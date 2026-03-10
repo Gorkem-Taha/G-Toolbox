@@ -107,3 +107,8 @@ If you ever want to completely remove G-Toolbox and reclaim your disk space, DO 
 
 🗑️ Deep Clean: This script acts as a smart uninstaller. It safely removes the virtual environment AND hunts down the hidden AI model cache files (which can consume gigabytes of hidden space) stored deep within your Windows user folders, ensuring a 100% clean removal.
 
+---
+
+## 📜 License
+This project is licensed under the [CC BY-NC 4.0 License](LICENSE).  
+Developed by **[Görkem Taha Çanakcı](https://github.com/Gorkem-Taha)**
