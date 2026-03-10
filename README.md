@@ -78,7 +78,7 @@ Because G-Toolbox runs actual AI models locally, your hardware dictates the proc
 * **Storage:** SSD with 10 GB free space.
 
 ---
-## 🛠️ Installation Guide (One-Click Setup)
+## 🛠️ Installation Guide
 
 > Forget complicated command lines and paths. G-Toolbox comes with fully automated, foolproof setup scripts designed specifically for Windows environments.
 
@@ -91,6 +91,14 @@ git clone [https://github.com/Gorkem-Taha/G-Toolbox.git](https://github.com/Gork
 Navigate to the extracted folder and double-click the installation.bat file.
 
 🛡️ Isolated Environment: It automatically creates a Python Virtual Environment (venv) to ensure it never interferes with your computer's global system settings.
+
+🧠 Smart Engine Selection: During the setup, the terminal will pause and ask you to choose your AI processing engine (for background removal):
+
+1) CPU Mode: Select this for standard computers. (Highly recommended if you are unsure).
+
+2) GPU Mode: Select this ONLY if you have an NVIDIA graphics card. It unlocks lightning-fast processing!
+
+3) Skip: Use this if you are re-running the setup just to fix or update general libraries.
 
 ⏳ Patience is Key: It will download massive AI frameworks (like PyTorch and FastAPI). Depending on your internet speed, this may take 5-15 minutes. Grab a coffee!
 
