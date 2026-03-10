@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title data-i18n="app_title">G-Toolbox | Premium Toolbox</title>
+    <meta name="description" content="Premium multi-purpose media & file processing tool." data-i18n="app_desc" />
+
+    <!-- Disable Dark Reader (Site is already native dark theme) -->
+    <meta name="darkreader-lock" />
+
+    <!-- Favicon -->
+    <link rel="icon" href="/static/favicon.ico" type="image/x-icon" />
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- FontAwesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+
+    <!-- Custom styles -->
+    <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+
+<body class="flex h-screen text-gray-100 font-sans overflow-hidden bg-[#050507]">
+
+    <!-- ═══ Ambient Background Orbs ═══ -->
+    <div class="ambient-orb orb-1"></div>
+    <div class="ambient-orb orb-2"></div>
+
+    <!-- ═══ HOME VIEW (Açılış Sayfası) ══════════════════════ -->
+
+    <div class="absolute top-8 right-10 z-50 flex items-center justify-center gap-2 px-3 py-1.5 rounded-xl">
+        <button id="lang-en"
+            class="flex items-center gap-2 hover:text-purple-400 transition-colors text-sm font-bold text-gray-300 px-2"
+            onclick="changeLanguage('en')">🇬🇧 English</button>
+        <div class="w-px h-4 bg-white/20"></div>
+        <button id="lang-tr"
+            class="flex items-center gap-2 hover:text-purple-400 transition-colors text-sm font-bold text-gray-300 px-2"
+            onclick="changeLanguage('tr')">🇹🇷 Türkçe</button>
+    </div>
+
+    <div id="home-view" class="h-full w-full flex flex-col relative z-20 overflow-y-auto">
+        <!-- Hero Section -->
+        <div class="flex flex-col items-center justify-center pt-24 pb-16 px-6 text-center">
+            <h1 class="text-5xl md:text-6xl font-extrabold tracking-tight mb-6 relative z-20"
+                style="filter: drop-shadow(0 0 20px rgba(168,85,247,0.4));">
+                <span
+                    class="bg-gradient-to-r from-purple-400 via-pink-300 to-amber-400 bg-clip-text text-transparent inline-block">
+                    <span data-i18n="hero_title">The Only Place for All Your Files</span>
+                </span>
+            </h1>
+            <p class="text-lg md:text-xl text-gray-400 max-w-2xl mx-auto leading-relaxed">
+                <span data-i18n="hero_desc">Process your media, documents, and files locally, securely, and at lightning
+                    speed with G-Toolbox. With zero data leak guarantee.</span>
+            </p>
+        </div>
+
+        <!-- Features Grid -->
+        <div class="w-full max-w-6xl mx-auto px-6 pb-24 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <!-- Card 1 -->
+            <div
+                class="glass p-8 rounded-3xl flex flex-col items-start transition-all hover:-translate-y-2 hover:border-purple-500/30 group">
+                <div
+                    class="w-16 h-16 rounded-2xl bg-purple-500/10 flex items-center justify-center mb-6 border border-purple-500/20 group-hover:bg-purple-500/20 transition-colors">
+                    <i class="fa-solid fa-arrows-rotate text-3xl text-purple-400"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-100 mb-3" data-i18n="menu_converter">Media Converter</h3>
+                <p class="text-gray-400 leading-relaxed mb-8 flex-1 text-[0.95rem]">
+                    <span data-i18n="desc_converter">Convert your image, audio, and video files to any format in
+                        seconds. No limits, no waiting.</span>
+                </p>
+                <button
+                    class="btn-go-tool w-full py-3.5 rounded-xl font-bold text-white bg-white/5 border border-white/10 hover:bg-gradient-to-r hover:from-purple-600 hover:to-amber-500 hover:shadow-[0_0_20px_rgba(168,85,247,0.4)] hover:border-transparent transition-all flex items-center justify-center gap-2"
+                    data-target="converter">
+                    <span data-i18n="btn_go_tool">Go to Tool</span> <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+
+            <!-- Card 2 -->
+            <div
+                class="glass p-8 rounded-3xl flex flex-col items-start transition-all hover:-translate-y-2 hover:border-pink-500/30 group">
+                <div
+                    class="w-16 h-16 rounded-2xl bg-pink-500/10 flex items-center justify-center mb-6 border border-pink-500/20 group-hover:bg-pink-500/20 transition-colors">
+                    <i class="fa-solid fa-wand-magic-sparkles text-3xl text-pink-400"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-100 mb-3" data-i18n="menu_bgremover">Background Remover</h3>
+                <p class="text-gray-400 leading-relaxed mb-8 flex-1 text-[0.95rem]">
+                    <span data-i18n="desc_bgremover">Flawlessly remove the background of your photos with advanced AI in
+                        a single click.</span>
+                </p>
+                <button
+                    class="btn-go-tool w-full py-3.5 rounded-xl font-bold text-white bg-white/5 border border-white/10 hover:bg-gradient-to-r hover:from-pink-600 hover:to-purple-500 hover:shadow-[0_0_20px_rgba(236,72,153,0.4)] hover:border-transparent transition-all flex items-center justify-center gap-2"
+                    data-target="bgremover">
+                    <span data-i18n="btn_go_tool">Go to Tool</span> <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+
+            <!-- Card 3 -->
+            <div
+                class="glass p-8 rounded-3xl flex flex-col items-start transition-all hover:-translate-y-2 hover:border-blue-500/30 group">
+                <div
+                    class="w-16 h-16 rounded-2xl bg-blue-500/10 flex items-center justify-center mb-6 border border-blue-500/20 group-hover:bg-blue-500/20 transition-colors">
+                    <i class="fa-solid fa-cloud-arrow-down text-3xl text-blue-400"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-100 mb-3" data-i18n="menu_videodownloader">Video Downloader</h3>
+                <p class="text-gray-400 leading-relaxed mb-8 flex-1 text-[0.95rem]">
+                    <span data-i18n="desc_videodownloader">Download videos from YouTube and other platforms in your
+                        desired quality and resolution, watermark-free.</span>
+                </p>
+                <button
+                    class="btn-go-tool w-full py-3.5 rounded-xl font-bold text-white bg-white/5 border border-white/10 hover:bg-gradient-to-r hover:from-blue-600 hover:to-purple-500 hover:shadow-[0_0_20px_rgba(59,130,246,0.4)] hover:border-transparent transition-all flex items-center justify-center gap-2"
+                    data-target="videodownloader">
+                    <span data-i18n="btn_go_tool">Go to Tool</span> <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+
+            <!-- Card 4 -->
+            <div
+                class="glass p-8 rounded-3xl flex flex-col items-start transition-all hover:-translate-y-2 hover:border-amber-500/30 group">
+                <div
+                    class="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center mb-6 border border-amber-500/20 group-hover:bg-amber-500/20 transition-colors">
+                    <i class="fa-solid fa-eraser text-3xl text-amber-400"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-100 mb-3" data-i18n="menu_magic_eraser">Magic Eraser</h3>
+                <p class="text-gray-400 leading-relaxed mb-8 flex-1 text-[0.95rem]">
+                    <span data-i18n="desc_magic_eraser">Professionally erase unwanted objects, people, or text from your
+                        images with AI.</span>
+                </p>
+                <button
+                    class="btn-go-tool w-full py-3.5 rounded-xl font-bold text-white bg-white/5 border border-white/10 hover:bg-gradient-to-r hover:from-amber-600 hover:to-orange-500 hover:shadow-[0_0_20px_rgba(245,158,11,0.4)] hover:border-transparent transition-all flex items-center justify-center gap-2"
+                    data-target="magic-eraser">
+                    <span data-i18n="btn_go_tool">Go to Tool</span> <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+
+            <!-- Card 5 -->
+            <div
+                class="glass p-8 rounded-3xl flex flex-col items-start transition-all hover:-translate-y-2 hover:border-emerald-500/30 group">
+                <div
+                    class="w-16 h-16 rounded-2xl bg-emerald-500/10 flex items-center justify-center mb-6 border border-emerald-500/20 group-hover:bg-emerald-500/20 transition-colors">
+                    <i class="fa-solid fa-magnifying-glass-plus text-3xl text-emerald-400"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-100 mb-3" data-i18n="menu_upscaler">Resolution Upscaler</h3>
+                <p class="text-gray-400 leading-relaxed mb-8 flex-1 text-[0.95rem]">
+                    <span data-i18n="desc_upscaler">Make your low-quality photos up to 4X clearer and more detailed with
+                        AI.</span>
+                </p>
+                <button
+                    class="btn-go-tool w-full py-3.5 rounded-xl font-bold text-white bg-white/5 border border-white/10 hover:bg-gradient-to-r hover:from-emerald-600 hover:to-teal-500 hover:shadow-[0_0_20px_rgba(16,185,129,0.4)] hover:border-transparent transition-all flex items-center justify-center gap-2"
+                    data-target="upscaler">
+                    <span data-i18n="btn_go_tool">Go to Tool</span> <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+
+            <!-- Card 6 -->
+            <div
+                class="glass p-8 rounded-3xl flex flex-col items-start transition-all hover:-translate-y-2 hover:border-indigo-500/30 group">
+                <div
+                    class="w-16 h-16 rounded-2xl bg-indigo-500/10 flex items-center justify-center mb-6 border border-indigo-500/20 group-hover:bg-indigo-500/20 transition-colors">
+                    <i class="fa-solid fa-lock text-3xl text-indigo-400"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-100 mb-3" data-i18n="menu_filevault">Vault Creator</h3>
+                <p class="text-gray-400 leading-relaxed mb-8 flex-1 text-[0.95rem]">
+                    <span data-i18n="desc_filevault">Create secure locked archives by encrypting your files and folders
+                        with military-grade AES-256.</span>
+                </p>
+                <button
+                    class="btn-go-tool w-full py-3.5 rounded-xl font-bold text-white bg-white/5 border border-white/10 hover:bg-gradient-to-r hover:from-indigo-600 hover:to-blue-500 hover:shadow-[0_0_20px_rgba(99,102,241,0.4)] hover:border-transparent transition-all flex items-center justify-center gap-2"
+                    data-target="filevault">
+                    <span data-i18n="btn_go_tool">Go to Tool</span> <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ APP VIEW ═══════════════════════════════════════════ -->
+    <div id="app-view" class="h-full w-full flex relative z-10 hidden">
+        <!-- ═══ SIDEBAR ═══════════════════════════════════════════ -->
+        <aside class="sidebar w-72 flex flex-col py-8 px-5 shrink-0 z-10 relative">
+
+            <!-- Logo -->
+            <button id="btn-go-home"
+                class="flex items-center gap-3 px-3 mb-10 hover:opacity-80 transition-opacity text-left bg-transparent border-0 cursor-pointer">
+                <div
+                    class="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 to-amber-500 flex items-center justify-center shrink-0">
+                    <i class="fa-solid fa-screwdriver-wrench text-white text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold logo-glow tracking-tight text-gray-100">G-Toolbox</h1>
+                    <p class="text-xs text-gray-500 font-medium" data-i18n="app_version">Toolbox v4.0</p>
+                </div>
+            </button>
+
+            <!-- Section label -->
+            <p class="text-[0.65rem] uppercase tracking-[0.2em] text-gray-600 font-semibold px-3 mb-3"
+                data-i18n="sidebar_tools">Tools</p>
+
+            <!-- Nav items -->
+            <nav class="flex flex-col gap-1">
+                <div class="sidebar-item" data-tool="converter">
+                    <i class="fa-solid fa-arrows-rotate icon text-purple-400"></i>
+                    <span data-i18n="menu_converter">Media Converter</span>
+                </div>
+                <div class="sidebar-item" data-tool="bgremover">
+                    <i class="fa-solid fa-wand-magic-sparkles icon text-purple-400"></i>
+                    <span data-i18n="menu_bgremover">Background Remover</span>
+                </div>
+                <div class="sidebar-item" data-tool="magic-eraser">
+                    <i class="fa-solid fa-eraser icon text-purple-400"></i>
+                    <span data-i18n="menu_magic_eraser">Magic Eraser</span>
+                </div>
+                <div class="sidebar-item" data-tool="upscaler">
+                    <i class="fa-solid fa-magnifying-glass-plus icon text-purple-400"></i>
+                    <span data-i18n="menu_upscaler">Resolution Upscaler</span>
+                </div>
+                <div class="sidebar-item" data-tool="videodownloader">
+                    <i class="fa-solid fa-cloud-arrow-down icon text-purple-400"></i>
+                    <span data-i18n="menu_videodownloader">Video Downloader</span>
+                </div>
+                <div class="sidebar-item" data-tool="filevault">
+                    <i class="fa-solid fa-lock icon text-purple-400"></i>
+                    <span data-i18n="menu_filevault">Vault Creator</span>
+                </div>
+            </nav>
+
+            <!-- Bottom spacer + version -->
+            <div class="mt-auto px-3 pt-6 border-t border-white/5 flex flex-col gap-4">
+                <button id="btn-sync-update"
+                    class="w-full py-2.5 rounded-xl font-bold text-white bg-white/5 border border-white/10 hover:bg-gradient-to-r hover:from-purple-600 hover:to-amber-500 hover:border-transparent transition-all flex items-center justify-center gap-2 text-sm">
+                    <i class="fa-solid fa-arrows-rotate"></i> <span data-i18n="btn_sync_update">🔄 Sistemi Güncelle
+                        (Sync)</span>
+                </button>
+                <div class="flex items-center gap-2 text-xs text-gray-600 justify-center">
+                    <i class="fa-solid fa-shield-halved text-purple-500/60"></i>
+                    <span data-i18n="sidebar_footer">All files are processed locally</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- ═══ MAIN CONTENT ═══════════════════════════════════════ -->
+        <main class="flex-1 flex flex-col z-10 relative overflow-y-auto">
+
+            <!-- Top bar -->
+            <header class="flex items-center justify-between px-10 py-6 border-b border-white/5">
+                <div>
+                    <h2 class="text-xl font-semibold tracking-tight" id="page-title" data-i18n="welcome_title">Welcome
+                    </h2>
+                    <p class="text-sm text-gray-500 mt-0.5" id="page-subtitle" data-i18n="welcome_subtitle">Select a
+                        tool from the left menu to start</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="spinner" id="spinner"></div>
+                </div>
+            </header>
+
+            <!-- GLOBAL PROGRESS BAR -->
+            <div id="global-progress-container"
+                class="w-full bg-black/40 border-b border-white/5 hidden transition-all duration-300">
+                <div class="w-full h-1.5 bg-white/5 overflow-hidden">
+                    <div id="global-progress-bar"
+                        class="h-full bg-gradient-to-r from-purple-600 to-amber-500 shadow-[0_0_15px_rgba(168,85,247,0.7)] transition-all duration-300 ease-out"
+                        style="width: 0%;"></div>
+                </div>
+                <div class="flex justify-between items-center px-10 py-2">
+                    <span id="global-progress-message" class="text-xs font-medium text-purple-300 animate-pulse"
+                        data-i18n="global_progress_starting">Starting process...</span>
+                    <span id="global-progress-percent" class="text-xs font-bold text-gray-300">0%</span>
+                </div>
+            </div>
+
+            <!-- (Sayfalar aşağıda) -->
+
+            <!-- ═══ PAGE: CONVERTER ═══════════════════════════════ -->
+            <section class="tool-page flex-1 flex-col px-6 py-8 hidden overflow-y-auto" id="page-converter">
+
+                <div class="w-full max-w-6xl mx-auto flex flex-col gap-6 h-full min-h-[700px]">
+                    <!-- Üst: Sürükle Bırak Alanı -->
+                    <div class="w-full glass p-1 rounded-3xl shrink-0">
+                        <div class="drop-zone" id="drop-zone-universal">
+                            <input type="file" id="file-input-universal" class="hidden" />
+
+                            <div class="drop-zone-icon">
+                                <i class="fa-solid fa-cloud-arrow-up"></i>
+                            </div>
+
+                            <p id="universal-drop-text" class="text-xl font-bold text-gray-200 mb-2"
+                                data-i18n="drop_file_here">Drop Your File Here</p>
+                            <p class="text-sm text-gray-500">
+                                <span data-i18n="drop_or_click">or click to <span
+                                        class="text-purple-400 font-medium cursor-pointer hover:underline text-md">browse</span></span>
+                            </p>
+
+                            <div class="file-info" id="info-universal">
+                                <i class="fa-solid fa-file file-info-icon" id="info-universal-icon"></i>
+                                <div class="flex-1 text-left">
+                                    <p class="file-info-name" id="info-universal-name">—</p>
+                                    <p class="file-info-size" id="info-universal-size">—</p>
+                                </div>
+                                <button class="hover:text-red-400 transition-colors ml-4 text-gray-500 p-2"
+                                    id="btn-universal-clear">
+                                    <i class="fa-solid fa-xmark text-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Alt: Dönüşüm Formatları (Tek Sütun) -->
+                    <div class="flex flex-col gap-6 w-full flex-1 items-center">
+
+                        <!-- Hedef Format Seçimi (Convert To) -->
+                        <div class="w-full max-w-2xl glass rounded-3xl p-6 flex flex-col overflow-hidden relative border-l-4 border-l-transparent transition-colors duration-300 hidden"
+                            id="col-to">
+                            <h3
+                                class="text-xl font-bold mb-4 flex items-center justify-center gap-3 text-gray-100 text-center w-full">
+                                <span
+                                    class="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-sm font-black text-gray-400 shadow-inner">
+                                </span>
+                                <span data-i18n="target_format">Select Target Format</span>
+                            </h3>
+                            <div class="relative mb-5">
+                                <i
+                                    class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-gray-500"></i>
+                                <input type="text" id="search-to" placeholder="Search target format..."
+                                    data-i18n="search_format_placeholder"
+                                    class="w-full bg-black/20 border border-white/10 rounded-xl py-3.5 pl-11 pr-4 text-sm text-white focus:outline-none focus:border-amber-500/50 transition-colors placeholder:text-gray-600">
+                            </div>
+                            <div class="overflow-y-auto pr-2 select-none format-list-container custom-scroll grid grid-cols-1 md:grid-cols-2 gap-4"
+                                id="list-convert-to" style="max-height: 400px;">
+                                <!-- JS ile dinamik doldurulacak -->
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Alt: Magic Başlat Butonu -->
+                    <div class="w-full shrink-0 flex justify-center pb-4 mt-2">
+                        <button
+                            class="convert-btn w-full max-w-xl py-5 rounded-2xl text-lg font-extrabold shadow-[0_0_30px_rgba(168,85,247,0.15)] hidden"
+                            id="btn-universal-convert">
+                            <i
+                                class="fa-solid fa-wand-magic-sparkles text-xl group-hover:animate-pulse text-gold-light"></i>
+                            <span class="tracking-wide text-white" data-i18n="btn_start_conversion">Start Magic
+                                Conversion!</span>
+                        </button>
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- ═══ PAGE: MAGIC ERASER ══════════════════════════════ -->
+            <section class="tool-page flex-1 flex-col px-6 py-8 hidden overflow-y-auto" id="page-magic-eraser">
+                <div class="w-full max-w-4xl mx-auto flex flex-col gap-6">
+
+                    <!-- Drop Zone (Visible initially) -->
+                    <div class="w-full glass p-1 rounded-3xl" id="magic-drop-container">
+                        <div class="drop-zone" id="drop-zone-magic">
+                            <input type="file" id="file-input-magic" accept="image/*" class="hidden" />
+                            <div class="drop-zone-icon"><i class="fa-solid fa-eraser"></i></div>
+                            <p class="text-xl font-bold text-gray-200 mb-2" data-i18n="drop_image_here">Drop Your Image
+                                Here</p>
+                            <p class="text-sm text-gray-500"><span data-i18n="drop_or_click_image">or click to <span
+                                        class="text-purple-400 font-medium cursor-pointer hover:underline">select</span></span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Editor Area (Hidden initially) -->
+                    <div id="magic-editor-container" class="w-full hidden flex-col items-center gap-6">
+
+                        <!-- Controls -->
+                        <div class="w-full glass p-4 rounded-2xl flex items-center justify-between gap-6">
+                            <!-- Brush Size Slider -->
+                            <div class="flex items-center gap-4 flex-1">
+                                <i class="fa-solid fa-paint-brush text-gray-400"></i>
+                                <span class="text-sm text-gray-300 font-semibold whitespace-nowrap"
+                                    data-i18n="brush_size">Brush: </span><span
+                                    id="magic-brush-size-val">30</span>px</span>
+                                <input type="range" id="magic-brush-slider" min="5" max="100" value="30"
+                                    class="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-purple-500 transition-all hover:bg-white/20">
+                            </div>
+                            <!-- Reset / Clear Brush Button -->
+                            <button type="button" id="btn-magic-clear-mask"
+                                class="text-sm px-4 py-2 rounded-xl bg-white/5 hover:bg-amber-500/20 hover:text-amber-400 text-gray-400 transition-all">
+                                <i class="fa-solid fa-rotate-left mr-2"></i><span data-i18n="btn_clear">Clear</span>
+                            </button>
+                            <!-- Close Button -->
+                            <button type="button" id="btn-magic-close"
+                                class="text-sm px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 transition-all">
+                                <i class="fa-solid fa-xmark mr-2"></i><span data-i18n="btn_close">Close</span>
+                            </button>
+                        </div>
+
+                        <!-- Canvas Container -->
+                        <div class="relative w-full border border-white/5 rounded-xl overflow-hidden glass flex justify-center items-center p-2"
+                            style="background: repeating-conic-gradient(#111 0% 25%, transparent 0% 50%) 50% / 20px 20px;">
+                            <!-- We will position base image and drawing canvas here -->
+                            <canvas id="magic-canvas" class="cursor-crosshair"
+                                style="max-width: 100%; height: auto; object-fit: contain; border-radius: 8px;"></canvas>
+                        </div>
+
+                        <!-- Action Button -->
+                        <button
+                            class="convert-btn w-full max-w-xl py-5 rounded-2xl text-lg font-extrabold shadow-[0_0_30px_rgba(168,85,247,0.15)]"
+                            id="btn-magic-apply">
+                            <i
+                                class="fa-solid fa-wand-magic-sparkles text-xl group-hover:animate-pulse text-gold-light"></i>
+                            <span class="tracking-wide text-white" data-i18n="btn_magic_erase">Erase Magically!</span>
+                        </button>
+
+                    </div>
+                </div>
+            </section>
+
+            <!-- ═══ PAGE: IMAGE UPSCALER ════════════════════════════ -->
+            <section class="tool-page flex-1 flex-col px-6 py-8 hidden overflow-y-auto" id="page-upscaler">
+                <div class="w-full max-w-4xl mx-auto flex flex-col gap-6">
+
+                    <!-- Drop Zone -->
+                    <div class="w-full glass p-1 rounded-3xl" id="upscale-drop-container">
+                        <div class="drop-zone" id="drop-zone-upscale">
+                            <input type="file" id="file-input-upscale" accept="image/*" class="hidden" />
+                            <div class="drop-zone-icon"><i class="fa-solid fa-image"></i></div>
+                            <p class="text-xl font-bold text-gray-200 mb-2" data-i18n="drop_image_here">Drop Your Image
+                                Here</p>
+                            <p class="text-sm text-gray-500"><span data-i18n="drop_or_click_image">or click to <span
+                                        class="text-purple-400 font-medium cursor-pointer hover:underline">select</span></span>
+                            </p>
+
+                            <!-- Process Preview -->
+                            <div class="file-info hidden" id="info-upscale">
+                                <i class="fa-solid fa-image file-info-icon" style="color: var(--color-purple-400);"></i>
+                                <div class="flex-1 text-left">
+                                    <p class="file-info-name" id="info-upscale-name">—</p>
+                                    <p class="file-info-size" id="info-upscale-size">—</p>
+                                </div>
+                                <span class="convert-type-badge badge-image" data-i18n="badge_image">Image</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Panel -->
+                    <div id="upscale-panel" class="w-full hidden flex-col gap-6">
+
+                        <!-- Upscaler Settings -->
+                        <div class="w-full glass p-6 rounded-3xl flex flex-col gap-4">
+                            <h3 class="text-lg font-bold text-gray-100 border-b border-white/10 pb-2"><span
+                                    data-i18n="select_upscale_ratio">Select Upscale Ratio</span></h3>
+
+                            <div class="grid grid-cols-2 gap-4">
+                                <button type="button"
+                                    class="upscale-option-btn w-full text-left px-5 py-4 rounded-xl border-2 border-transparent bg-black/40 hover:bg-black/60 transition-all flex flex-col gap-1 ring-2 ring-purple-500 text-white"
+                                    data-scale="2">
+                                    <span class="font-bold text-lg"><i
+                                            class="fa-solid fa-xmark text-purple-400 mr-1 text-sm"></i>2x</span>
+                                    <span class="text-sm text-gray-400"><span data-i18n="hd_quality">HD Quality - Fast
+                                            process</span></span>
+                                </button>
+
+                                <button type="button"
+                                    class="upscale-option-btn w-full text-left px-5 py-4 rounded-xl border-2 border-white/5 bg-white/5 hover:bg-white/10 transition-all flex flex-col gap-1 text-gray-300 group"
+                                    data-scale="4">
+                                    <span class="font-bold text-lg"><i
+                                            class="fa-solid fa-xmark text-gray-500 group-hover:text-purple-400 mr-1 text-sm transition-colors"></i>4x</span>
+                                    <span class="text-sm text-gray-500"><span data-i18n="4k_quality">4K Quality -
+                                            Maximum detail</span></span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Processing UI -->
+                        <div class="ai-processing hidden" id="upscale-processing">
+                            <div class="ai-processing-inner">
+                                <div class="ai-spinner"></div>
+                                <p class="text-sm font-semibold text-purple-300 mt-4"><span
+                                        data-i18n="upscale_processing">AI is increasing pixels and sharpening...</span>
+                                </p>
+                                <p class="text-xs text-gray-500 mt-1"><span data-i18n="process_takes_time">This process
+                                        may take a while</span></p>
+                            </div>
+                        </div>
+
+                        <!-- Action Button -->
+                        <button
+                            class="convert-btn w-full py-5 rounded-2xl text-lg font-extrabold shadow-[0_0_30px_rgba(168,85,247,0.15)]"
+                            id="btn-upscale-apply">
+                            <i
+                                class="fa-solid fa-wand-magic-sparkles text-xl group-hover:animate-pulse text-gold-light"></i>
+                            <span class="tracking-wide text-white" data-i18n="btn_start_upscale">Start Magic
+                                Upscaling!</span>
+                        </button>
+
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- ═══ PAGE: BG REMOVER ══════════════════════════════ -->
+            <section class="tool-page flex-1 flex-col items-center justify-center px-10 py-12 hidden"
+                id="page-bgremover">
+
+                <!-- Drop Zone -->
+                <div class="w-full max-w-2xl glass p-1 mx-auto">
+                    <div class="drop-zone" id="drop-zone-bg">
+                        <input type="file" id="file-input-bg" accept="image/*" class="hidden" />
+
+                        <div class="drop-zone-icon">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i>
+                        </div>
+
+                        <p class="text-lg font-semibold text-gray-200 mb-2">
+                            <span data-i18n="drop_bg_image">Drag the image you want to remove the background from</span>
+                        </p>
+                        <p class="text-sm text-gray-500">
+                            <span data-i18n="drop_or_click_image_bg">or click to <span
+                                    class="text-purple-400 font-medium cursor-pointer hover:underline">select an
+                                    image</span></span>
+                        </p>
+
+                        <!-- File info -->
+                        <div class="file-info" id="info-bg">
+                            <i class="fa-solid fa-image file-info-icon"></i>
+                            <div class="flex-1">
+                                <p class="file-info-name" id="info-bg-name">—</p>
+                                <p class="file-info-size" id="info-bg-size">—</p>
+                            </div>
+                            <span class="convert-type-badge badge-image" data-i18n="badge_image">Image</span>
+                        </div>
+
+                        <!-- Progress bar -->
+                        <div class="progress-container" id="progress-bg">
+                            <div class="progress-bar" id="bar-bg">
+                                <span class="progress-text font-bold text-xs"
+                                    style="mix-blend-mode: difference; color: white;" id="percent-bg">0%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Preview + Action Panel -->
+                <div class="w-full max-w-2xl mx-auto mt-6 glass p-6 hidden" id="bg-panel">
+
+                    <!-- Image preview -->
+                    <div class="bg-preview-container" id="bg-preview-container">
+                        <div class="bg-preview-card">
+                            <p class="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-3"
+                                data-i18n="preview_original">Original</p>
+                            <div class="bg-preview-img-wrap">
+                                <img id="bg-preview-original" src="" alt="Orijinal" />
+                            </div>
+                        </div>
+                        <div class="bg-preview-arrow">
+                            <i class="fa-solid fa-arrow-right text-purple-500/50"></i>
+                        </div>
+                        <div class="bg-preview-card">
+                            <p class="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-3"
+                                data-i18n="preview_result">Result</p>
+                            <div class="bg-preview-img-wrap checkerboard">
+                                <img id="bg-preview-result" src="" alt="Sonuç" class="hidden" />
+                                <div id="bg-result-placeholder" class="bg-result-placeholder">
+                                    <i class="fa-solid fa-sparkles text-purple-400/30 text-3xl"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- AI processing overlay -->
+                    <div class="ai-processing hidden" id="ai-processing">
+                        <div class="ai-processing-inner">
+                            <div class="ai-spinner"></div>
+                            <p class="text-sm font-semibold text-purple-300 mt-4"><span data-i18n="ai_processing">AI is
+                                    Processing...</span></p>
+                            <p class="text-xs text-gray-500 mt-1"><span data-i18n="removing_bg">Removing
+                                    background</span></p>
+                        </div>
+                    </div>
+
+                    <!-- Magic button -->
+                    <button class="convert-btn mt-6 bg-remove-btn" id="btn-remove-bg">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                        <span data-i18n="btn_remove_bg">Magic Remove Background</span>
+                    </button>
+                </div>
+
+                <!-- Feature badges -->
+                <div class="flex gap-6 mt-10 text-xs text-gray-600 justify-center">
+                    <span class="flex items-center gap-2">
+                        <i class="fa-solid fa-brain text-purple-500/70"></i> <span data-i18n="badge_ai_powered">AI
+                            Powered</span>
+                    </span>
+                    <span class="flex items-center gap-2">
+                        <i class="fa-solid fa-droplet-slash text-amber-500/70"></i> <span
+                            data-i18n="badge_transparent_png">Transparent PNG Output</span>
+                    </span>
+                    <span class="flex items-center gap-2">
+                        <i class="fa-solid fa-gauge-high text-purple-500/70"></i> <span
+                            data-i18n="badge_auto_download">Auto Download</span>
+                    </span>
+                </div>
+            </section>
+
+            <!-- ═══ PAGE: VIDEO DOWNLOADER ══════════════════════════ -->
+            <section class="tool-page flex-1 flex-col items-center justify-center px-10 py-12 hidden"
+                id="page-videodownloader">
+
+                <!-- URL Input Card -->
+                <div class="w-full max-w-2xl glass p-1 mx-auto">
+                    <div class="video-input-area">
+                        <div class="drop-zone-icon">
+                            <i class="fa-solid fa-cloud-arrow-down"></i>
+                        </div>
+                        <p class="text-lg font-semibold text-gray-200 mb-2" data-i18n="menu_videodownloader">Video
+                            Downloader</p>
+                        <p class="text-sm text-gray-500 mb-6"><span data-i18n="desc_videodownloader">Download videos
+                                from YouTube and supported platforms</span></p>
+
+                        <!-- URL Input -->
+                        <div class="video-url-wrapper">
+                            <div class="video-url-input-glow"></div>
+                            <div class="video-url-input-container">
+                                <i class="fa-solid fa-link video-url-icon"></i>
+                                <input type="text" id="video-url-input" class="video-url-input"
+                                    placeholder="Paste video link (YouTube, etc.)..." data-i18n="video_link_placeholder"
+                                    autocomplete="off" />
+                                <button id="btn-fetch-info" class="btn-fetch-info">
+                                    <i class="fa-solid fa-magnifying-glass"></i>
+                                    <span data-i18n="btn_fetch_info">Fetch Info</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Loading indicator for fetch -->
+                        <div class="video-fetch-loading hidden" id="video-fetch-loading">
+                            <div class="ai-spinner" style="width:36px;height:36px;"></div>
+                            <p class="text-sm text-purple-300 mt-3 font-semibold" data-i18n="fetching_video_info">
+                                Fetching Video Info...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Video Info + Download Panel -->
+                <div class="w-full max-w-2xl mx-auto mt-6 glass p-6 hidden" id="video-info-panel">
+
+                    <!-- Video Preview -->
+                    <div class="video-preview-container">
+                        <div class="video-thumbnail-wrap">
+                            <img id="video-thumbnail" src="" alt="Thumbnail" />
+                            <div class="video-duration-badge" id="video-duration"></div>
+                        </div>
+                        <div class="video-meta">
+                            <h3 class="video-title" id="video-title">—</h3>
+                            <p class="video-uploader" id="video-uploader">—</p>
+                        </div>
+                    </div>
+
+                    <!-- Çözünürlük Seçimi -->
+                    <div class="video-format-section mt-5">
+                        <div class="flex items-center gap-3 mb-4">
+                            <i class="fa-solid fa-sliders text-purple-400"></i>
+                            <h4 class="font-semibold text-gray-200 text-sm" data-i18n="select_resolution">Select
+                                Resolution</h4>
+                        </div>
+                        <div class="video-format-chips" id="video-format-chips">
+                            <!-- JS tarafından dinamik olarak doldurulacak -->
+                        </div>
+                    </div>
+
+                    <!-- Download Button -->
+                    <button class="convert-btn mt-6 video-download-btn" id="btn-download-video">
+                        <i class="fa-solid fa-download"></i>
+                        <span data-i18n="btn_start_download">Start Download</span>
+                    </button>
+
+                    <!-- Download progress overlay -->
+                    <div class="video-download-loading hidden" id="video-download-loading">
+                        <div class="ai-processing-inner">
+                            <div class="ai-spinner"></div>
+                            <p class="text-sm font-semibold text-purple-300 mt-4" data-i18n="video_processing">Video is
+                                downloading and processing...</p>
+                            <p class="text-xs text-gray-500 mt-1" data-i18n="process_minutes">This process may take a
+                                few minutes</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Feature badges -->
+                <div class="flex gap-6 mt-10 text-xs text-gray-600 justify-center">
+                    <span class="flex items-center gap-2">
+                        <i class="fa-solid fa-video text-purple-500/70"></i> <span
+                            data-i18n="badge_youtube_support">YouTube Supported</span>
+                    </span>
+                    <span class="flex items-center gap-2">
+                        <i class="fa-solid fa-music text-amber-500/70"></i> <span data-i18n="badge_mp3_convert">MP3
+                            Conversion</span>
+                    </span>
+                    <span class="flex items-center gap-2">
+                        <i class="fa-solid fa-gauge-high text-purple-500/70"></i> <span
+                            data-i18n="badge_high_quality">High Quality</span>
+                    </span>
+                </div>
+            </section>
+
+            <!-- ═══ PAGE: DOSYA KASASI ═════════════════════════ -->
+            <section class="tool-page flex-1 flex-col px-6 py-8 hidden overflow-y-auto" id="page-filevault">
+                <div class="w-full max-w-4xl mx-auto flex flex-col gap-6">
+                    <div class="w-full glass p-6 rounded-3xl text-center">
+                        <i class="fa-solid fa-shield-halved text-4xl text-purple-400 mb-4"></i>
+                        <h3 class="text-2xl font-bold text-gray-100 mb-2" data-i18n="vault_title">Vault Creator
+                            (AES-256)</h3>
+                        <p class="text-sm text-gray-400 mb-6"><span data-i18n="vault_desc">Lock or decrypt your files
+                                via military-grade encryption.</span></p>
+
+                        <!-- Seçim Butonları -->
+                        <div class="flex gap-4 justify-center">
+                            <button type="button" id="vault-mode-file"
+                                class="px-6 py-3 rounded-xl font-bold text-white bg-black/40 ring-2 ring-purple-500 transition-all flex items-center gap-2 shadow-[0_0_15px_rgba(168,85,247,0.3)]">
+                                📄 <span data-i18n="vault_mode_file">Select File</span>
+                            </button>
+                            <button type="button" id="vault-mode-dir"
+                                class="px-6 py-3 rounded-xl font-bold text-gray-300 bg-white/5 hover:bg-white/10 transition-all flex items-center gap-2 border border-white/10">
+                                📁 <span data-i18n="vault_mode_dir">Select Folder</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Drop Zone -->
+                    <div class="w-full glass p-1 rounded-3xl" id="vault-drop-container">
+                        <div class="drop-zone cursor-pointer hover:border-purple-500/50 transition-colors"
+                            id="drop-zone-vault">
+                            <input type="file" id="file-input-vault-multi" multiple class="hidden" />
+                            <input type="file" id="file-input-vault-dir" webkitdirectory directory multiple
+                                class="hidden" />
+
+                            <div class="drop-zone-icon" id="vault-icon"><i class="fa-solid fa-file-shield"></i></div>
+                            <p class="text-xl font-bold text-gray-200 mb-2" id="vault-drop-title"><span
+                                    data-i18n="vault_drop_text">Drop your files or folders here</span></p>
+                            <p class="text-sm text-gray-500" id="vault-drop-hint"><span data-i18n="vault_drop_click">or
+                                    click to <span
+                                        class="text-purple-400 font-medium hover:underline">select</span></span></p>
+
+                            <div class="file-info hidden mt-6" id="info-vault">
+                                <div class="flex-1 text-left">
+                                    <p class="file-info-name" id="info-vault-name">—</p>
+                                    <p class="file-info-size" id="info-vault-size">—</p>
+                                </div>
+                                <button
+                                    class="relative z-50 pointer-events-auto cursor-pointer hover:bg-red-500/20 bg-red-500/10 rounded-lg transition-colors ml-4 text-red-400 px-3 py-1.5 flex items-center gap-2 text-sm font-bold border border-red-500/20"
+                                    id="btn-vault-clear">
+                                    <i class="fa-solid fa-trash-can"></i> <span data-i18n="btn_vault_clear">Clear
+                                        Selection</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Password and Actions Panel -->
+                    <div id="vault-panel" class="w-full hidden flex-col gap-6">
+                        <div class="w-full glass p-6 rounded-3xl flex flex-col gap-4">
+                            <div class="relative">
+                                <i class="fa-solid fa-key absolute left-4 top-1/2 -translate-y-1/2 text-gray-500"></i>
+                                <input type="password" id="vault-password" placeholder="Set / enter a secure password"
+                                    data-i18n="vault_pwd_placeholder"
+                                    class="w-full bg-black/20 border border-white/10 rounded-xl py-4 pl-12 pr-4 text-white focus:outline-none focus:border-purple-500/50 transition-colors placeholder:text-gray-600">
+                            </div>
+                            <div class="flex gap-4 mt-2">
+                                <button
+                                    class="w-full py-4 rounded-xl font-bold text-white bg-gradient-to-r from-red-600 to-purple-600 hover:shadow-[0_0_20px_rgba(220,38,38,0.4)] transition-all flex items-center justify-center gap-2"
+                                    id="btn-vault-encrypt">
+                                    <i class="fa-solid fa-lock"></i> <span data-i18n="btn_vault_encrypt">Encrypt
+                                        File</span>
+                                </button>
+                                <button
+                                    class="w-full py-4 rounded-xl font-bold text-white bg-gradient-to-r from-green-500 to-blue-600 hover:shadow-[0_0_20px_rgba(16,185,129,0.4)] transition-all flex items-center justify-center gap-2"
+                                    id="btn-vault-decrypt">
+                                    <i class="fa-solid fa-lock-open"></i> <span data-i18n="btn_vault_decrypt">Unlock
+                                        (Decrypt)</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div> <!-- /#app-view -->
+
+    <!-- ═══ UPDATE MODAL ══════════════════════════════════════ -->
+    <div id="update-modal"
+        class="fixed inset-0 z-[9999] hidden flex items-center justify-center bg-black/80 backdrop-blur-sm">
+        <div
+            class="glass p-8 rounded-3xl max-w-md w-full mx-4 text-center transform shadow-[0_0_50px_rgba(168,85,247,0.3)] border border-purple-500/30">
+            <div class="w-20 h-20 mx-auto rounded-full bg-green-500/20 flex items-center justify-center mb-6">
+                <i class="fa-solid fa-check text-4xl text-green-400"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-white mb-4" data-i18n="update_success_title">Güncelleme Tamamlandı!</h2>
+            <p class="text-gray-300 text-sm leading-relaxed mb-8" data-i18n="update_success_desc">Değişikliklerin aktif
+                olması için lütfen siyah ekranı (terminali) kapatıp uygulamayı yeniden başlatın.</p>
+        </div>
+    </div>
+
+    <!-- ═══ TOAST CONTAINER ═══════════════════════════════════ -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- App Logic -->
+    <script src="/static/js/app.js?v=4.0.1"></script>
+</body>
+
+</html>
