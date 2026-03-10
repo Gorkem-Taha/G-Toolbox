@@ -25,7 +25,7 @@ In a world where every SaaS application uploads your private documents and photo
 *(Add your screenshots here by replacing the placeholder links)*
 
 ### 🏠 The Workspace (Home)
-![G-Toolbox Homepage](<img width="1139" height="716" alt="menu" src="https://github.com/user-attachments/assets/f62bdba1-da2a-465b-836c-9aff40cb47bb" />)
+![G-Toolbox Homepage](/static/menu.png)
 *The dark-themed, premium interface designed for maximum productivity.*
 
 ### 🎨 AI Studio & Tools
@@ -51,14 +51,10 @@ Instantly cut out the main subject of any photo with perfect edge detection, pow
 Military-grade file and folder encryption. Select a single file or an entire folder—the backend will automatically compress and lock it into a `.enc` vault.
 * ⚠️ **Security Warning:** There is NO backdoor. If you forget the password you set, your files cannot be recovered by anyone, not even supercomputers.
 
-### 5. Advanced PDF Engine
-* **Merge:** Combine dozens of PDFs into one.
-* **Split & Extract:** Don't just split pages—extract specific ranges (e.g., "1, 3-5, 10") into a brand-new, clean document.
-
-### 6. Universal File Converter
+### 5. Universal File Converter
 Convert images and audio formats locally using FFmpeg architecture without uploading to sketchy online converters.
 
-### 7. OTA Auto-Updater (Sync)
+### 6. OTA Auto-Updater (Sync)
 Stay up-to-date effortlessly. Click the "Sync" button in the app, and G-Toolbox will securely fetch the latest features from GitHub and patch itself without touching your personal files or virtual environment.
 
 ---
@@ -91,15 +87,15 @@ Forget complicated command lines. G-Toolbox comes with automated setup scripts.
 Clone this repository or download it as a ZIP file and extract it to a folder on your PC.
 
 **Step 2: Install Dependencies**
-Double-click the `kur.bat` file. 
+Double-click the `installation.bat` file. 
 * This will automatically create an isolated Python Virtual Environment (`venv`) so it doesn't mess with your computer's global Python settings. 
 * It will download all necessary packages (PyTorch, FastAPI, etc.). *Note: This may take 5-15 minutes depending on your internet speed.*
 
 **Step 3: Launch the App**
-Double-click the `baslat.bat` file.
+Double-click the `Start.bat` file.
 * This will start the local server. A terminal window will open—leave it running in the background.
 * Open your web browser and go to: `http://localhost:8000`
 
 **Step 4: Clean Uninstall (Optional)**
-If you ever want to completely remove G-Toolbox and reclaim your disk space, do not just delete the folder! Double-click `kaldir.bat`.
+If you ever want to completely remove G-Toolbox and reclaim your disk space, do not just delete the folder! Double-click `DELETE.bat`.
 * This will safely delete the virtual environment AND locate the hidden AI model cache files (which can be gigabytes in size) stored deep in your Windows user folders, ensuring a 100% clean removal.
