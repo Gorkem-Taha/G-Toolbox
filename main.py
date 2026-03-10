@@ -23,7 +23,7 @@ from typing import List
 import zipfile
 import urllib.request
 
-GITHUB_REPO_URL = "https://github.com/KULLANICI_ADIN/REPO_ADIN/archive/refs/heads/main.zip"
+GITHUB_REPO_URL = "https://github.com/Gorkem-Taha/G-Toolbox/archive/refs/heads/main.zip"
 
 try:
     from simple_lama_inpainting import SimpleLama

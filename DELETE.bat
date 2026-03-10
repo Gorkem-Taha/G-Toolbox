@@ -1,5 +1,5 @@
 @echo off
-title VIP Swiss Army Knife - Uninstaller and Cleaner
+title G-Toolbox - Uninstaller and Cleaner
 color 4f
 echo WARNING: This process will delete the project, all downloaded libraries, and AI models from your computer!
 pause
