@@ -87,14 +87,14 @@ You can either download this repository as a **`.zip`** file and extract it to y
 ```bash
 git clone [https://github.com/Gorkem-Taha/G-Toolbox.git](https://github.com/Gorkem-Taha/G-Toolbox.git)
 ```
-⚙️ Step 2: Install Dependencies
+### ⚙️ Step 2: Install Dependencies
 Navigate to the extracted folder and double-click the installation.bat file.
 
 🛡️ Isolated Environment: It automatically creates a Python Virtual Environment (venv) to ensure it never interferes with your computer's global system settings.
 
 ⏳ Patience is Key: It will download massive AI frameworks (like PyTorch and FastAPI). Depending on your internet speed, this may take 5-15 minutes. Grab a coffee!
 
-🚀 Step 3: Launch the App
+### 🚀 Step 3: Launch the App
 Double-click the Start.bat file.
 
 A black terminal window will appear, booting up the local AI server. Leave this window running in the background.
@@ -102,8 +102,8 @@ A black terminal window will appear, booting up the local AI server. Leave this 
 Open your favorite web browser and navigate to your private, offline workspace:
 👉 http://localhost:8000
 
-🧹 Step 4: Clean Uninstall (Optional)
+### 🧹 Step 4: Clean Uninstall (Optional)
 If you ever want to completely remove G-Toolbox and reclaim your disk space, DO NOT just delete the project folder! Instead, double-click the DELETE.bat file.
 
-🗑️ Deep Clean: This script acts as a smart uninstaller. It safely removes the virtual environment AND hunts down the hidden AI model cache files (which can consume gigabytes of hidden space) stored deep within your Windows user folders, ensuring a 100% clean removal.
+    🗑️ Deep Clean: This script acts as a smart uninstaller. It safely removes the virtual environment AND hunts down the hidden AI model cache files (which can consume gigabytes of hidden space) stored deep within your Windows user folders, ensuring a 100% clean removal.
 
