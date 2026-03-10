@@ -68,14 +68,14 @@ Because G-Toolbox runs actual AI models locally, your hardware dictates the proc
 * **Processor (CPU):** Intel Core i3 / i5 (8th Gen+) or AMD Ryzen 3
 * **Memory (RAM):** 8 GB (Expect high usage during AI tasks)
 * **Graphics:** Integrated Graphics (Intel HD / AMD Vega)
-* **Storage:** 10 GB free space (For environments and AI models)
+* **Storage:** 5 GB free space (For environments and AI models)
 
 ### 🚀 Recommended Requirements (Runs on GPU - Lightning Fast)
 * **OS:** Windows 10 / Windows 11 (64-bit)
 * **Processor (CPU):** Intel Core i5 / i7 (10th Gen+) or AMD Ryzen 5 / 7
 * **Memory (RAM):** 16 GB or higher
 * **Graphics (GPU):** **NVIDIA GPU** (GTX 1660, RTX 2060, RTX 3050 or better) with at least 4GB+ VRAM. *CUDA acceleration is automatically detected and utilized.*
-* **Storage:** SSD with 15 GB free space.
+* **Storage:** SSD with 10 GB free space.
 
 ---
 
