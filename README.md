@@ -86,6 +86,7 @@ Because G-Toolbox runs actual AI models locally, your hardware dictates the proc
 You can either download this repository as a **`.zip`** file and extract it to your desired folder, or clone it directly via terminal:
 ```bash
 git clone [https://github.com/Gorkem-Taha/G-Toolbox.git](https://github.com/Gorkem-Taha/G-Toolbox.git)
+```
 ⚙️ Step 2: Install Dependencies
 Navigate to the extracted folder and double-click the installation.bat file.
 
@@ -105,4 +106,4 @@ Open your favorite web browser and navigate to your private, offline workspace:
 If you ever want to completely remove G-Toolbox and reclaim your disk space, DO NOT just delete the project folder! Instead, double-click the DELETE.bat file.
 
 🗑️ Deep Clean: This script acts as a smart uninstaller. It safely removes the virtual environment AND hunts down the hidden AI model cache files (which can consume gigabytes of hidden space) stored deep within your Windows user folders, ensuring a 100% clean removal.
-```
+
