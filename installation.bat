@@ -1,16 +1,43 @@
 @echo off
-title VIP Swiss Army Knife - Setup
-echo Welcome to the VIP Swiss Army Knife Setup!
+CD /D %~dp0
+setlocal
+title G-Toolbox - Setup
+
+python --version >nul 2>&1
+if %errorlevel% neq 0 (
+    echo [ERROR] Python is not installed or not in PATH!
+    echo Please install Python and check 'Add to PATH' option.
+    pause
+    exit
+)
+
+echo ==================================================
+echo    Welcome to G-Toolbox Setup
+echo ==================================================
 echo.
-echo Step 1: Creating virtual environment (Sandbox)...
-python -m venv venv
+
+if exist venv (
+    echo [INFO] Virtual environment already exists.
+) else (
+    echo [STEP 1] Creating virtual environment...
+    python -m venv venv
+)
+
+call venv\Scripts\activate.bat
 
 echo.
-echo Step 2: Downloading libraries and AI requirements...
-echo Please wait (This may take 5-10 minutes depending on your internet speed)...
-call venv\Scripts\activate.bat
+echo [STEP 2] Choose engine:
+echo 1) CPU Mode
+echo 2) GPU Mode
+echo 3) Skip
+echo.
+set /p choice="Enter (1/2/3): "
+
+if "%choice%"=="1" pip install "rembg[cpu]"
+if "%choice%"=="2" pip install "rembg[gpu]"
+
+echo [STEP 3] Installing requirements...
 pip install -r requirements.txt
 
-echo.
-echo Setup completed successfully! You can now run the project using 'baslat.bat'.
+echo Setup finished!
 pause
