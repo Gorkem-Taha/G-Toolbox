@@ -31,7 +31,7 @@ In a world where every SaaS application uploads your private documents and photo
 *Real-time progress bars and seamless AI integration.*
 
 ---
-## 🚀 The Arsenal (Detailed Tool Descriptions)
+## 🚀 Detailed Tool Descriptions
 
 ### 1. 🌌 AI Image Upscaler (Super Resolution)
 Upscale low-resolution or blurry images to stunning 4K quality without losing detail, powered by the **Real-ESRGAN** model.
@@ -78,24 +78,30 @@ Because G-Toolbox runs actual AI models locally, your hardware dictates the proc
 * **Storage:** SSD with 15 GB free space.
 
 ---
-
 ## 🛠️ Installation Guide (One-Click Setup)
 
-Forget complicated command lines. G-Toolbox comes with automated setup scripts.
+> Forget complicated command lines and paths. G-Toolbox comes with fully automated, foolproof setup scripts designed specifically for Windows environments.
 
-**Step 1: Download the Project**
-Clone this repository or download it as a ZIP file and extract it to a folder on your PC.
+### 📦 Step 1: Download the Project
+You can either download this repository as a **`.zip`** file and extract it to your desired folder, or clone it directly via terminal:
+```bash
+git clone [https://github.com/Gorkem-Taha/G-Toolbox.git](https://github.com/Gorkem-Taha/G-Toolbox.git)
+⚙️ Step 2: Install Dependencies
+Navigate to the extracted folder and double-click the installation.bat file.
 
-**Step 2: Install Dependencies**
-Double-click the `installation.bat` file. 
-* This will automatically create an isolated Python Virtual Environment (`venv`) so it doesn't mess with your computer's global Python settings. 
-* It will download all necessary packages (PyTorch, FastAPI, etc.). *Note: This may take 5-15 minutes depending on your internet speed.*
+🛡️ Isolated Environment: It automatically creates a Python Virtual Environment (venv) to ensure it never interferes with your computer's global system settings.
 
-**Step 3: Launch the App**
-Double-click the `Start.bat` file.
-* This will start the local server. A terminal window will open—leave it running in the background.
-* Open your web browser and go to: `http://localhost:8000`
+⏳ Patience is Key: It will download massive AI frameworks (like PyTorch and FastAPI). Depending on your internet speed, this may take 5-15 minutes. Grab a coffee!
 
-**Step 4: Clean Uninstall (Optional)**
-If you ever want to completely remove G-Toolbox and reclaim your disk space, do not just delete the folder! Double-click `DELETE.bat`.
-* This will safely delete the virtual environment AND locate the hidden AI model cache files (which can be gigabytes in size) stored deep in your Windows user folders, ensuring a 100% clean removal.
+🚀 Step 3: Launch the App
+Double-click the Start.bat file.
+
+A black terminal window will appear, booting up the local AI server. Leave this window running in the background.
+
+Open your favorite web browser and navigate to your private, offline workspace:
+👉 http://localhost:8000
+
+🧹 Step 4: Clean Uninstall (Optional)
+If you ever want to completely remove G-Toolbox and reclaim your disk space, DO NOT just delete the project folder! Instead, double-click the DELETE.bat file.
+
+🗑️ Deep Clean: This script acts as a smart uninstaller. It safely removes the virtual environment AND hunts down the hidden AI model cache files (which can consume gigabytes of hidden space) stored deep within your Windows user folders, ensuring a 100% clean removal.
