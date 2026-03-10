@@ -280,13 +280,11 @@ function i18n(key) {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-    // ── Global refs ──────────────────────────────────────────
     const spinner = document.getElementById("spinner");
     const toastContainer = document.getElementById("toast-container");
     const pageTitle = document.getElementById("page-title");
     const pageSubtitle = document.getElementById("page-subtitle");
 
-    // YENİ: Global Progress Bar Refs
     const globalProgressContainer = document.getElementById("global-progress-container");
     const globalProgressBar = document.getElementById("global-progress-bar");
     const globalProgressMessage = document.getElementById("global-progress-message");
@@ -343,11 +341,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // ── Format maps ──────────────────────────────────────────
-
-    // ═══════════════════════════════════════════════════════════
-    //  SIDEBAR NAVİGASYON
-    // ═══════════════════════════════════════════════════════════
+    // SIDEBAR NAVIGATION
     const sidebarItems = document.querySelectorAll(".sidebar-item[data-tool]");
     const toolPages = document.querySelectorAll(".tool-page");
 
@@ -400,24 +394,18 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    // ═══════════════════════════════════════════════════════════
-    //  GÖRÜNÜM DEĞİŞTİRME (VIEW SWITCHING: HOME <-> APP)
-    // ═══════════════════════════════════════════════════════════
     const homeView = document.getElementById("home-view");
     const appView = document.getElementById("app-view");
     const btnGoHome = document.getElementById("btn-go-home");
     const btnGoTools = document.querySelectorAll(".btn-go-tool");
 
-    // Ana Sayfadan (Home) Araçlara Geçiş
     btnGoTools.forEach((btn) => {
         btn.addEventListener("click", () => {
             const targetTool = btn.dataset.target;
 
-            // Görünüm: Home gizle, App göster
             homeView.classList.add("hidden");
             appView.classList.remove("hidden");
 
-            // İlgili aracı aktifleştir (simüle tık)
             const sidebarBtn = document.querySelector(`.sidebar-item[data-tool="${targetTool}"]`);
             if (sidebarBtn) {
                 sidebarBtn.click();
@@ -425,20 +413,14 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    // Araçlardan (App) Ana Sayfaya (Home) Dönüş
     if (btnGoHome) {
         btnGoHome.addEventListener("click", () => {
-            // Görünüm: App gizle, Home göster
             appView.classList.add("hidden");
             homeView.classList.remove("hidden");
 
-            // Seçili araç işaretini kaldırma (isteğe bağlı)
             document.querySelector(".sidebar-item.active")?.classList.remove("active");
         });
     }
-    // ═══════════════════════════════════════════════════════════
-    //  SAYFA 2: EVRENSEL DÖNÜŞTÜRÜCÜ (UNIVERSAL CONVERTER)
-    // ═══════════════════════════════════════════════════════════
     const UNIVERSAL_FORMATS = {
         image: {
             title: "Görseller",
@@ -495,11 +477,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     };
 
-    // ═══════════════════════════════════════════════════════════
-    //  SAYFA 2: EVRENSEL DÖNÜŞTÜRÜCÜ (UNIVERSAL CONVERTER)
-    // ═══════════════════════════════════════════════════════════
-
-    // Geniş Kapsamlı Dönüşüm Haritası
+    // Conversion Matrix
     const conversionMap = {
         // IMAGE to ...
         'png': ['jpg', 'jpeg', 'webp', 'gif', 'bmp', 'tiff', 'ico', 'svg'],
@@ -532,7 +510,6 @@ document.addEventListener("DOMContentLoaded", () => {
         'xlsx': ['csv']
     };
 
-    // UI Format Gösterim Detayları
     const formatDisplay = {
         'png': { label: "PNG", icon: "fa-image" },
         'jpg': { label: "JPG", icon: "fa-image" },
@@ -577,7 +554,6 @@ document.addEventListener("DOMContentLoaded", () => {
     let universalSourceExt = null;
     let universalSelectedFormatTo = null;
 
-    // Sürükle bırak / tıklama olaylarını bağla
     setupDropZone(dropUniversal, inputUniversal, handleUniFile, (e) => {
         if (e.target.closest("#btn-universal-clear") || e.target.closest("#info-universal")) return true;
     });
@@ -589,13 +565,10 @@ document.addEventListener("DOMContentLoaded", () => {
         infoUniName.textContent = file.name;
         infoUniSize.textContent = formatBytes(file.size);
 
-        // Uygun format mı kontrol et
         if (conversionMap[ext] && conversionMap[ext].length > 0) {
             universalSourceExt = ext;
             infoUniIcon.className = `fa-solid ${formatDisplay[ext] ? formatDisplay[ext].icon : 'fa-file'} file-info-icon text-purple-400`;
             infoUniversal.classList.add("visible");
-
-            // Sütunu ve formatları aç
             colTo.classList.remove("hidden");
             renderTargetList(searchTo.value);
 
@@ -643,19 +616,15 @@ document.addEventListener("DOMContentLoaded", () => {
             `;
 
             btn.addEventListener("click", () => {
-                // Tüm butonlardan aktif sınıfını kaldır
                 listTo.querySelectorAll(".uni-format-btn").forEach(b => {
                     b.classList.remove("ring-2", "ring-purple-500", "bg-purple-500/20", "text-white", "border-transparent");
                     b.querySelector('i').classList.replace("text-purple-400", "text-gray-400");
                 });
 
-                // Bu butonu aktif yap
                 btn.classList.add("ring-2", "ring-purple-500", "bg-purple-500/20", "text-white", "border-transparent");
                 btn.querySelector('i').classList.replace("text-gray-400", "text-purple-400");
 
                 universalSelectedFormatTo = ext;
-
-                // Sihirli butonu göster
                 btnUniConvert.classList.remove("hidden");
                 btnUniConvert.classList.remove("opacity-50", "pointer-events-none");
             });
@@ -664,10 +633,8 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // Arama dinleyicisi
     searchTo.addEventListener("input", (e) => renderTargetList(e.target.value));
 
-    // Temizle Butonu
     btnUniversalClear.addEventListener("click", resetUniversalConverter);
 
     function resetUniversalConverter() {
@@ -682,26 +649,18 @@ document.addEventListener("DOMContentLoaded", () => {
         listTo.innerHTML = "";
         searchTo.value = "";
 
-        // Butonu eski haline al
-        btnUniConvert.disabled = false;
-        btnUniConvert.querySelector('span').textContent = i18n('btn_start_conversion');
-        btnUniConvert.querySelector('i').className = "fa-solid fa-wand-magic-sparkles text-xl group-hover:animate-pulse text-gold-light";
-
-        // Spinner'ı gizle (güvenlik için)
         if (typeof spinner !== 'undefined' && spinner) {
             spinner.classList.remove("visible");
         }
     }
 
-    // Sihirli Dönüşüm Gerçek İstek
+    // Process Universal Conversion Request
     btnUniConvert.addEventListener("click", () => {
         if (!universalSelectedFile || !universalSelectedFormatTo) return;
 
-        // İşlem animasyonu
         btnUniConvert.disabled = true;
         btnUniConvert.querySelector('span').textContent = i18n('converting');
         btnUniConvert.querySelector('i').className = "fa-solid fa-circle-notch fa-spin text-white text-xl";
-        // spinner.classList.add("visible"); // Artık spinner yerine progress kullanacağız
 
         const taskId = generateTaskId();
         startGlobalProgress(taskId);
@@ -725,7 +684,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 return response.blob();
             })
             .then(blob => {
-                // Dosyayı indir
                 const sourceName = universalSelectedFile.name.replace(/\.[^.]+$/, "");
                 const outName = `${sourceName}.${universalSelectedFormatTo}`;
                 downloadBlob(blob, outName);
@@ -737,16 +695,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 stopGlobalProgress(false);
                 showToast("error", `⚠️ ${err.message}`);
 
-                // Butonu eski haline al
-                btnUniConvert.disabled = false;
-                btnUniConvert.querySelector('span').textContent = i18n('btn_start_conversion');
-                btnUniConvert.querySelector('i').className = "fa-solid fa-wand-magic-sparkles text-xl group-hover:animate-pulse text-gold-light";
             });
     });
 
-    // ═══════════════════════════════════════════════════════════
-    //  SAYFA 3: SİHİRLİ SİLGİ (MAGIC ERASER)
-    // ═══════════════════════════════════════════════════════════
+    // MAGIC ERASER
     const magicDropZone = document.getElementById("drop-zone-magic");
     const magicInput = document.getElementById("file-input-magic");
     const magicDropContainer = document.getElementById("magic-drop-container");
@@ -950,7 +902,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
                             const sourceName = magicOriginalFile.name.replace(/\.[^.]+$/, "");
 
-                            // Orijinal dosya gibi devame debilmesi için blob'dan File oluşturuyoruz
+                            // Convert Blob to File to allow further user edits
                             magicOriginalFile = new File([blob], `${sourceName}_erased.png`, { type: blob.type });
 
                             downloadBlob(blob, `${sourceName}_erased.png`);
@@ -973,9 +925,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // ═══════════════════════════════════════════════════════════
-    //  SAYFA X: IMAGE UPSCALER
-    // ═══════════════════════════════════════════════════════════
+    // IMAGE UPSCALER
     const dropUpscale = document.getElementById("drop-zone-upscale");
     const inputUpscale = document.getElementById("file-input-upscale");
     const infoUpscale = document.getElementById("info-upscale");
@@ -987,11 +937,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const upscaleOptions = document.querySelectorAll(".upscale-option-btn");
 
     let upscaleFile = null;
-    let selectedScale = 2; // Varsayılan scale
+    let selectedScale = 2; // Default scale
 
     if (dropUpscale) {
         setupDropZone(dropUpscale, inputUpscale, handleUpscaleFile, (e) => {
-            if (e.target.closest("#upscale-panel")) return true; // Panele tıklanırsa dosya seçimini tetikleme
+            if (e.target.closest("#upscale-panel")) return true; // Do not trigger file dialog when clicking inside panel
         });
     }
 
@@ -1019,7 +969,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     upscaleOptions.forEach(btn => {
         btn.addEventListener("click", () => {
-            // Aktif sınıfları temizle
             upscaleOptions.forEach(b => {
                 b.classList.remove("ring-2", "ring-purple-500", "bg-black/40");
                 b.classList.add("border-white/5", "bg-white/5");
@@ -1030,7 +979,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             });
 
-            // Seçileni aktif yap
             btn.classList.add("ring-2", "ring-purple-500", "bg-black/40");
             btn.classList.remove("border-white/5", "bg-white/5");
             const btnIcon = btn.querySelector("i");
@@ -1047,7 +995,6 @@ document.addEventListener("DOMContentLoaded", () => {
         btnUpscaleApply.addEventListener("click", () => {
             if (!upscaleFile) return;
 
-            // İşlem animasyonu
             btnUpscaleApply.disabled = true;
             btnUpscaleApply.querySelector('span').textContent = i18n('erasing_ai');
             btnUpscaleApply.querySelector('i').className = "fa-solid fa-circle-notch fa-spin text-white text-xl";
@@ -1077,7 +1024,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     return response.blob();
                 })
                 .then(blob => {
-                    // Dosyayı indir
                     const sourceName = upscaleFile.name.replace(/\.[^.]+$/, "");
                     const ext = upscaleFile.name.split('.').pop() || 'png';
                     const outName = `${sourceName}_upscaled_${selectedScale}x.${ext}`;
@@ -1085,7 +1031,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     stopGlobalProgress(true, i18n('completed'));
                     showToast("success", `🎉 ${i18n('pixel_upscale_success')} — ${outName}`);
 
-                    // Durumu sıfırla
                     btnUpscaleApply.disabled = false;
                     btnUpscaleApply.querySelector('span').textContent = i18n('btn_start_upscale');
                     btnUpscaleApply.querySelector('i').className = "fa-solid fa-wand-magic-sparkles text-xl group-hover:animate-pulse text-gold-light";
@@ -1102,9 +1047,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // ═══════════════════════════════════════════════════════════
-    //  SAYFA 4: ARKA PLAN SİLİCİ
-    // ═══════════════════════════════════════════════════════════
+    // BACKGROUND REMOVER
     const dropBg = document.getElementById("drop-zone-bg");
     const inputBg = document.getElementById("file-input-bg");
     const progBg = document.getElementById("progress-bg");
@@ -1126,7 +1069,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     function handleBgFile(file) {
-        // Sadece resim kabul et
         if (!file.type.startsWith("image/")) {
             showToast("error", `⚠️ ${i18n('select_image_error')}`);
             return;
@@ -1138,14 +1080,12 @@ document.addEventListener("DOMContentLoaded", () => {
         infoBgSize.textContent = formatBytes(file.size);
         infoBg.classList.add("visible");
 
-        // Önizleme göster
         const reader = new FileReader();
         reader.onload = (e) => {
             previewOrig.src = e.target.result;
         };
         reader.readAsDataURL(file);
 
-        // Panel göster, sonucu sıfırla
         bgPanel.classList.remove("hidden");
         previewResult.classList.add("hidden");
         previewResult.src = "";
@@ -1171,11 +1111,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
         progBg.classList.add("visible");
         barBg.style.width = "0%";
-        // spinner.classList.add("visible"); // global progress bar var artık
         btnRemoveBg.disabled = true;
-        btnRemoveBg.innerHTML = `<div class="spinner visible" style="width:18px;height:18px;border-width:2px;display:inline-block"></div><span>İşleniyor…</span>`;
+        btnRemoveBg.innerHTML = `<div class="spinner visible" style="width:18px;height:18px;border-width:2px;display:inline-block"></div><span>Processing...</span>`;
 
-        // AI processing overlay göster
         aiProcessing.classList.remove("hidden");
 
         xhr.responseType = "blob";
@@ -1193,9 +1131,8 @@ document.addEventListener("DOMContentLoaded", () => {
             aiProcessing.classList.add("hidden");
 
             if (xhr.status === 200) {
-                // Sonucu önizleme olarak göster
                 const blob = xhr.response;
-                // Önceki blob URL'yi serbest bırak (memory leak önleme)
+                // Revoke previous blob URL to prevent memory leaks
                 if (previewResult.src && previewResult.src.startsWith("blob:")) {
                     URL.revokeObjectURL(previewResult.src);
                 }
@@ -1204,7 +1141,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 previewResult.classList.remove("hidden");
                 resultPlaceh.classList.add("hidden");
 
-                // Otomatik indir
                 const stem = file.name.replace(/\.[^.]+$/, "");
                 downloadBlob(blob, `${stem}_nobg.png`);
 
@@ -1214,8 +1150,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 stopGlobalProgress(false);
                 readBlobError(xhr.response);
             }
-
-            // Kısmi reset
             setTimeout(() => {
                 progBg.classList.remove("visible");
                 barBg.style.width = "0%";
@@ -1238,9 +1172,6 @@ document.addEventListener("DOMContentLoaded", () => {
         xhr.send(fd);
     }
 
-    // ═══════════════════════════════════════════════════════════
-    //  SAYFA 4: VİDEO İNDİRİCİ
-    // ═══════════════════════════════════════════════════════════
     const videoUrlInput = document.getElementById("video-url-input");
     const btnFetchInfo = document.getElementById("btn-fetch-info");
     const fetchLoading = document.getElementById("video-fetch-loading");
@@ -1256,7 +1187,6 @@ document.addEventListener("DOMContentLoaded", () => {
     let currentVideoUrl = "";
     let selectedVideoFormat = "best";
 
-    // Ikon haritası — çözünürlüğe göre ikon
     function _resolutionIcon(h) {
         if (h >= 2160) return "fa-crown";
         if (h >= 1440) return "fa-star";
@@ -1273,16 +1203,11 @@ document.addEventListener("DOMContentLoaded", () => {
         return `${h}p`;
     }
 
-    /**
-     * Dinamik çözünürlük + MP3 chip'lerini oluşturur.
-     */
     function buildVideoFormatChips(resolutions) {
         videoFormatChips.innerHTML = "";
 
-        // Düşük çözünürlükleri filtrele (< 240p storyboard/thumbnail olabilir)
         const filtered = resolutions.filter(h => h >= 240);
 
-        // 1) "En İyi Kalite" — her zaman mevcut, varsayılan seçili
         const bestChip = document.createElement("button");
         bestChip.className = "format-chip selected";
         bestChip.dataset.format = "best";
@@ -1294,7 +1219,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
         videoFormatChips.appendChild(bestChip);
 
-        // 2) Çözünürlük chip'leri (büyükten küçüğe)
         filtered.forEach((h) => {
             const chip = document.createElement("button");
             chip.className = "format-chip";
@@ -1308,7 +1232,6 @@ document.addEventListener("DOMContentLoaded", () => {
             videoFormatChips.appendChild(chip);
         });
 
-        // 3) MP3 (Sadece Ses) chip'i
         const mp3Chip = document.createElement("button");
         mp3Chip.className = "format-chip";
         mp3Chip.dataset.format = "mp3";
@@ -1320,11 +1243,9 @@ document.addEventListener("DOMContentLoaded", () => {
         });
         videoFormatChips.appendChild(mp3Chip);
 
-        // Varsayılan: En İyi Kalite
         selectedVideoFormat = "best";
     }
 
-    // Enter tuşu ile de bilgi getirebilsin
     videoUrlInput.addEventListener("keydown", (e) => {
         if (e.key === "Enter") {
             e.preventDefault();
@@ -1332,7 +1253,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // ── Bilgileri Getir ────────────────────────────────────────
     btnFetchInfo.addEventListener("click", async () => {
         const url = videoUrlInput.value.trim();
         if (!url) {
@@ -1340,7 +1260,6 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        // UI durumu: yükleniyor
         btnFetchInfo.disabled = true;
         fetchLoading.classList.remove("hidden");
         videoInfoPanel.classList.add("hidden");
@@ -1360,18 +1279,15 @@ document.addEventListener("DOMContentLoaded", () => {
                 return;
             }
 
-            // Bilgileri göster
             currentVideoUrl = url;
             videoThumbnail.src = data.thumbnail || "";
             videoDuration.textContent = data.duration || "";
             videoTitle.textContent = data.title || i18n('unknown');
             videoUploader.textContent = data.uploader ? `📺 ${data.uploader}` : "";
 
-            // Dinamik çözünürlük chip'lerini oluştur
             const resolutions = data.resolutions || [];
             buildVideoFormatChips(resolutions);
 
-            // Paneli göster
             videoInfoPanel.classList.remove("hidden");
             showToast("success", `✅ ${i18n('fetch_success')}`);
 
@@ -1384,21 +1300,18 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // ── İndirmeyi Başlat (Yeni: 3 aşamalı sistem) ────────────────
     btnDownloadVideo.addEventListener("click", async () => {
         if (!currentVideoUrl) {
             showToast("error", "⚠️ Önce video bilgilerini getirin.");
             return;
         }
 
-        // UI durumu: indiriliyor
         btnDownloadVideo.disabled = true;
         btnDownloadVideo.innerHTML = `<div class="spinner visible" style="width:18px;height:18px;border-width:2px;display:inline-block"></div><span>Başlatılıyor…</span>`;
         downloadLoading.classList.remove("hidden");
         spinner.classList.add("visible");
 
         try {
-            // ── Aşama 1: İndirmeyi arka planda başlat ────────────
             const startRes = await fetch("/start-download", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -1419,14 +1332,11 @@ document.addEventListener("DOMContentLoaded", () => {
             const taskId = startData.task_id;
             btnDownloadVideo.innerHTML = `<div class="spinner visible" style="width:18px;height:18px;border-width:2px;display:inline-block"></div><span>İndiriliyor… %0</span>`;
 
-            // ── Aşama 2: Durumu yokla (polling) ──────────────────
             const downloadResult = await pollDownloadStatus(taskId);
 
             if (downloadResult.status === "done") {
-                // ── Aşama 3: Dosyayı tarayıcıda doğrudan indir ──
                 btnDownloadVideo.innerHTML = `<div class="spinner visible" style="width:18px;height:18px;border-width:2px;display:inline-block"></div><span>Dosya hazırlanıyor…</span>`;
 
-                // Tarayıcının native indirme mekanizmasını kullan (RAM'e yüklemez!)
                 const a = document.createElement("a");
                 a.href = `/download-file/${taskId}`;
                 a.download = downloadResult.filename || "video.mp4";
@@ -1446,10 +1356,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    /**
-     * İndirme durumunu her 800ms'de bir sorgular.
-     * İndirme bitene veya hata oluşana kadar devam eder.
-     */
     async function pollDownloadStatus(taskId) {
         const loadingText = downloadLoading.querySelector("p.text-sm");
 
@@ -1464,7 +1370,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     return { status: "error", error: data.message };
                 }
 
-                // UI güncelle
                 const pct = data.progress || 0;
                 const speedInfo = data.speed ? ` · ${data.speed}` : "";
 
@@ -1478,13 +1383,11 @@ document.addEventListener("DOMContentLoaded", () => {
                     }
                 }
 
-                // Tamamlandı veya hata
                 if (data.status === "done") {
                     return { status: "done", filename: data.filename };
                 } else if (data.status === "error") {
                     return { status: "error", error: data.error };
                 }
-                // "downloading" ise devam et...
 
             } catch (e) {
                 return { status: "error", error: "Sunucu bağlantısı kesildi." };
@@ -1499,13 +1402,6 @@ document.addEventListener("DOMContentLoaded", () => {
         spinner.classList.remove("visible");
     }
 
-    // (PDF Araçları bölümü kaldırıldı)
-
-
-
-    // ═══════════════════════════════════════════════════════════
-    //  SAYFA : DOSYA KASASI (FILE VAULT)
-    // ═══════════════════════════════════════════════════════════
     const dropVault = document.getElementById("drop-zone-vault");
     const inputVaultMulti = document.getElementById("file-input-vault-multi");
     const inputVaultDir = document.getElementById("file-input-vault-dir");
@@ -1605,7 +1501,6 @@ document.addEventListener("DOMContentLoaded", () => {
         vaultPanel.classList.add("flex");
     }
 
-    // Gelen input değişiminde
     if (inputVaultMulti) {
         inputVaultMulti.addEventListener("change", (e) => { addVaultFiles(e.target.files); });
     }
@@ -1613,10 +1508,8 @@ document.addEventListener("DOMContentLoaded", () => {
         inputVaultDir.addEventListener("change", (e) => { addVaultFiles(e.target.files); });
     }
 
-    // DropZone tıklama - moda göre input'u tetikle
     if (dropVault) {
         dropVault.addEventListener("click", (e) => {
-            // Eger clear butonuna veya information a tiklandiysa tetikleme
             if (e.target.closest("#btn-vault-clear") || e.target.closest("#info-vault") || e.target.tagName.toLowerCase() === 'input') {
                 return;
             }
@@ -1686,7 +1579,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 fd.append("files", f, path);
             });
         } else {
-            // decrypt genelde 1 dosya oldugundan
             fd.append("file", vaultFiles[0], vaultFiles[0].name);
         }
         fd.append("password", pwd);
@@ -1756,11 +1648,10 @@ document.addEventListener("DOMContentLoaded", () => {
     // ═══════════════════════════════════════════════════════════
 
     /**
-     * Bir drop-zone elemanına drag-drop ve click olaylarını bağlar.
-     * @param {HTMLElement} zone - Drop zone container
-     * @param {HTMLInputElement} input - File input element
-     * @param {Function} onFile - Dosya seçildiğinde çağrılacak callback
-     * @param {Function} [clickGuard] - Tıklamayı engelleri kontrol eden fn (true döndürürse tıklama engellenir)
+     * @param {HTMLElement} zone 
+     * @param {HTMLInputElement} input 
+     * @param {Function} onFile 
+     * @param {Function} [clickGuard]
      */
     function setupDropZone(zone, input, onFile, clickGuard) {
         zone.addEventListener("click", (e) => {
@@ -1784,7 +1675,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    /** Blob'u indir */
     function downloadBlob(blob, filename) {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
@@ -1796,7 +1686,6 @@ document.addEventListener("DOMContentLoaded", () => {
         URL.revokeObjectURL(url);
     }
 
-    /** Hata blob'unu oku ve toast göster */
     function readBlobError(blob) {
         const reader = new FileReader();
         reader.onload = () => {
@@ -1810,7 +1699,6 @@ document.addEventListener("DOMContentLoaded", () => {
         reader.readAsText(blob);
     }
 
-    /** Toast bildirimi */
     window.showToast = function (type, message, title = "") {
         const toast = document.createElement("div");
         toast.className = `toast toast-${type}`;
@@ -1845,7 +1733,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }, 4000);
     }
 
-    /** Byte formatla */
     function formatBytes(bytes) {
         if (bytes === 0) return "0 B";
         const k = 1024;
@@ -1854,9 +1741,6 @@ document.addEventListener("DOMContentLoaded", () => {
         return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + units[i];
     }
 
-    // ═══════════════════════════════════════════════════════════
-    //  OTA UPDATE / SYNC
-    // ═══════════════════════════════════════════════════════════
     const btnSyncUpdate = document.getElementById("btn-sync-update");
     const updateModal = document.getElementById("update-modal");
 
@@ -1867,7 +1751,6 @@ document.addEventListener("DOMContentLoaded", () => {
             btnSyncUpdate.disabled = true;
             btnSyncUpdate.classList.add("opacity-50");
 
-            // Show global progress bar
             startGlobalProgress(taskId);
 
             try {
@@ -1883,7 +1766,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 stopGlobalProgress(response.ok, response.ok ? "Success" : "Error");
 
                 if (response.ok) {
-                    // Show success modal
                     updateModal.classList.remove("hidden");
                 } else {
                     showToast("error", `⚠️ ${data.message || 'Update failed'}`);

@@ -23,9 +23,7 @@ from typing import List
 import zipfile
 import urllib.request
 
-# ── OTA Update Yapılandırması ────────────────────────────────────
 GITHUB_REPO_URL = "https://github.com/KULLANICI_ADIN/REPO_ADIN/archive/refs/heads/main.zip"
-# ──────────────────────────────────────────────────────────────────
 
 try:
     from simple_lama_inpainting import SimpleLama
@@ -38,15 +36,14 @@ try:
     import numpy as np
     import torch
     
-    # ── HOTFIX: basicsr requires torchvision.transforms.functional_tensor ──
-    #  Which was removed in newer versions of torchvision.
+    # HOTFIX: basicsr requires torchvision.transforms.functional_tensor
+    # which was removed in newer versions of torchvision.
     import sys
     try:
         import torchvision.transforms.functional_tensor
     except ImportError:
         import torchvision.transforms.functional as functional
         sys.modules['torchvision.transforms.functional_tensor'] = functional
-    # ────────────────────────────────────────────────────────────────────────
     
     from basicsr.archs.rrdbnet_arch import RRDBNet
     from realesrgan import RealESRGANer
@@ -98,19 +95,16 @@ logger = logging.getLogger("uvicorn.error")
 
 
 def _safe_filename(raw: str) -> str:
-    """Dosya adından tehlikeli karakterleri ve path traversal denemelerini temizle."""
-    # Sadece dosya adını al (dizin bileşenlerini at)
+    """Sanitizes the filename by removing dangerous characters and path traversal attempts."""
     name = Path(raw).name
-    # Boşsa rastgele isim ver
     if not name or name.startswith("."):
         name = uuid.uuid4().hex
     return name
 
 def cleanup_files_and_memory(*filepaths):
-    """Verilen yollardaki dosyaları (eğer diskte mevcutlarsa) siler ve RAM'i temizler."""
+    """Safely deletes specified files from disk and triggers garbage collection to free up system memory and VRAM."""
     import gc
     
-    # 1) Diskteki dosyaları sil
     for path in filepaths:
         if path and os.path.exists(str(path)):
             try:
@@ -118,7 +112,6 @@ def cleanup_files_and_memory(*filepaths):
             except Exception as e:
                 logger.warning(f"Failed to delete file: {path} - Error: {e}")
                 
-    # 2) RAM ve GPU (VRAM) temizliği
     gc.collect()
     try:
         import torch
@@ -128,7 +121,6 @@ def cleanup_files_and_memory(*filepaths):
     except ImportError:
         pass
 
-# ── Dizin yapılandırması ─────────────────────────────────────────
 BASE_DIR = Path(__file__).resolve().parent
 UPLOAD_DIR = BASE_DIR / "uploads"
 DOWNLOAD_DIR = BASE_DIR / "downloads"
@@ -138,13 +130,12 @@ DOWNLOAD_DIR.mkdir(exist_ok=True)
 
 
 def _find_ffmpeg() -> str | None:
-    """Sistemde ffmpeg'in yerini bul. Bulursa dizin yolunu döner."""
-    # 1) PATH'te var mı?
+    """Locates the ffmpeg executable in the system PATH or known local directories."""
     ffmpeg_in_path = shutil.which("ffmpeg")
     if ffmpeg_in_path:
         return str(Path(ffmpeg_in_path).parent)
 
-    # 2) Bilinen konumlarda ara
+
     known_locations = [
         Path(r"C:\Program Files\ShareX\ffmpeg.exe"),
         Path(r"C:\Program Files (x86)\ShareX\ffmpeg.exe"),
@@ -165,13 +156,11 @@ if FFMPEG_DIR:
 else:
     logger.warning(
         "⚠️ ffmpeg not found! Video download (merge/convert) may not work. "
-        "Put ffmpeg.exe in the project directory or add it to PATH."
+        "Place ffmpeg.exe in the project directory or add it to PATH."
     )
 
-# ── FastAPI uygulaması ────────────────────────────────────────────
 app = FastAPI(title="G-Toolbox", version="4.0.0")
 
-# ── İlerleme Takibi ───────────────────────────────────────────────
 progress_store: dict[str, dict] = {}
 
 def update_progress(task_id: str, progress: int, message: str):
@@ -180,10 +169,9 @@ def update_progress(task_id: str, progress: int, message: str):
 
 @app.get("/progress/{task_id}")
 async def get_progress(task_id: str):
+    """Returns the current progress status for a given task ID."""
     return JSONResponse(content=progress_store.get(task_id, {"progress": 0, "message": ""}))
-# ──────────────────────────────────────────────────────────────────
 
-# Statik dosyalar ve şablonlar
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
@@ -201,24 +189,21 @@ MIME_MAP = {
     "video/mp4": "video", "video/x-msvideo": "video", "video/x-matroska": "video",
     "video/quicktime": "video", "video/webm": "video", "video/x-flv": "video",
     "video/x-ms-wmv": "video",
-    # Ses
     "audio/mpeg": "audio", "audio/wav": "audio", "audio/ogg": "audio",
     "audio/flac": "audio", "audio/aac": "audio", "audio/mp4": "audio",
     "audio/x-m4a": "audio", "audio/x-ms-wma": "audio",
 }
 
 
-
-
-# ── Ana sayfa ─────────────────────────────────────────────────────
 @app.get("/")
 async def index(request: Request):
+    """Renders the main application interface."""
     return templates.TemplateResponse("index.html", {"request": request})
 
 
-# ── Dosya yükleme endpoint'i ─────────────────────────────────────
 @app.post("/upload")
 async def upload_file(file: UploadFile = File(...)):
+    """Uploads a file to the temporary storage directory."""
     try:
         safe_name = _safe_filename(file.filename)
         dest = UPLOAD_DIR / safe_name
@@ -244,7 +229,6 @@ async def upload_file(file: UploadFile = File(...)):
         )
 
 
-# ── Medya dönüştürme endpoint'i ──────────────────────────────────
 @app.post("/convert")
 async def convert_file(
     file: UploadFile = File(...),
@@ -252,7 +236,8 @@ async def convert_file(
     background_tasks: BackgroundTasks = None,
     x_task_id: str = Header(None)
 ):
-    update_progress(x_task_id, 20, "Dosya yüklendi, işleme başlanıyor...")
+    """Handles standard media file conversions."""
+    update_progress(x_task_id, 20, "File uploaded, initializing conversion...")
     target_format = target_format.strip().lower().lstrip(".")
     uid = uuid.uuid4().hex[:8]
     safe_name = _safe_filename(file.filename)
@@ -289,14 +274,12 @@ async def convert_file(
         )
 
     try:
-        update_progress(x_task_id, 50, "Model is running (This may take a while)...")
+        update_progress(x_task_id, 50, "Model is executing. This process relies on CPU/GPU hardware and may take a moment...")
         if category == "image":
             _convert_image(str(src_path), str(out_path), target_format)
         else:
-            # video veya audio → ffmpeg-python
             _convert_media(str(src_path), str(out_path))
 
-        # Dosyayı content-disposition ile indirttirelim
         media_type = _guess_media_type(target_format)
         update_progress(x_task_id, 90, "Packaging results...")
         if background_tasks:
@@ -319,7 +302,6 @@ async def convert_file(
         )
 
 
-# ── Evrensel Dönüştürücü endpoint'i ──────────────────────────────────
 @app.post("/convert-universal")
 async def convert_universal(
     file: UploadFile = File(...),
@@ -327,15 +309,11 @@ async def convert_universal(
     background_tasks: BackgroundTasks = None,
     x_task_id: str = Header(None)
 ):
-    update_progress(x_task_id, 20, "Dosya yüklendi, işleme başlanıyor...")
+    """Handles universal format conversions across image, audio, and video types."""
+    update_progress(x_task_id, 20, "File uploaded, initializing conversion...")
     target_format = target_format.strip().lower().lstrip(".")
     uid = uuid.uuid4().hex[:8]
     safe_name = _safe_filename(file.filename)
-
-    # Gelen dosyayı uploads/ klasörüne kaydet
-    src_path = UPLOAD_DIR / f"uni_{uid}_{safe_name}"
-    with open(src_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
 
     stem = Path(safe_name).stem
     out_name = f"{stem}_{uid}.{target_format}"
@@ -347,15 +325,12 @@ async def convert_universal(
     videos_audios = {"mp4", "avi", "mkv", "mov", "webm", "flv", "wmv", "mp3", "wav", "ogg", "flac", "aac", "m4a", "wma"}
 
     try:
-        update_progress(x_task_id, 50, "Model çalışıyor (Bu işlem biraz sürebilir)...")
+        update_progress(x_task_id, 50, "Model is executing. This may take a while depending on file size...")
         if ext in images and target_format in images:
-            # Pillow ile resim dönüşümü
             _convert_image(str(src_path), str(out_path), target_format)
             
         elif ext in videos_audios and target_format in videos_audios:
-            # ffmpeg ile medya dönüşümü
             _convert_media(str(src_path), str(out_path))
-            
 
         else:
             cleanup_files_and_memory(src_path)
@@ -364,11 +339,11 @@ async def convert_universal(
                 content={"success": False, "message": "Unsupported universal conversion route."}
             )
 
-        update_progress(x_task_id, 90, "Sonuçlar paketleniyor...")
+        update_progress(x_task_id, 90, "Packaging results...")
         if background_tasks:
             background_tasks.add_task(cleanup_files_and_memory, src_path, out_path)
             
-        update_progress(x_task_id, 100, "Tamamlandı!")
+        update_progress(x_task_id, 100, "Completed!")
         return FileResponse(
             path=str(out_path),
             filename=out_name,
@@ -383,18 +358,16 @@ async def convert_universal(
         )
 
 
-# ── Arka plan kaldırma endpoint'i ─────────────────────────────────
 @app.post("/remove-background")
 async def remove_background(
     file: UploadFile = File(...),
     background_tasks: BackgroundTasks = None,
     x_task_id: str = Header(None)
 ):
-    update_progress(x_task_id, 20, "Dosya yüklendi, işleme başlanıyor...")
+    """Removes the background from images using the rembg AI model."""
+    update_progress(x_task_id, 20, "File uploaded, initializing process...")
     uid = uuid.uuid4().hex[:8]
     safe_name = _safe_filename(file.filename)
-
-    # Sadece resim kabul et
     mime = file.content_type or ""
     ext = Path(safe_name).suffix.lower().lstrip(".")
     is_image = mime.startswith("image/") or ext in IMAGE_EXTENSIONS
@@ -405,7 +378,6 @@ async def remove_background(
             content={"success": False, "message": "Only image files are accepted."},
         )
 
-    # Geçici olarak kaydet
     src_path = UPLOAD_DIR / f"{uid}_{safe_name}"
     with open(src_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
@@ -415,8 +387,7 @@ async def remove_background(
     out_path = DOWNLOAD_DIR / out_name
 
     try:
-        update_progress(x_task_id, 50, "Model çalışıyor (Bu işlem biraz sürebilir)...")
-        # PIL ile aç → rembg ile arka planı kaldır → PNG olarak kaydet
+        update_progress(x_task_id, 50, "AI model is executing. This process relies on CPU and GPU overhead...")
         img = Image.open(src_path)
         result = rembg_remove(img)
         result.save(str(out_path), format="PNG")
@@ -427,7 +398,7 @@ async def remove_background(
         else:
             cleanup_files_and_memory(src_path)
             
-        update_progress(x_task_id, 100, "Tamamlandı!")
+        update_progress(x_task_id, 100, "Completed!")
         return FileResponse(
             path=str(out_path),
             filename=out_name,
@@ -441,7 +412,6 @@ async def remove_background(
             content={"success": False, "message": f"Background removal error: {str(exc)}"},
         )
 
-# ── Sihirli Silgi (Magic Eraser) endpoint'i ────────────────────────
 @app.post("/magic-erase")
 async def magic_erase(
     image: UploadFile = File(...),
@@ -449,7 +419,8 @@ async def magic_erase(
     background_tasks: BackgroundTasks = None,
     x_task_id: str = Header(None)
 ):
-    update_progress(x_task_id, 20, "Dosya yüklendi, işleme başlanıyor...")
+    """Erases specified masked regions from an image using the LaMa inpainting model."""
+    update_progress(x_task_id, 20, "File uploaded, initializing process...")
     if not LAMA_AVAILABLE:
         return JSONResponse(
             status_code=500,
@@ -473,7 +444,7 @@ async def magic_erase(
         shutil.copyfileobj(mask.file, buffer)
 
     try:
-        update_progress(x_task_id, 50, "Model çalışıyor (Bu işlem biraz sürebilir)...")
+        update_progress(x_task_id, 50, "LaMa model is executing over the masked regions...")
         def process_lama():
             from simple_lama_inpainting import SimpleLama
             lama_model = SimpleLama()
@@ -492,7 +463,7 @@ async def magic_erase(
         else:
             cleanup_files_and_memory(img_path, mask_path)
             
-        update_progress(x_task_id, 100, "Tamamlandı!")
+        update_progress(x_task_id, 100, "Completed!")
         return FileResponse(
             path=str(out_path),
             filename=out_name,
@@ -539,7 +510,7 @@ async def upscale_image(
         update_progress(x_task_id, 50, "Model çalışıyor (Bu işlem biraz sürebilir)...")
         def process_upscale():
             upscaler = get_upscaler()
-            # Unicode yol sorunlarını çözmek için byte olarak okuyup decode ediyoruz
+            # Decode using raw bytes to bypass cv2 unicode limitations
             img_bytes = np.fromfile(str(src_path), np.uint8)
             img = cv2.imdecode(img_bytes, cv2.IMREAD_UNCHANGED)
             if img is None:
@@ -547,7 +518,7 @@ async def upscale_image(
             
             output, _ = upscaler.enhance(img, outscale=scale)
             
-            # Kaydederken de unicode sorununu çözmek için imencode ve tofile kullanıyoruz
+            # Encode and save via tofile to prevent Unicode save issues
             is_success, buffer = cv2.imencode(ext.lower() if ext else '.png', output)
             if is_success:
                 buffer.tofile(str(out_path))
@@ -556,14 +527,13 @@ async def upscale_image(
             
         await asyncio.to_thread(process_upscale)
         
-        update_progress(x_task_id, 90, "Sonuçlar paketleniyor...")
+        update_progress(x_task_id, 90, "Packaging results...")
         if background_tasks:
             background_tasks.add_task(cleanup_files_and_memory, src_path, out_path)
         else:
             cleanup_files_and_memory(src_path)
             
-        update_progress(x_task_id, 100, "Tamamlandı!")
-        # _guess_media_type yerine extension tabanlı mime kullanabiliriz veya sabit image/* dönebiliriz
+        update_progress(x_task_id, 100, "Completed!")
         return FileResponse(
             path=str(out_path),
             filename=out_name,
@@ -577,23 +547,21 @@ async def upscale_image(
         )
 
 
-# ── Video bilgi modeli ─────────────────────────────────────────
 class VideoURLRequest(BaseModel):
     url: str
 
 class VideoDownloadRequest(BaseModel):
     url: str
-    format_id: str   # "best", "worst", "mp3", veya çözünürlük: "360", "480", "720", "1080", "1440", "2160"
+    format_id: str
     title: str = "video"
 
 
-# ── İndirme görev takip sistemi ──────────────────────────────
-# Bellek içi görev deposu: {task_id: {status, progress, filename, error, ...}}
+# In-memory download task tracker
 _download_tasks: dict[str, dict] = {}
 
 
 def _ytdlp_progress_hook(task_id: str):
-    """yt-dlp ilerleme callback'i — görev ilerlemesini günceller."""
+    """Callback function to report yt-dlp download progress."""
     def hook(d):
         task = _download_tasks.get(task_id)
         if not task:
@@ -602,18 +570,18 @@ def _ytdlp_progress_hook(task_id: str):
             total = d.get("total_bytes") or d.get("total_bytes_estimate") or 0
             downloaded = d.get("downloaded_bytes", 0)
             if total > 0:
-                task["progress"] = min(int((downloaded / total) * 95), 95)  # %95'e kadar (merge için yer bırak)
+                task["progress"] = min(int((downloaded / total) * 95), 95)
             speed = d.get("speed")
             if speed:
                 task["speed"] = speed
         elif d.get("status") == "finished":
-            task["progress"] = 97  # İndirme bitti, birleştirme/dönüştürme yapılıyor
+            task["progress"] = 97  # Download finished, merging/converting
     return hook
 
 
-# ── Video bilgi getirme endpoint'i ───────────────────────────
 @app.post("/fetch-video-info")
 async def fetch_video_info(req: VideoURLRequest):
+    """Fetches metadata and available resolutions for the provided video URL."""
     try:
         ydl_opts = {
             "quiet": True,
@@ -628,7 +596,6 @@ async def fetch_video_info(req: VideoURLRequest):
 
         info = await asyncio.to_thread(_extract)
 
-        # Mevcut çözünürlükleri çıkar (deduplicate)
         available_heights = set()
         for f in info.get("formats", []):
             h = f.get("height")
@@ -636,7 +603,6 @@ async def fetch_video_info(req: VideoURLRequest):
             if h and vcodec != "none":
                 available_heights.add(h)
 
-        # Sıralı çözünürlük listesi oluştur
         resolution_list = sorted(available_heights, reverse=True)
 
         duration = info.get("duration", 0)
@@ -658,14 +624,13 @@ async def fetch_video_info(req: VideoURLRequest):
         )
 
 
-# ── 1) İndirmeyi Başlat — hemen task_id döner ────────────────
 @app.post("/start-download")
 async def start_download(req: VideoDownloadRequest):
+    """Initializes background download task and returns a tracking ID immediately."""
     task_id = uuid.uuid4().hex[:12]
     uid = task_id[:8]
     out_template = str(DOWNLOAD_DIR / f"{uid}.%(ext)s")
 
-    # Görev kaydı oluştur
     _download_tasks[task_id] = {
         "status": "downloading",
         "progress": 0,
@@ -675,7 +640,6 @@ async def start_download(req: VideoDownloadRequest):
         "error": None,
     }
 
-    # Ortak ağ ayarları
     _net = {
         "socket_timeout": 30,
         "retries": 10,
@@ -773,9 +737,9 @@ async def start_download(req: VideoDownloadRequest):
     })
 
 
-# ── 2) İndirme Durumu Sorgula ────────────────────────────────
 @app.get("/download-status/{task_id}")
 async def download_status(task_id: str):
+    """Polls the current download status using task ID."""
     task = _download_tasks.get(task_id)
     if not task:
         return JSONResponse(
@@ -801,9 +765,9 @@ async def download_status(task_id: str):
     })
 
 
-# ── 3) Dosyayı İndir (GET — tarayıcı doğrudan indirir) ──────
 @app.get("/download-file/{task_id}")
 async def download_file(task_id: str):
+    """Returns the fully processed file for direct client download."""
     task = _download_tasks.get(task_id)
     if not task:
         return JSONResponse(status_code=404, content={"success": False, "message": "Task not found."})
@@ -818,7 +782,6 @@ async def download_file(task_id: str):
     ext = Path(filepath).suffix.lstrip(".")
     media_type = _guess_media_type(ext)
 
-    # Görev kaydını temizle
     _download_tasks.pop(task_id, None)
 
     response = FileResponse(
@@ -826,21 +789,18 @@ async def download_file(task_id: str):
         filename=task["filename"],
         media_type=media_type,
     )
-    # Dosya gönderildikten sonra sil
     response.background = BackgroundTasks()
     response.background.add_task(cleanup_files_and_memory, filepath)
     return response
 
 
 def _convert_image(src: str, dst: str, fmt: str) -> None:
-    """Pillow ile resim dönüştürme."""
+    """Converts image formats using Pillow."""
     img = Image.open(src)
 
-    # RGBA → RGB (JPEG gibi RGBA desteklemeyen formatlar için)
     if fmt in ("jpg", "jpeg", "bmp") and img.mode in ("RGBA", "P"):
         img = img.convert("RGB")
 
-    # ICO formatı için boyut sınırlaması
     if fmt == "ico":
         if img.mode in ("RGBA", "P"):
             img = img.convert("RGBA")
@@ -848,7 +808,6 @@ def _convert_image(src: str, dst: str, fmt: str) -> None:
             img = img.convert("RGB")
         img.thumbnail((256, 256), Image.LANCZOS)
 
-    # Pillow formatına çevir
     pillow_fmt = fmt.upper()
     if pillow_fmt == "JPG":
         pillow_fmt = "JPEG"
@@ -857,7 +816,7 @@ def _convert_image(src: str, dst: str, fmt: str) -> None:
 
 
 def _convert_media(src: str, dst: str) -> None:
-    """ffmpeg-python ile video/ses dönüştürme."""
+    """Converts video and audio media formats using ffmpeg-python."""
     (
         ffmpeg
         .input(src)
@@ -868,7 +827,7 @@ def _convert_media(src: str, dst: str) -> None:
 
 
 def _guess_media_type(ext: str) -> str:
-    """Uzantıdan MIME tipi tahmin et."""
+    """Guesses MIME type based on file extension."""
     mapping = {
         "png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg",
         "webp": "image/webp", "bmp": "image/bmp", "gif": "image/gif",
@@ -881,7 +840,6 @@ def _guess_media_type(ext: str) -> str:
     return mapping.get(ext, "application/octet-stream")
 
 
-# ── DOSYA KASASI (File Vault) ────────────────────────────────────
 @app.post("/encrypt-file")
 async def encrypt_file(
     files: List[UploadFile] = File(...),
@@ -889,6 +847,7 @@ async def encrypt_file(
     background_tasks: BackgroundTasks = None,
     x_task_id: str = Header(None)
 ):
+    """Encrypts files or archives them into a secure AES-256 encrypted payload."""
     update_progress(x_task_id, 20, "Processing and Encrypting data...")
     
     uid = uuid.uuid4().hex[:8]
@@ -922,13 +881,13 @@ async def encrypt_file(
 
         await asyncio.to_thread(do_encrypt)
         
-        update_progress(x_task_id, 90, "Sonuçlar paketleniyor...")
+        update_progress(x_task_id, 90, "Packaging results...")
         if background_tasks:
             background_tasks.add_task(cleanup_files_and_memory, src_path, out_path)
         else:
             cleanup_files_and_memory(src_path)
             
-        update_progress(x_task_id, 100, "Tamamlandı!")
+        update_progress(x_task_id, 100, "Completed!")
         return FileResponse(
             path=str(out_path),
             filename=out_name,
@@ -948,7 +907,8 @@ async def decrypt_file(
     background_tasks: BackgroundTasks = None,
     x_task_id: str = Header(None)
 ):
-    update_progress(x_task_id, 20, "Dosya yüklendi, işleme başlanıyor...")
+    """Decrypts an AES-256 encrypted payload and restores original files."""
+    update_progress(x_task_id, 20, "File uploaded, initializing decryption...")
     
     uid = uuid.uuid4().hex[:8]
     safe_name = _safe_filename(file.filename)
@@ -973,13 +933,13 @@ async def decrypt_file(
 
         await asyncio.to_thread(do_decrypt)
         
-        update_progress(x_task_id, 90, "Sonuçlar paketleniyor...")
+        update_progress(x_task_id, 90, "Packaging results...")
         if background_tasks:
             background_tasks.add_task(cleanup_files_and_memory, src_path, out_path)
         else:
             cleanup_files_and_memory(src_path)
             
-        update_progress(x_task_id, 100, "Tamamlandı!")
+        update_progress(x_task_id, 100, "Completed!")
         
         ext = Path(out_name).suffix.lstrip(".")
         media_type = _guess_media_type(ext)
@@ -999,27 +959,26 @@ async def decrypt_file(
             content={"success": False, "message": f"Decryption failed: {str(exc)}"},
         )
 
-# ── OTA UPDATE ENDPOINT'LERİ ──────────────────────────────────────
 @app.get("/check-update")
 async def check_update():
-    return JSONResponse(content={"status": "ready", "message": "Güncellemeler kontrol ediliyor..."})
+    """Checks for available over-the-air updates."""
+    return JSONResponse(content={"status": "ready", "message": "Checking for updates..."})
 
 @app.post("/apply-update")
 async def apply_update(x_task_id: str = Header(None)):
-    update_progress(x_task_id, 10, "Bağlanılıyor: GitHub...")
+    """Downloads and applies updates from the source repository securely."""
+    update_progress(x_task_id, 10, "Connecting to GitHub...")
     
     zip_path = DOWNLOAD_DIR / "update.zip"
     extract_path = DOWNLOAD_DIR / "update_tmp"
     
     try:
-        # ZIP dosyasını indir
-        update_progress(x_task_id, 30, "Yeni dosyalar indiriliyor...")
+        update_progress(x_task_id, 30, "Downloading new updates...")
         def _download():
             urllib.request.urlretrieve(GITHUB_REPO_URL, str(zip_path))
         await asyncio.to_thread(_download)
         
-        # Sıkıştırılmış dosyayı aç ve uygula
-        update_progress(x_task_id, 60, "Sistem güncelleniyor...")
+        update_progress(x_task_id, 60, "Applying system updates...")
         def _extract_and_apply():
             if extract_path.exists():
                 shutil.rmtree(extract_path)
@@ -1028,10 +987,9 @@ async def apply_update(x_task_id: str = Header(None)):
             with zipfile.ZipFile(zip_path, 'r') as zip_ref:
                 zip_ref.extractall(extract_path)
             
-            # İç içe geçmiş klasörü bul (örn: REPO_ADIN-main)
             extracted_items = list(extract_path.iterdir())
             if not extracted_items:
-                raise Exception("ZIP dosyası boş.")
+                raise Exception("Downloaded ZIP file is empty.")
             
             root_dir = extracted_items[0] if extracted_items[0].is_dir() else extract_path
             
@@ -1040,10 +998,8 @@ async def apply_update(x_task_id: str = Header(None)):
             
             for item in root_dir.rglob("*"):
                 if item.is_file():
-                    # Relatif yolu al
                     rel_path = item.relative_to(root_dir)
                     
-                    # Korumalı dizinleri atla
                     is_protected = False
                     for part in rel_path.parts:
                         if part in protected_folders:
@@ -1052,13 +1008,11 @@ async def apply_update(x_task_id: str = Header(None)):
                     if is_protected:
                         continue
                         
-                    # Sadece izin verilen uzantıları kopyala
                     if item.suffix.lower() in allowed_exts:
                         target = BASE_DIR / rel_path
                         target.parent.mkdir(parents=True, exist_ok=True)
                         shutil.copy2(item, target)
                         
-            # Temizlik
             if zip_path.exists():
                 zip_path.unlink()
             if extract_path.exists():
@@ -1066,10 +1020,10 @@ async def apply_update(x_task_id: str = Header(None)):
                 
         await asyncio.to_thread(_extract_and_apply)
         
-        update_progress(x_task_id, 100, "Güncelleme Tamamlandı!")
+        update_progress(x_task_id, 100, "Update Completed!")
         return JSONResponse(content={
             "status": "success", 
-            "message": "G-Toolbox başarıyla güncellendi! Lütfen sunucuyu yeniden başlatın."
+            "message": "G-Toolbox has been updated successfully! Please restart the server."
         })
         
     except Exception as e:
@@ -1079,5 +1033,3 @@ async def apply_update(x_task_id: str = Header(None)):
         if extract_path.exists():
             shutil.rmtree(extract_path, ignore_errors=True)
         return JSONResponse(status_code=500, content={"status": "error", "message": f"Update failed: {str(e)}"})
-
-# ──────────────────────────────────────────────────────────────────
