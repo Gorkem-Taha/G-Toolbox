@@ -105,3 +105,4 @@ Open your favorite web browser and navigate to your private, offline workspace:
 If you ever want to completely remove G-Toolbox and reclaim your disk space, DO NOT just delete the project folder! Instead, double-click the DELETE.bat file.
 
 🗑️ Deep Clean: This script acts as a smart uninstaller. It safely removes the virtual environment AND hunts down the hidden AI model cache files (which can consume gigabytes of hidden space) stored deep within your Windows user folders, ensuring a 100% clean removal.
+```
