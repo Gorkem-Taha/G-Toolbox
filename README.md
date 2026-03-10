@@ -27,7 +27,7 @@ In a world where every SaaS application uploads your private documents and photo
 *The dark-themed, premium interface designed for maximum productivity.*
 
 ### 🎨 AI Studio & Tools
-![AI Tools](docs/images/ai-tools.png)
+![AI Tools](/static/bc_remove.png)
 *Real-time progress bars and seamless AI integration.*
 
 ---
