@@ -25,7 +25,7 @@ In a world where every SaaS application uploads your private documents and photo
 *(Add your screenshots here by replacing the placeholder links)*
 
 ### 🏠 The Workspace (Home)
-![G-Toolbox Homepage](docs/images/homepage.png)
+![G-Toolbox Homepage](<img width="1139" height="716" alt="menu" src="https://github.com/user-attachments/assets/f62bdba1-da2a-465b-836c-9aff40cb47bb" />)
 *The dark-themed, premium interface designed for maximum productivity.*
 
 ### 🎨 AI Studio & Tools
