@@ -25,7 +25,7 @@ In a world where every SaaS application uploads your private documents and photo
 *(Add your screenshots here by replacing the placeholder links)*
 
 ### 🏠 The Workspace (Home)
-![G-Toolbox Homepage]("/static/menu.png")
+![G-Toolbox Homepage](/static/menu.png)
 *The dark-themed, premium interface designed for maximum productivity.*
 
 ### 🎨 AI Studio & Tools
@@ -87,15 +87,15 @@ Forget complicated command lines. G-Toolbox comes with automated setup scripts.
 Clone this repository or download it as a ZIP file and extract it to a folder on your PC.
 
 **Step 2: Install Dependencies**
-Double-click the `kur.bat` file. 
+Double-click the `installation.bat` file. 
 * This will automatically create an isolated Python Virtual Environment (`venv`) so it doesn't mess with your computer's global Python settings. 
 * It will download all necessary packages (PyTorch, FastAPI, etc.). *Note: This may take 5-15 minutes depending on your internet speed.*
 
 **Step 3: Launch the App**
-Double-click the `baslat.bat` file.
+Double-click the `Start.bat` file.
 * This will start the local server. A terminal window will open—leave it running in the background.
 * Open your web browser and go to: `http://localhost:8000`
 
 **Step 4: Clean Uninstall (Optional)**
-If you ever want to completely remove G-Toolbox and reclaim your disk space, do not just delete the folder! Double-click `kaldir.bat`.
+If you ever want to completely remove G-Toolbox and reclaim your disk space, do not just delete the folder! Double-click `DELETE.bat`.
 * This will safely delete the virtual environment AND locate the hidden AI model cache files (which can be gigabytes in size) stored deep in your Windows user folders, ensuring a 100% clean removal.
