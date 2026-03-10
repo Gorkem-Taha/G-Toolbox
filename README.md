@@ -1,6 +1,6 @@
 # ⚡ G-Toolbox | Premium AI-Powered Local Toolkit
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
+![Version](https://img.shields.io/badge/version-4.0.0-blue.svg)
 ![License](https://img.shields.io/badge/license-Non--Commercial-red.svg)
 ![Platform](https://img.shields.io/badge/platform-Windows-lightgrey.svg)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
