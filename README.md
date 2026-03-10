@@ -22,39 +22,39 @@ In a world where every SaaS application uploads your private documents and photo
 
 ## 📸 Screenshots
 
-*(Add your screenshots here by replacing the placeholder links)*
-
 ### 🏠 The Workspace (Home)
 ![G-Toolbox Homepage](/static/menu.png)
 *The dark-themed, premium interface designed for maximum productivity.*
 
 ### 🎨 AI Studio & Tools
-![AI Tools](docs/images/ai-tools.png)
+![AI Tools](/static/bc_remove.png)
 *Real-time progress bars and seamless AI integration.*
 
 ---
-
 ## 🚀 The Arsenal (Detailed Tool Descriptions)
 
-### 1. AI Image Upscaler (Super Resolution)
+### 1. 🌌 AI Image Upscaler (Super Resolution)
 Upscale low-resolution or blurry images to stunning 4K quality without losing detail, powered by the **Real-ESRGAN** model.
-* ⚠️ **Hardware Warning:** This tool is extremely resource-intensive. When running at 4x scale, it will heavily utilize your Graphics Card (GPU) or CPU. **It is completely normal to hear your computer's cooling fans spin up to maximum speed.** The system uses *Tiling Optimization* to prevent your PC from freezing during this process.
+> ⚠️ **Hardware Warning:** This tool is extremely resource-intensive. When running at 4x scale, it will heavily utilize your Graphics Card (GPU) or CPU. **It is completely normal to hear your computer's cooling fans spin up to maximum speed.** The system uses *Tiling Optimization* to prevent your PC from freezing during this process.
 
-### 2. Magic Eraser (AI Inpainting)
+### 2. 🪄 Magic Eraser (AI Inpainting)
 Remove unwanted objects, text, or people from any photo. Powered by the **LaMa** model, it intelligently analyzes surrounding pixels to recreate the background flawlessly.
-* *Note:* Requires moderate RAM usage during processing.
+> 💡 *Note:* Requires moderate RAM usage during processing.
 
-### 3. Deep Background Remover
+### 3. ✂️ Deep Background Remover
 Instantly cut out the main subject of any photo with perfect edge detection, powered by the **U^2-Net** model. Say goodbye to manual masking.
 
-### 4. The File Vault (AES-256 Encryption)
+### 4. 🔒 The File Vault (AES-256 Encryption)
 Military-grade file and folder encryption. Select a single file or an entire folder—the backend will automatically compress and lock it into a `.enc` vault.
-* ⚠️ **Security Warning:** There is NO backdoor. If you forget the password you set, your files cannot be recovered by anyone, not even supercomputers.
+> 🛑 **Security Warning:** There is NO backdoor. If you forget the password you set, your files cannot be recovered by anyone, not even supercomputers.
 
-### 5. Universal File Converter
-Convert images and audio formats locally using FFmpeg architecture without uploading to sketchy online converters.
+### 5. 📥 Universal Media Downloader
+Download high-quality videos or extract audio directly from the web straight to your local drive. Powered by **yt-dlp** and **FFmpeg**, bypassing the need for sketchy, ad-filled online downloaders. Supports real-time progress tracking!
 
-### 6. OTA Auto-Updater (Sync)
+### 6. 🔄 Universal File Converter
+Convert images and audio formats locally using **FFmpeg** architecture without uploading your sensitive files to online servers. Keep your workflow offline and private.
+
+### 7. ☁️ OTA Auto-Updater (Sync)
 Stay up-to-date effortlessly. Click the "Sync" button in the app, and G-Toolbox will securely fetch the latest features from GitHub and patch itself without touching your personal files or virtual environment.
 
 ---
