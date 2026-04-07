@@ -119,4 +119,4 @@ If you ever want to completely remove G-Toolbox and reclaim your disk space, DO 
 
 ## 📜 License
 This project is licensed under the [CC BY-NC 4.0 License](LICENSE).  
-Developed by **[Görkem Taha Çanakcı](https://github.com/Gorkem-Taha)**
+Developed by **[Görkem Taha](https://github.com/Gorkem-Taha)**
