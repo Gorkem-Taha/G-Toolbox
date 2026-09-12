@@ -180,7 +180,13 @@ def cleanup_files_and_memory(*filepaths):
     except ImportError:
         pass
 
-BASE_DIR = Path(__file__).resolve().parent
+if getattr(sys, "frozen", False):
+    BASE_DIR = Path(sys.executable).resolve().parent
+    RESOURCE_DIR = Path(getattr(sys, "_MEIPASS", BASE_DIR))
+else:
+    BASE_DIR = Path(__file__).resolve().parent
+    RESOURCE_DIR = BASE_DIR
+
 UPLOAD_DIR = BASE_DIR / "uploads"
 DOWNLOAD_DIR = BASE_DIR / "downloads"
 
@@ -218,7 +224,38 @@ else:
         "Place ffmpeg.exe in the project directory or add it to PATH."
     )
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI(title="G-Toolbox", version="4.0.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+def get_lan_ip() -> str:
+    """Detects the primary LAN IPv4 address of the host machine."""
+    import socket
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect(("8.8.8.8", 80))
+            return s.getsockname()[0]
+    except Exception:
+        return "127.0.0.1"
+
+@app.get("/api/network-info")
+async def get_network_info(request: Request):
+    """Returns host LAN network details for easy mobile pairing."""
+    host_ip = get_lan_ip()
+    port = request.url.port or 8000
+    return JSONResponse({
+        "lan_ip": host_ip,
+        "port": port,
+        "mobile_url": f"http://{host_ip}:{port}"
+    })
 
 progress_store: dict[str, dict] = {}
 
@@ -259,8 +296,11 @@ async def on_startup():
     except Exception as e:
         logger.warning(f"Startup purge warning: {e}")
 
-app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
-templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
+STATIC_DIR = RESOURCE_DIR / "static" if (RESOURCE_DIR / "static").exists() else BASE_DIR / "static"
+TEMPLATES_DIR = RESOURCE_DIR / "templates" if (RESOURCE_DIR / "templates").exists() else BASE_DIR / "templates"
+
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 # ── Desteklenen formatlar ─────────────────────────────────────────
 IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "webp", "bmp", "gif", "tiff", "ico"}

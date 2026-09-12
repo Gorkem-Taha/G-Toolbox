@@ -10,6 +10,12 @@
     <!-- Disable Dark Reader (Site is already native dark theme) -->
     <meta name="darkreader-lock" />
 
+    <!-- PWA & Mobile Meta -->
+    <link rel="manifest" href="/static/manifest.json" />
+    <meta name="theme-color" content="#050507" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
     <!-- Favicon -->
     <link rel="icon" href="/static/favicon.ico" type="image/x-icon" />
 
@@ -31,14 +37,22 @@
 
     <!-- ═══ HOME VIEW ═══════════════════════════════════════ -->
 
-    <div class="absolute top-8 right-10 z-50 flex items-center justify-center gap-2 px-3 py-1.5 rounded-xl">
+    <div class="absolute top-6 right-6 md:top-8 md:right-10 z-50 flex items-center justify-center gap-2 px-3 py-1.5 rounded-xl bg-black/40 backdrop-blur-md border border-white/10 shadow-lg">
+        <button id="btn-device-mode" onclick="openDeviceModeModal()"
+            class="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-300 hover:bg-purple-500/20 transition-all text-xs font-semibold"
+            title="Cihaz ve Bağlantı Modu">
+            <span id="mode-status-dot" class="w-2 h-2 rounded-full bg-green-400"></span>
+            <span id="mode-status-text">PC Server</span>
+            <i class="fa-solid fa-sliders text-[10px] text-purple-400"></i>
+        </button>
+        <div class="w-px h-4 bg-white/20"></div>
         <button id="lang-en"
-            class="flex items-center gap-2 hover:text-purple-400 transition-colors text-sm font-bold text-gray-300 px-2"
-            onclick="changeLanguage('en')">🇬🇧 English</button>
+            class="flex items-center gap-1.5 hover:text-purple-400 transition-colors text-xs font-bold text-gray-300 px-1"
+            onclick="changeLanguage('en')">🇬🇧 EN</button>
         <div class="w-px h-4 bg-white/20"></div>
         <button id="lang-tr"
-            class="flex items-center gap-2 hover:text-purple-400 transition-colors text-sm font-bold text-gray-300 px-2"
-            onclick="changeLanguage('tr')">🇹🇷 Türkçe</button>
+            class="flex items-center gap-1.5 hover:text-purple-400 transition-colors text-xs font-bold text-gray-300 px-1"
+            onclick="changeLanguage('tr')">🇹🇷 TR</button>
     </div>
 
     <div id="home-view" class="h-full w-full flex flex-col relative z-20 overflow-y-auto">
@@ -817,11 +831,124 @@
         </div>
     </div>
 
+    <!-- ═══ DEVICE / CONNECTION MODE MODAL ═══════════════════════ -->
+    <div id="device-mode-modal"
+        class="fixed inset-0 z-[9999] hidden flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+        <div class="glass p-6 md:p-8 rounded-3xl max-w-lg w-full text-left shadow-[0_0_50px_rgba(168,85,247,0.25)] border border-purple-500/30">
+            <div class="flex items-center justify-between pb-4 mb-6 border-b border-white/10">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center text-purple-400">
+                        <i class="fa-solid fa-mobile-screen-button text-xl"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold text-white">Çalışma Modu & Mobil Bağlantı</h2>
+                        <p class="text-xs text-gray-400">Mobil cihaz ve masaüstü bağlantı yapılandırması</p>
+                    </div>
+                </div>
+                <button onclick="closeDeviceModeModal()" class="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white flex items-center justify-center transition-colors">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Mode Selector Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
+                <!-- Mode 1: PC Server -->
+                <div id="card-mode-pc" onclick="selectOperatingMode('pc')"
+                    class="p-4 rounded-2xl border-2 border-purple-500 bg-purple-500/10 cursor-pointer transition-all flex flex-col justify-between">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-bold uppercase tracking-wider text-purple-400">Önerilen</span>
+                        <i class="fa-solid fa-circle-check text-purple-400" id="icon-check-pc"></i>
+                    </div>
+                    <div class="font-bold text-white text-base mb-1 flex items-center gap-2">
+                        <i class="fa-solid fa-desktop text-purple-400"></i> PC Sunucusu
+                    </div>
+                    <p class="text-[11px] text-gray-400 leading-snug">
+                        Tüm AI Upscale, 4K Video ve FFmpeg işlemlerini bilgisayarınızın GPU'su yürütür.
+                    </p>
+                </div>
+
+                <!-- Mode 2: Mobile / Local Device -->
+                <div id="card-mode-local" onclick="selectOperatingMode('local')"
+                    class="p-4 rounded-2xl border border-white/10 bg-white/5 cursor-pointer transition-all flex flex-col justify-between hover:border-white/20">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-bold uppercase tracking-wider text-gray-400">Çevrimdışı</span>
+                        <i class="fa-regular fa-circle text-gray-500" id="icon-check-local"></i>
+                    </div>
+                    <div class="font-bold text-white text-base mb-1 flex items-center gap-2">
+                        <i class="fa-solid fa-mobile text-pink-400"></i> Yerel Cihaz
+                    </div>
+                    <p class="text-[11px] text-gray-400 leading-snug">
+                        Telefonunuzun işlemcisini kullanır. PC kapalıyken bile temel medya araçları çalışır.
+                    </p>
+                </div>
+            </div>
+
+            <!-- PC Server Connection Details (when Mode 1 active) -->
+            <div id="section-pc-config" class="space-y-4">
+                <div class="bg-black/30 border border-white/10 rounded-2xl p-4">
+                    <label class="block text-xs font-semibold text-gray-300 mb-2">PC Sunucu Adresi (LAN / Wi-Fi veya Tünel):</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="input-server-url" placeholder="http://192.168.1.105:8000"
+                            class="flex-1 bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500 transition-colors">
+                        <button onclick="testServerConnection()" class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5">
+                            <i class="fa-solid fa-plug"></i> Test Et
+                        </button>
+                    </div>
+                    <div id="connection-status-msg" class="mt-2 text-xs text-gray-400 flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-yellow-400"></span> Durum kontrol ediliyor...
+                    </div>
+                </div>
+
+                <div class="bg-purple-900/20 border border-purple-500/20 rounded-2xl p-4 text-xs text-purple-200 flex flex-col gap-2">
+                    <div class="font-bold text-sm text-purple-300 flex items-center gap-2">
+                        <i class="fa-solid fa-qrcode"></i> Telefonda Açmak İçin:
+                    </div>
+                    <p class="text-gray-300">Aynı Wi-Fi ağındaki telefonunuzun tarayıcısına bu adresi yazın:</p>
+                    <div class="flex items-center justify-between bg-black/40 px-3 py-2 rounded-xl border border-purple-500/30">
+                        <code id="display-lan-url" class="font-mono text-amber-300 text-xs">Yükleniyor...</code>
+                        <button onclick="copyLanUrl()" class="text-purple-400 hover:text-purple-200 transition-colors">
+                            <i class="fa-regular fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Local Mode Details (when Mode 2 active) -->
+            <div id="section-local-config" class="hidden bg-black/30 border border-white/10 rounded-2xl p-4 space-y-3">
+                <div class="flex items-center gap-2 text-sm font-bold text-pink-400">
+                    <i class="fa-solid fa-microchip"></i> Telefon İşlemcisi Devrede
+                </div>
+                <p class="text-xs text-gray-300 leading-relaxed">
+                    Bu modda görseller doğrudan telefonunuzun tarayıcısında (HTML5 Canvas) işlenir. Sunucu veya internet bağlantısına gerek yoktur.
+                </p>
+                <div class="grid grid-cols-2 gap-2 text-[11px] text-gray-400">
+                    <div class="p-2 rounded-lg bg-white/5">✅ Görsel Format Dönüştürme</div>
+                    <div class="p-2 rounded-lg bg-white/5">✅ Görsel Sıkıştırma</div>
+                    <div class="p-2 rounded-lg bg-white/5">✅ EXIF Temizleme</div>
+                    <div class="p-2 rounded-lg bg-white/5">⚠️ Ağır AI (PC Gerekir)</div>
+                </div>
+            </div>
+
+            <div class="mt-6 flex justify-end">
+                <button onclick="saveOperatingModeSettings()" class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-amber-500 text-white font-bold text-sm hover:shadow-[0_0_20px_rgba(168,85,247,0.4)] transition-all">
+                    Kaydet ve Uygula
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- ═══ TOAST CONTAINER ═══════════════════════════════════ -->
     <div class="toast-container" id="toast-container"></div>
 
     <!-- App Logic -->
-    <script src="/static/js/app.js?v=4.0.1"></script>
+    <script src="/static/js/app.js?v=4.0.2"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/static/sw.js').catch(() => {});
+            });
+        }
+    </script>
 </body>
 
 </html>

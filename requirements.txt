@@ -16,3 +16,4 @@ basicsr
 realesrgan
 pyAesCrypt
 pypdf
+pywebview
