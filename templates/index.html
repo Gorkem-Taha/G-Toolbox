@@ -46,6 +46,13 @@
             <i class="fa-solid fa-sliders text-[10px] text-purple-400"></i>
         </button>
         <div class="w-px h-4 bg-white/20"></div>
+        <button id="btn-purge-vram-home" onclick="purgeVram()"
+            class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-red-500/10 border border-red-500/20 text-red-300 hover:bg-red-500/20 transition-all text-xs font-semibold"
+            title="VRAM & Bellek Boşalt">
+            <i class="fa-solid fa-broom text-[11px] text-red-400"></i>
+            <span data-i18n="btn_purge_vram">VRAM Boşalt</span>
+        </button>
+        <div class="w-px h-4 bg-white/20"></div>
         <button id="lang-en"
             class="flex items-center gap-1.5 hover:text-purple-400 transition-colors text-xs font-bold text-gray-300 px-1"
             onclick="changeLanguage('en')">🇬🇧 EN</button>
@@ -258,6 +265,78 @@
                     <span data-i18n="btn_go_tool">Go to Tool</span> <i class="fa-solid fa-arrow-right"></i>
                 </button>
             </div>
+
+            <!-- Card 11: Subtitle Burner -->
+            <div
+                class="glass p-8 rounded-3xl flex flex-col items-start transition-all hover:-translate-y-2 hover:border-indigo-500/30 group">
+                <div
+                    class="w-16 h-16 rounded-2xl bg-indigo-500/10 flex items-center justify-center mb-6 border border-indigo-500/20 group-hover:bg-indigo-500/20 transition-colors">
+                    <i class="fa-solid fa-closed-captioning text-3xl text-indigo-400"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-100 mb-3" data-i18n="menu_subtitles">Subtitle Burner</h3>
+                <p class="text-gray-400 leading-relaxed mb-8 flex-1 text-[0.95rem]">
+                    <span data-i18n="desc_subtitles">Burn SRT or VTT subtitles directly into video with custom styling.</span>
+                </p>
+                <button
+                    class="btn-go-tool w-full py-3.5 rounded-xl font-bold text-white bg-white/5 border border-white/10 hover:bg-gradient-to-r hover:from-indigo-600 hover:to-purple-500 hover:shadow-[0_0_20px_rgba(99,102,241,0.4)] hover:border-transparent transition-all flex items-center justify-center gap-2"
+                    data-target="subtitles">
+                    <span data-i18n="btn_go_tool">Go to Tool</span> <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+
+            <!-- Card 12: PDF Toolkit -->
+            <div
+                class="glass p-8 rounded-3xl flex flex-col items-start transition-all hover:-translate-y-2 hover:border-red-500/30 group">
+                <div
+                    class="w-16 h-16 rounded-2xl bg-red-500/10 flex items-center justify-center mb-6 border border-red-500/20 group-hover:bg-red-500/20 transition-colors">
+                    <i class="fa-solid fa-file-pdf text-3xl text-red-400"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-100 mb-3" data-i18n="menu_pdftools">PDF Toolkit</h3>
+                <p class="text-gray-400 leading-relaxed mb-8 flex-1 text-[0.95rem]">
+                    <span data-i18n="desc_pdftools">Merge multiple PDFs, extract page ranges, or extract text into TXT.</span>
+                </p>
+                <button
+                    class="btn-go-tool w-full py-3.5 rounded-xl font-bold text-white bg-white/5 border border-white/10 hover:bg-gradient-to-r hover:from-red-600 hover:to-rose-500 hover:shadow-[0_0_20px_rgba(239,68,68,0.4)] hover:border-transparent transition-all flex items-center justify-center gap-2"
+                    data-target="pdftools">
+                    <span data-i18n="btn_go_tool">Go to Tool</span> <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+
+            <!-- Card 13: Audio Effects & Speed -->
+            <div
+                class="glass p-8 rounded-3xl flex flex-col items-start transition-all hover:-translate-y-2 hover:border-emerald-500/30 group">
+                <div
+                    class="w-16 h-16 rounded-2xl bg-emerald-500/10 flex items-center justify-center mb-6 border border-emerald-500/20 group-hover:bg-emerald-500/20 transition-colors">
+                    <i class="fa-solid fa-sliders text-3xl text-emerald-400"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-100 mb-3" data-i18n="menu_audiofx">Audio Effects & Speed</h3>
+                <p class="text-gray-400 leading-relaxed mb-8 flex-1 text-[0.95rem]">
+                    <span data-i18n="desc_audiofx">Slowed+Reverb, Nightcore, speed, tempo, and pitch manipulation.</span>
+                </p>
+                <button
+                    class="btn-go-tool w-full py-3.5 rounded-xl font-bold text-white bg-white/5 border border-white/10 hover:bg-gradient-to-r hover:from-emerald-600 hover:to-teal-500 hover:shadow-[0_0_20px_rgba(16,185,129,0.4)] hover:border-transparent transition-all flex items-center justify-center gap-2"
+                    data-target="audiofx">
+                    <span data-i18n="btn_go_tool">Go to Tool</span> <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+
+            <!-- Card 14: Noise Cleaner -->
+            <div
+                class="glass p-8 rounded-3xl flex flex-col items-start transition-all hover:-translate-y-2 hover:border-sky-500/30 group">
+                <div
+                    class="w-16 h-16 rounded-2xl bg-sky-500/10 flex items-center justify-center mb-6 border border-sky-500/20 group-hover:bg-sky-500/20 transition-colors">
+                    <i class="fa-solid fa-wave-square text-3xl text-sky-400"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-100 mb-3" data-i18n="menu_noisecleaner">Noise Cleaner</h3>
+                <p class="text-gray-400 leading-relaxed mb-8 flex-1 text-[0.95rem]">
+                    <span data-i18n="desc_noisecleaner">Remove background hiss, fan noise, and hum with adaptive FFT noise filtering.</span>
+                </p>
+                <button
+                    class="btn-go-tool w-full py-3.5 rounded-xl font-bold text-white bg-white/5 border border-white/10 hover:bg-gradient-to-r hover:from-sky-600 hover:to-blue-500 hover:shadow-[0_0_20px_rgba(14,165,233,0.4)] hover:border-transparent transition-all flex items-center justify-center gap-2"
+                    data-target="noisecleaner">
+                    <span data-i18n="btn_go_tool">Go to Tool</span> <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
         </div>
     </div>
 
@@ -325,6 +404,22 @@
                     <i class="fa-solid fa-film icon text-orange-400"></i>
                     <span data-i18n="menu_animator">Video to GIF</span>
                 </div>
+                <div class="sidebar-item" data-tool="subtitles">
+                    <i class="fa-solid fa-closed-captioning icon text-indigo-400"></i>
+                    <span data-i18n="menu_subtitles">Subtitle Burner</span>
+                </div>
+                <div class="sidebar-item" data-tool="pdftools">
+                    <i class="fa-solid fa-file-pdf icon text-red-400"></i>
+                    <span data-i18n="menu_pdftools">PDF Toolkit</span>
+                </div>
+                <div class="sidebar-item" data-tool="audiofx">
+                    <i class="fa-solid fa-sliders icon text-emerald-400"></i>
+                    <span data-i18n="menu_audiofx">Audio Effects</span>
+                </div>
+                <div class="sidebar-item" data-tool="noisecleaner">
+                    <i class="fa-solid fa-wave-square icon text-sky-400"></i>
+                    <span data-i18n="menu_noisecleaner">Noise Cleaner</span>
+                </div>
             </nav>
 
             <!-- Bottom spacer + version -->
@@ -353,6 +448,12 @@
                         tool from the left menu to start</p>
                 </div>
                 <div class="flex items-center gap-3">
+                    <button id="btn-purge-vram" onclick="purgeVram()"
+                        class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 hover:bg-red-500/20 hover:border-red-500/40 transition-all text-xs font-semibold shadow-sm"
+                        title="VRAM & Bellek Boşalt">
+                        <i class="fa-solid fa-broom text-red-400"></i>
+                        <span data-i18n="btn_purge_vram">VRAM Boşalt</span>
+                    </button>
                     <div class="spinner" id="spinner"></div>
                 </div>
             </header>
@@ -1086,6 +1187,330 @@
 
                         <button id="btn-animator-apply" class="w-full py-4 rounded-xl font-bold text-white bg-gradient-to-r from-orange-600 to-amber-600 hover:shadow-[0_0_20px_rgba(249,115,22,0.4)] transition-all flex items-center justify-center gap-2">
                             <i class="fa-solid fa-play"></i> <span>Animasyonu Üret ve İndir</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ═══ PAGE 11: SUBTITLE BURNER ═════════════════════════ -->
+            <section class="tool-page flex-1 flex-col items-center justify-start hidden" id="page-subtitles">
+                <div class="w-full max-w-4xl flex flex-col items-center gap-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+                        <!-- Video File Drop Zone -->
+                        <div class="drop-zone w-full p-8 flex flex-col items-center justify-center border-2 border-dashed border-white/10 rounded-3xl bg-black/20 hover:border-indigo-500/40 transition-colors cursor-pointer"
+                            id="drop-zone-subtitles-video">
+                            <input type="file" id="file-input-subtitles-video" class="hidden" accept="video/*" />
+                            <div class="w-14 h-14 rounded-2xl bg-indigo-500/10 flex items-center justify-center mb-3 text-indigo-400">
+                                <i class="fa-solid fa-video text-2xl"></i>
+                            </div>
+                            <h4 class="text-base font-bold text-white mb-1">1. Video Dosyası Seçin</h4>
+                            <p class="text-xs text-gray-500">MP4, MKV, MOV, WebM</p>
+                            <div class="file-info hidden mt-4 w-full bg-white/5 p-3 rounded-xl flex items-center justify-between" id="info-subtitles-video">
+                                <div class="truncate mr-2">
+                                    <p class="file-info-name font-bold text-white text-xs truncate" id="info-subtitles-video-name">—</p>
+                                    <p class="file-info-size text-[11px] text-gray-400" id="info-subtitles-video-size">—</p>
+                                </div>
+                                <button class="text-xs text-red-400 hover:text-red-300 font-bold px-2 py-1 rounded bg-red-500/10" id="btn-subtitles-video-clear">✕</button>
+                            </div>
+                        </div>
+
+                        <!-- Subtitle File Drop Zone -->
+                        <div class="drop-zone w-full p-8 flex flex-col items-center justify-center border-2 border-dashed border-white/10 rounded-3xl bg-black/20 hover:border-indigo-500/40 transition-colors cursor-pointer"
+                            id="drop-zone-subtitles-sub">
+                            <input type="file" id="file-input-subtitles-sub" class="hidden" accept=".srt,.vtt,.ass" />
+                            <div class="w-14 h-14 rounded-2xl bg-indigo-500/10 flex items-center justify-center mb-3 text-indigo-400">
+                                <i class="fa-solid fa-closed-captioning text-2xl"></i>
+                            </div>
+                            <h4 class="text-base font-bold text-white mb-1">2. Altyazı Dosyası (.srt, .vtt)</h4>
+                            <p class="text-xs text-gray-500">SRT, VTT veya ASS</p>
+                            <div class="file-info hidden mt-4 w-full bg-white/5 p-3 rounded-xl flex items-center justify-between" id="info-subtitles-sub">
+                                <div class="truncate mr-2">
+                                    <p class="file-info-name font-bold text-white text-xs truncate" id="info-subtitles-sub-name">—</p>
+                                    <p class="file-info-size text-[11px] text-gray-400" id="info-subtitles-sub-size">—</p>
+                                </div>
+                                <button class="text-xs text-red-400 hover:text-red-300 font-bold px-2 py-1 rounded bg-red-500/10" id="btn-subtitles-sub-clear">✕</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="w-full glass p-6 rounded-3xl flex flex-col gap-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="text-xs font-semibold uppercase tracking-wider text-gray-400 block mb-2">Yazı Boyutu (Font Size)</label>
+                                <select id="sub-fontsize" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-indigo-500">
+                                    <option value="18">Küçük (18px)</option>
+                                    <option value="24" selected>Standart / Normal (24px)</option>
+                                    <option value="32">Büyük (32px)</option>
+                                    <option value="40">Çok Büyük (40px)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-xs font-semibold uppercase tracking-wider text-gray-400 block mb-2">Yazı Rengi</label>
+                                <select id="sub-fontcolor" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-indigo-500">
+                                    <option value="&H00FFFFFF" selected>⚪ Beyaz (Klasik)</option>
+                                    <option value="&H0000FFFF">🟡 Sarı (Sinematik)</option>
+                                    <option value="&H00FFFF00">🔵 Camgöbeği (Cyan)</option>
+                                    <option value="&H0000FF00">🟢 Açık Yeşil</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <button id="btn-subtitles-apply" class="w-full py-4 rounded-xl font-bold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:shadow-[0_0_20px_rgba(99,102,241,0.4)] transition-all flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-fire"></i> <span>Altyazıyı Videoya Kalıcı Göm ve İndir</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ═══ PAGE 12: PDF TOOLKIT ═══════════════════════════════ -->
+            <section class="tool-page flex-1 flex-col items-center justify-start hidden" id="page-pdftools">
+                <div class="w-full max-w-4xl flex flex-col items-center gap-6">
+                    <!-- PDF Sub-Mode Tabs -->
+                    <div class="flex items-center gap-2 p-1.5 rounded-2xl bg-black/40 border border-white/10 w-full max-w-md justify-between">
+                        <button id="tab-pdf-merge" class="pdf-mode-tab flex-1 py-2.5 px-3 rounded-xl font-bold text-xs transition-all bg-red-600 text-white shadow-md flex items-center justify-center gap-1.5" data-mode="merge">
+                            <i class="fa-solid fa-object-group"></i> Birleştir
+                        </button>
+                        <button id="tab-pdf-split" class="pdf-mode-tab flex-1 py-2.5 px-3 rounded-xl font-medium text-xs transition-all text-gray-400 hover:text-white flex items-center justify-center gap-1.5" data-mode="split">
+                            <i class="fa-solid fa-scissors"></i> Sayfa Böl
+                        </button>
+                        <button id="tab-pdf-text" class="pdf-mode-tab flex-1 py-2.5 px-3 rounded-xl font-medium text-xs transition-all text-gray-400 hover:text-white flex items-center justify-center gap-1.5" data-mode="text">
+                            <i class="fa-solid fa-file-lines"></i> Metin Çıkar
+                        </button>
+                    </div>
+
+                    <!-- Panel 1: Merge -->
+                    <div id="panel-pdf-merge" class="w-full flex flex-col gap-4">
+                        <div class="drop-zone w-full p-10 flex flex-col items-center justify-center border-2 border-dashed border-white/10 rounded-3xl bg-black/20 hover:border-red-500/40 transition-colors cursor-pointer"
+                            id="drop-zone-pdf-merge">
+                            <input type="file" id="file-input-pdf-merge" class="hidden" accept=".pdf" multiple />
+                            <div class="w-16 h-16 rounded-2xl bg-red-500/10 flex items-center justify-center mb-4 text-red-400">
+                                <i class="fa-solid fa-copy text-3xl"></i>
+                            </div>
+                            <h3 class="text-xl font-bold text-white mb-2">Birleştirilecek PDF'leri Bırakın</h3>
+                            <p class="text-sm text-gray-500">Birden fazla PDF seçebilirsiniz (Sıralama otomatik korunur)</p>
+                            <div id="pdf-merge-list" class="mt-4 w-full max-w-lg hidden flex flex-col gap-2"></div>
+                        </div>
+                        <button id="btn-pdf-merge-apply" class="w-full py-4 rounded-xl font-bold text-white bg-gradient-to-r from-red-600 to-rose-600 hover:shadow-[0_0_20px_rgba(239,68,68,0.4)] transition-all flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-object-group"></i> <span>Tüm PDF'leri Tek Dosyada Birleştir</span>
+                        </button>
+                    </div>
+
+                    <!-- Panel 2: Split -->
+                    <div id="panel-pdf-split" class="w-full hidden flex flex-col gap-4">
+                        <div class="drop-zone w-full p-10 flex flex-col items-center justify-center border-2 border-dashed border-white/10 rounded-3xl bg-black/20 hover:border-red-500/40 transition-colors cursor-pointer"
+                            id="drop-zone-pdf-split">
+                            <input type="file" id="file-input-pdf-split" class="hidden" accept=".pdf" />
+                            <div class="w-16 h-16 rounded-2xl bg-red-500/10 flex items-center justify-center mb-4 text-red-400">
+                                <i class="fa-solid fa-scissors text-3xl"></i>
+                            </div>
+                            <h3 class="text-xl font-bold text-white mb-2">Bölünecek PDF Dosyasını Bırakın</h3>
+                            <p class="text-sm text-gray-500">Tek bir PDF dosyası seçin</p>
+                            <div class="file-info hidden mt-6 w-full max-w-md bg-white/5 p-4 rounded-xl flex items-center justify-between" id="info-pdf-split">
+                                <div>
+                                    <p class="file-info-name font-bold text-white text-sm" id="info-pdf-split-name">—</p>
+                                    <p class="file-info-size text-xs text-gray-400" id="info-pdf-split-size">—</p>
+                                </div>
+                                <button class="text-xs text-red-400 hover:text-red-300 font-bold px-3 py-1 rounded-lg bg-red-500/10" id="btn-pdf-split-clear">Temizle</button>
+                            </div>
+                        </div>
+
+                        <div class="glass p-6 rounded-3xl flex flex-col gap-3">
+                            <label class="text-xs font-semibold uppercase tracking-wider text-gray-400 block">Çıkarılacak Sayfalar / Aralıklar:</label>
+                            <input type="text" id="pdf-split-pages" placeholder="Örn: 1-3, 5, 8-10 veya sadece 2-4"
+                                class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-red-500">
+                            <p class="text-[11px] text-gray-500">Aralıklar virgülle ayrılabilir. Örnek: "1-5" (ilk 5 sayfa) veya "1,3,7".</p>
+                            <button id="btn-pdf-split-apply" class="w-full py-4 rounded-xl font-bold text-white bg-gradient-to-r from-red-600 to-rose-600 hover:shadow-[0_0_20px_rgba(239,68,68,0.4)] transition-all flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-scissors"></i> <span>Seçili Sayfaları Yeni PDF Olarak Çıkar</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Panel 3: Extract Text -->
+                    <div id="panel-pdf-text" class="w-full hidden flex flex-col gap-4">
+                        <div class="drop-zone w-full p-10 flex flex-col items-center justify-center border-2 border-dashed border-white/10 rounded-3xl bg-black/20 hover:border-red-500/40 transition-colors cursor-pointer"
+                            id="drop-zone-pdf-text">
+                            <input type="file" id="file-input-pdf-text" class="hidden" accept=".pdf" />
+                            <div class="w-16 h-16 rounded-2xl bg-red-500/10 flex items-center justify-center mb-4 text-red-400">
+                                <i class="fa-solid fa-file-lines text-3xl"></i>
+                            </div>
+                            <h3 class="text-xl font-bold text-white mb-2">Metni Çıkarılacak PDF'i Bırakın</h3>
+                            <p class="text-sm text-gray-500">Tüm sayfalardaki metinler dijital TXT formatına dönüştürülür</p>
+                            <div class="file-info hidden mt-6 w-full max-w-md bg-white/5 p-4 rounded-xl flex items-center justify-between" id="info-pdf-text">
+                                <div>
+                                    <p class="file-info-name font-bold text-white text-sm" id="info-pdf-text-name">—</p>
+                                    <p class="file-info-size text-xs text-gray-400" id="info-pdf-text-size">—</p>
+                                </div>
+                                <button class="text-xs text-red-400 hover:text-red-300 font-bold px-3 py-1 rounded-lg bg-red-500/10" id="btn-pdf-text-clear">Temizle</button>
+                            </div>
+                        </div>
+
+                        <button id="btn-pdf-text-apply" class="w-full py-4 rounded-xl font-bold text-white bg-gradient-to-r from-red-600 to-rose-600 hover:shadow-[0_0_20px_rgba(239,68,68,0.4)] transition-all flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-align-left"></i> <span>PDF'teki Metinleri Çıkar</span>
+                        </button>
+
+                        <div id="pdf-text-result-box" class="hidden mt-2 p-4 rounded-2xl bg-black/40 border border-white/10 text-left flex flex-col gap-3">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-bold text-red-400">Çıkarılan Metin Önizleme:</span>
+                                <div class="flex gap-2">
+                                    <button id="btn-copy-pdf-text" class="text-xs text-gray-300 hover:text-white px-2.5 py-1 rounded bg-white/10 flex items-center gap-1">
+                                        <i class="fa-regular fa-copy"></i> Kopyala
+                                    </button>
+                                    <button id="btn-download-pdf-text" class="text-xs text-red-300 hover:text-white px-2.5 py-1 rounded bg-red-500/20 flex items-center gap-1 font-bold">
+                                        <i class="fa-solid fa-download"></i> .txt İndir
+                                    </button>
+                                </div>
+                            </div>
+                            <textarea id="pdf-text-content" rows="10" readonly class="w-full bg-black/60 border border-white/10 rounded-xl p-3 text-xs text-gray-200 font-mono focus:outline-none resize-y"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ═══ PAGE 13: AUDIO EFFECTS & SPEED ═════════════════════ -->
+            <section class="tool-page flex-1 flex-col items-center justify-start hidden" id="page-audiofx">
+                <div class="w-full max-w-4xl flex flex-col items-center gap-6">
+                    <div class="drop-zone w-full p-10 flex flex-col items-center justify-center border-2 border-dashed border-white/10 rounded-3xl bg-black/20 hover:border-emerald-500/40 transition-colors cursor-pointer"
+                        id="drop-zone-audiofx">
+                        <input type="file" id="file-input-audiofx" class="hidden" accept="audio/*,video/*" />
+                        <div class="w-16 h-16 rounded-2xl bg-emerald-500/10 flex items-center justify-center mb-4 text-emerald-400">
+                            <i class="fa-solid fa-sliders text-3xl"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-2">Efekt Uygulanacak Ses veya Videoyu Bırakın</h3>
+                        <p class="text-sm text-gray-500">MP3, WAV, FLAC, M4A, MP4 desteklenir</p>
+                        <div class="file-info hidden mt-6 w-full max-w-md bg-white/5 p-4 rounded-xl flex items-center justify-between" id="info-audiofx">
+                            <div>
+                                <p class="file-info-name font-bold text-white text-sm" id="info-audiofx-name">—</p>
+                                <p class="file-info-size text-xs text-gray-400" id="info-audiofx-size">—</p>
+                            </div>
+                            <button class="text-xs text-red-400 hover:text-red-300 font-bold px-3 py-1 rounded-lg bg-red-500/10" id="btn-audiofx-clear">Temizle</button>
+                        </div>
+                    </div>
+
+                    <div class="w-full glass p-6 rounded-3xl flex flex-col gap-6">
+                        <!-- Presets Bar -->
+                        <div>
+                            <label class="text-xs font-semibold uppercase tracking-wider text-gray-400 block mb-2.5">Hızlı Hazır Ayarlar (Presets)</label>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+                                <button type="button" id="btn-preset-slowed" class="py-2.5 px-3 rounded-xl border border-white/10 bg-white/5 hover:bg-emerald-500/20 hover:border-emerald-500 text-xs font-bold text-gray-200 transition-all">
+                                    🐌 Slowed + Reverb
+                                </button>
+                                <button type="button" id="btn-preset-nightcore" class="py-2.5 px-3 rounded-xl border border-white/10 bg-white/5 hover:bg-emerald-500/20 hover:border-emerald-500 text-xs font-bold text-gray-200 transition-all">
+                                    🐿️ Nightcore
+                                </button>
+                                <button type="button" id="btn-preset-fast" class="py-2.5 px-3 rounded-xl border border-white/10 bg-white/5 hover:bg-emerald-500/20 hover:border-emerald-500 text-xs font-bold text-gray-200 transition-all">
+                                    ⚡ 1.25x Hızlı
+                                </button>
+                                <button type="button" id="btn-preset-reset" class="py-2.5 px-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-xs font-bold text-gray-400 transition-all">
+                                    🔄 Standart (1.0x)
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Sliders -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="bg-black/20 p-4 rounded-2xl border border-white/5">
+                                <div class="flex justify-between items-center mb-2">
+                                    <label class="text-xs font-semibold text-gray-300">Tempo / Hız:</label>
+                                    <span id="label-fx-tempo" class="text-xs font-bold text-emerald-400">1.00x</span>
+                                </div>
+                                <input type="range" id="slider-fx-tempo" min="0.5" max="2.0" step="0.05" value="1.0" class="w-full accent-emerald-500 cursor-pointer">
+                                <div class="flex justify-between text-[10px] text-gray-500 mt-1">
+                                    <span>0.5x (Yavaş)</span>
+                                    <span>1.0x</span>
+                                    <span>2.0x (Hızlı)</span>
+                                </div>
+                            </div>
+
+                            <div class="bg-black/20 p-4 rounded-2xl border border-white/5">
+                                <div class="flex justify-between items-center mb-2">
+                                    <label class="text-xs font-semibold text-gray-300">Perde / Pitch:</label>
+                                    <span id="label-fx-pitch" class="text-xs font-bold text-emerald-400">1.00x</span>
+                                </div>
+                                <input type="range" id="slider-fx-pitch" min="0.7" max="1.5" step="0.05" value="1.0" class="w-full accent-emerald-500 cursor-pointer">
+                                <div class="flex justify-between text-[10px] text-gray-500 mt-1">
+                                    <span>0.7x (Kalın)</span>
+                                    <span>1.0x</span>
+                                    <span>1.5x (İnce)</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Echo & Reverb Switch -->
+                        <div class="flex items-center justify-between p-4 rounded-2xl bg-black/20 border border-white/5">
+                            <div class="flex items-center gap-3">
+                                <div class="w-9 h-9 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400">
+                                    <i class="fa-solid fa-water text-lg"></i>
+                                </div>
+                                <div>
+                                    <h4 class="text-sm font-bold text-white">Yankı & Reverb Efekti</h4>
+                                    <p class="text-xs text-gray-400">Uzaysal derinlik ve sinematik akustik ambiyans katar</p>
+                                </div>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="check-fx-reverb" class="sr-only peer">
+                                <div class="w-11 h-6 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                            </label>
+                        </div>
+
+                        <button id="btn-audiofx-apply" class="w-full py-4 rounded-xl font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:shadow-[0_0_20px_rgba(16,185,129,0.4)] transition-all flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-music"></i> <span>Efektli Sesi Üret ve İndir</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ═══ PAGE 14: NOISE CLEANER ═════════════════════════════ -->
+            <section class="tool-page flex-1 flex-col items-center justify-start hidden" id="page-noisecleaner">
+                <div class="w-full max-w-4xl flex flex-col items-center gap-6">
+                    <div class="drop-zone w-full p-10 flex flex-col items-center justify-center border-2 border-dashed border-white/10 rounded-3xl bg-black/20 hover:border-sky-500/40 transition-colors cursor-pointer"
+                        id="drop-zone-noisecleaner">
+                        <input type="file" id="file-input-noisecleaner" class="hidden" accept="audio/*,video/*" />
+                        <div class="w-16 h-16 rounded-2xl bg-sky-500/10 flex items-center justify-center mb-4 text-sky-400">
+                            <i class="fa-solid fa-wave-square text-3xl"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-2">Dip Gürültüsü Temizlenecek Medyayı Bırakın</h3>
+                        <p class="text-sm text-gray-500">Mikrofon hışırtısı, fan sesi, klima uğultusu temizlenir</p>
+                        <div class="file-info hidden mt-6 w-full max-w-md bg-white/5 p-4 rounded-xl flex items-center justify-between" id="info-noisecleaner">
+                            <div>
+                                <p class="file-info-name font-bold text-white text-sm" id="info-noisecleaner-name">—</p>
+                                <p class="file-info-size text-xs text-gray-400" id="info-noisecleaner-size">—</p>
+                            </div>
+                            <button class="text-xs text-red-400 hover:text-red-300 font-bold px-3 py-1 rounded-lg bg-red-500/10" id="btn-noisecleaner-clear">Temizle</button>
+                        </div>
+                    </div>
+
+                    <div class="w-full glass p-6 rounded-3xl flex flex-col gap-5">
+                        <div class="bg-black/20 p-4 rounded-2xl border border-white/5">
+                            <div class="flex justify-between items-center mb-2">
+                                <label class="text-xs font-semibold text-gray-300">Gürültü Bastırma Gücü (Noise Reduction):</label>
+                                <span id="label-noise-strength" class="text-xs font-bold text-sky-400">12 dB (Önerilen)</span>
+                            </div>
+                            <input type="range" id="slider-noise-nr" min="6" max="30" step="2" value="12" class="w-full accent-sky-500 cursor-pointer">
+                            <div class="flex justify-between text-[10px] text-gray-500 mt-1">
+                                <span>6 dB (Hafif)</span>
+                                <span>12 dB (Dengeli)</span>
+                                <span>24+ dB (Yoğun Filtre)</span>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-between p-4 rounded-2xl bg-black/20 border border-white/5">
+                            <div class="flex items-center gap-3">
+                                <div class="w-9 h-9 rounded-xl bg-sky-500/10 flex items-center justify-center text-sky-400">
+                                    <i class="fa-solid fa-microphone-lines text-lg"></i>
+                                </div>
+                                <div>
+                                    <h4 class="text-sm font-bold text-white">İnsan Sesi Netleştirme (Voice Focus)</h4>
+                                    <p class="text-xs text-gray-400">Derin bas uğultularını keser, konuşma frekanslarını öne çıkarır</p>
+                                </div>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="check-noise-voice-focus" checked class="sr-only peer">
+                                <div class="w-11 h-6 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-500"></div>
+                            </label>
+                        </div>
+
+                        <button id="btn-noisecleaner-apply" class="w-full py-4 rounded-xl font-bold text-white bg-gradient-to-r from-sky-600 to-blue-600 hover:shadow-[0_0_20px_rgba(14,165,233,0.4)] transition-all flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> <span>Gürültüyü Temizle ve İndir</span>
                         </button>
                     </div>
                 </div>

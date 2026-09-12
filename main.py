@@ -19,7 +19,7 @@ import ffmpeg
 import yt_dlp
 from PIL import Image, ExifTags
 from rembg import remove as rembg_remove
-from typing import List
+from typing import List, Optional, Dict, Any
 import zipfile
 import urllib.request
 
@@ -1581,4 +1581,466 @@ async def video_to_anim(
         return FileResponse(rendered_file, media_type=media_type, filename=rendered_file.name)
     except Exception as e:
         logger.error(f"Animation conversion failed: {e}")
+        return JSONResponse(status_code=500, content={"status": "error", "message": str(e)})
+
+
+# ── Hardware Telemetry & VRAM Management ─────────────────────────
+def purge_vram_and_models():
+    """Unloads cached AI models (RealESRGAN, LaMa, Faster-Whisper) and purges CUDA/RAM cache."""
+    global _UPSCALER_INSTANCE, _UPSCALER_INSTANCES, _LAMA_INSTANCE, _WHISPER_MODELS
+    _UPSCALER_INSTANCE = None
+    _UPSCALER_INSTANCES.clear()
+    _LAMA_INSTANCE = None
+    _WHISPER_MODELS.clear()
+    
+    import gc
+    gc.collect()
+    try:
+        import torch
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            torch.cuda.ipc_collect()
+    except Exception:
+        pass
+    logger.info("🧹 Purged all cached AI models and released VRAM/RAM.")
+
+@app.get("/api/system-status")
+async def get_system_status():
+    """Returns GPU VRAM and CPU RAM telemetry."""
+    import psutil
+    ram = psutil.virtual_memory()
+    res = {
+        "cpu_ram_total_mb": round(ram.total / (1024 * 1024), 1),
+        "cpu_ram_used_mb": round(ram.used / (1024 * 1024), 1),
+        "cpu_ram_percent": ram.percent,
+        "cuda_available": False,
+        "gpu_name": "None",
+        "vram_total_mb": 0,
+        "vram_allocated_mb": 0,
+        "vram_reserved_mb": 0,
+        "models_cached": {
+            "upscalers": len(_UPSCALER_INSTANCES),
+            "lama": _LAMA_INSTANCE is not None,
+            "whisper": len(_WHISPER_MODELS)
+        }
+    }
+    try:
+        import torch
+        if torch.cuda.is_available():
+            res["cuda_available"] = True
+            res["gpu_name"] = torch.cuda.get_device_name(0)
+            res["vram_total_mb"] = round(torch.cuda.get_device_properties(0).total_memory / (1024 * 1024), 1)
+            res["vram_allocated_mb"] = round(torch.cuda.memory_allocated(0) / (1024 * 1024), 1)
+            res["vram_reserved_mb"] = round(torch.cuda.memory_reserved(0) / (1024 * 1024), 1)
+    except Exception:
+        pass
+    return JSONResponse(res)
+
+@app.post("/api/purge-vram")
+async def api_purge_vram():
+    """Manually purges VRAM and unloads models."""
+    purge_vram_and_models()
+    status_response = await get_system_status()
+    import json
+    status_dict = json.loads(status_response.body.decode("utf-8"))
+    return JSONResponse({"success": True, "message": "VRAM and AI models successfully unloaded.", "status": status_dict})
+
+
+# ── Video Hardsub Burner ──────────────────────────────────────────
+@app.post("/burn-subtitles")
+async def burn_subtitles(
+    background_tasks: BackgroundTasks,
+    video: UploadFile = File(...),
+    subtitle: UploadFile = File(...),
+    font_size: int = Form(22),
+    font_color: str = Form("white"),
+    x_task_id: str = Header(None, alias="X-Task-ID")
+):
+    """Burns SRT subtitles permanently onto video using FFmpeg."""
+    update_progress(x_task_id, 10, "Uploading video and subtitle files...")
+    uid = uuid.uuid4().hex[:8]
+    safe_video = _safe_filename(video.filename)
+    safe_sub = _safe_filename(subtitle.filename)
+
+    video_path = UPLOAD_DIR / f"v_{uid}_{safe_video}"
+    sub_path = UPLOAD_DIR / f"s_{uid}_{safe_sub}"
+    out_name = f"{Path(safe_video).stem}_subbed_{uid}.mp4"
+    out_path = DOWNLOAD_DIR / out_name
+
+    with open(video_path, "wb") as vb:
+        shutil.copyfileobj(video.file, vb)
+    with open(sub_path, "wb") as sb:
+        shutil.copyfileobj(subtitle.file, sb)
+
+    color_map = {
+        "white": "&H00FFFFFF",
+        "yellow": "&H0000FFFF",
+        "cyan": "&H00FFFF00",
+        "green": "&H0000FF00",
+    }
+    color_code = color_map.get(font_color.lower(), "&H00FFFFFF")
+
+    def _burn():
+        try:
+            update_progress(x_task_id, 40, "Burning subtitles into video stream...")
+            ffmpeg_exe = "ffmpeg"
+            if FFMPEG_DIR:
+                custom_path = Path(FFMPEG_DIR) / "ffmpeg.exe"
+                if custom_path.exists():
+                    ffmpeg_exe = str(custom_path)
+
+            # Format subtitle path for FFmpeg filter on Windows
+            sub_str = str(sub_path).replace("\\", "/").replace(":", "\\:")
+            vf = f"subtitles='{sub_str}':force_style='FontSize={font_size},PrimaryColour={color_code},OutlineColour=&H00000000,BorderStyle=3,Outline=2'"
+
+            cmd = [
+                ffmpeg_exe, "-y",
+                "-i", str(video_path),
+                "-vf", vf,
+                "-c:v", "libx264",
+                "-preset", "fast",
+                "-crf", "22",
+                "-c:a", "copy",
+                str(out_path)
+            ]
+            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+            if proc.returncode != 0:
+                raise RuntimeError(f"Subtitle burn error: {proc.stderr or proc.stdout}")
+
+            update_progress(x_task_id, 100, "Subtitles burned successfully!")
+            return out_path
+        finally:
+            cleanup_files_and_memory(video_path, sub_path)
+
+    try:
+        res_file = await asyncio.to_thread(_burn)
+        background_tasks.add_task(cleanup_files_and_memory, res_file)
+        return FileResponse(res_file, media_type="video/mp4", filename=out_name)
+    except Exception as e:
+        logger.error(f"Subtitle burn failed: {e}")
+        return JSONResponse(status_code=500, content={"status": "error", "message": str(e)})
+
+
+# ── PDF Swiss Army Toolkit ─────────────────────────────────────────
+@app.post("/pdf-merge")
+async def pdf_merge(
+    background_tasks: BackgroundTasks,
+    files: List[UploadFile] = File(...),
+    x_task_id: str = Header(None, alias="X-Task-ID")
+):
+    """Merges multiple PDF files in order into a single unified document."""
+    update_progress(x_task_id, 20, "Uploading PDF files for merge...")
+    import pypdf
+    uid = uuid.uuid4().hex[:8]
+    out_name = f"merged_document_{uid}.pdf"
+    out_path = DOWNLOAD_DIR / out_name
+
+    saved_paths = []
+    for f in files:
+        p = UPLOAD_DIR / f"pdf_{uid}_{_safe_filename(f.filename)}"
+        with open(p, "wb") as buf:
+            shutil.copyfileobj(f.file, buf)
+        saved_paths.append(p)
+
+    def _do_merge():
+        try:
+            update_progress(x_task_id, 50, "Merging PDF pages...")
+            merger = pypdf.PdfWriter()
+            for sp in saved_paths:
+                merger.append(str(sp))
+            with open(out_path, "wb") as out_buf:
+                merger.write(out_buf)
+            merger.close()
+            update_progress(x_task_id, 100, "PDFs merged successfully!")
+            return out_path
+        finally:
+            cleanup_files_and_memory(*saved_paths)
+
+    try:
+        merged_file = await asyncio.to_thread(_do_merge)
+        background_tasks.add_task(cleanup_files_and_memory, merged_file)
+        return FileResponse(merged_file, media_type="application/pdf", filename=out_name)
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"status": "error", "message": f"Merge failed: {str(e)}"})
+
+
+@app.post("/pdf-split")
+async def pdf_split(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    page_range: Optional[str] = Form(None),
+    page_ranges: Optional[str] = Form(None),
+    x_task_id: str = Header(None, alias="X-Task-ID")
+):
+    """Extracts specified page ranges from a PDF."""
+    target_range = page_ranges or page_range or "1-1"
+    update_progress(x_task_id, 20, "Uploading PDF for extraction...")
+    import pypdf
+    uid = uuid.uuid4().hex[:8]
+    safe_name = _safe_filename(file.filename)
+    src_path = UPLOAD_DIR / f"split_{uid}_{safe_name}"
+    out_name = f"{Path(safe_name).stem}_pages_{uid}.pdf"
+    out_path = DOWNLOAD_DIR / out_name
+
+    with open(src_path, "wb") as buf:
+        shutil.copyfileobj(file.file, buf)
+
+    def _do_split():
+        try:
+            update_progress(x_task_id, 50, f"Extracting pages ({target_range})...")
+            reader = pypdf.PdfReader(str(src_path))
+            writer = pypdf.PdfWriter()
+            total_pages = len(reader.pages)
+
+            pages_to_extract = set()
+            parts = [p.strip() for p in target_range.split(",") if p.strip()]
+            for part in parts:
+                if "-" in part:
+                    s_str, e_str = part.split("-", 1)
+                    s_idx = max(1, int(s_str.strip()))
+                    e_idx = min(total_pages, int(e_str.strip()))
+                    for p_num in range(s_idx, e_idx + 1):
+                        pages_to_extract.add(p_num - 1)
+                else:
+                    p_idx = int(part) - 1
+                    if 0 <= p_idx < total_pages:
+                        pages_to_extract.add(p_idx)
+
+            if not pages_to_extract:
+                raise ValueError("No valid pages selected.")
+
+            for page_idx in sorted(pages_to_extract):
+                writer.add_page(reader.pages[page_idx])
+
+            with open(out_path, "wb") as out_buf:
+                writer.write(out_buf)
+
+            update_progress(x_task_id, 100, "Pages extracted successfully!")
+            return out_path
+        finally:
+            cleanup_files_and_memory(src_path)
+
+    try:
+        split_file = await asyncio.to_thread(_do_split)
+        background_tasks.add_task(cleanup_files_and_memory, split_file)
+        return FileResponse(split_file, media_type="application/pdf", filename=out_name)
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"status": "error", "message": f"Split failed: {str(e)}"})
+
+
+@app.post("/pdf-extract-text")
+async def pdf_extract_text(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    x_task_id: str = Header(None, alias="X-Task-ID")
+):
+    """Extracts all readable text content from a PDF file."""
+    update_progress(x_task_id, 20, "Uploading PDF for text extraction...")
+    import pypdf
+    uid = uuid.uuid4().hex[:8]
+    safe_name = _safe_filename(file.filename)
+    src_path = UPLOAD_DIR / f"txt_{uid}_{safe_name}"
+
+    with open(src_path, "wb") as buf:
+        shutil.copyfileobj(file.file, buf)
+
+    def _do_extract():
+        try:
+            update_progress(x_task_id, 50, "Extracting text content...")
+            reader = pypdf.PdfReader(str(src_path))
+            full_text = []
+            for i, page in enumerate(reader.pages, start=1):
+                txt = page.extract_text() or ""
+                full_text.append(f"--- PAGE {i} ---\n{txt.strip()}\n")
+
+            update_progress(x_task_id, 100, "Text extracted successfully!")
+            return {
+                "success": True,
+                "text": "\n".join(full_text),
+                "pages": len(reader.pages)
+            }
+        finally:
+            cleanup_files_and_memory(src_path)
+
+    try:
+        res = await asyncio.to_thread(_do_extract)
+        return JSONResponse(content=res)
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"status": "error", "message": f"Extract failed: {str(e)}"})
+
+
+# ── Audio Speed, Pitch & Effects Engine (Slowed+Reverb / Nightcore) ─
+@app.post("/audio-effects")
+async def audio_effects(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    preset: str = Form("custom"),
+    tempo: float = Form(1.0),
+    pitch: float = Form(1.0),
+    reverb: Optional[str] = Form(None),
+    add_reverb: bool = Form(False),
+    x_task_id: str = Header(None, alias="X-Task-ID")
+):
+    """Applies speed, pitch, nightcore, and slowed+reverb effects to audio."""
+    update_progress(x_task_id, 10, "Uploading audio for effects processing...")
+    safe_name = _safe_filename(file.filename)
+    uid = uuid.uuid4().hex[:8]
+    input_path = UPLOAD_DIR / f"fx_{uid}_{safe_name}"
+    out_name = f"{Path(safe_name).stem}_fx_{uid}.mp3"
+    out_path = DOWNLOAD_DIR / out_name
+
+    with open(input_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    enable_reverb = add_reverb or (str(reverb).lower() in ("true", "1", "yes"))
+
+    def _apply_fx():
+        try:
+            update_progress(x_task_id, 40, f"Applying audio effects filter chain...")
+            ffmpeg_exe = "ffmpeg"
+            if FFMPEG_DIR:
+                custom_path = Path(FFMPEG_DIR) / "ffmpeg.exe"
+                if custom_path.exists():
+                    ffmpeg_exe = str(custom_path)
+
+            filters = []
+            if preset == "slowed_reverb":
+                filters.append("atempo=0.85,aecho=0.8:0.88:60:0.4")
+            elif preset == "nightcore":
+                filters.append("asetrate=44100*1.25,atempo=1.0")
+            elif preset == "speed_1_5x":
+                filters.append("atempo=1.5")
+            elif preset == "slow_0_75x":
+                filters.append("atempo=0.75")
+            else:
+                clamped_tempo = max(0.5, min(2.0, tempo))
+                clamped_pitch = max(0.5, min(2.0, pitch))
+
+                if abs(clamped_pitch - 1.0) > 0.01:
+                    rate = int(44100 * clamped_pitch)
+                    comp_tempo = clamped_tempo / clamped_pitch
+                    # atempo requires between 0.5 and 2.0
+                    comp_tempo = max(0.5, min(2.0, comp_tempo))
+                    filters.append(f"asetrate={rate},atempo={comp_tempo:.3f}")
+                else:
+                    filters.append(f"atempo={clamped_tempo:.3f}")
+
+                if enable_reverb:
+                    filters.append("aecho=0.8:0.88:60:0.4")
+
+            af = ",".join(filters) if filters else "atempo=1.0"
+
+            cmd = [
+                ffmpeg_exe, "-y",
+                "-i", str(input_path),
+                "-af", af,
+                "-q:a", "2",
+                str(out_path)
+            ]
+            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+            if proc.returncode != 0:
+                raise RuntimeError(f"Audio effect error: {proc.stderr or proc.stdout}")
+
+            update_progress(x_task_id, 100, "Audio effects rendered successfully!")
+            return out_path
+        finally:
+            cleanup_files_and_memory(input_path)
+
+    try:
+        rendered = await asyncio.to_thread(_apply_fx)
+        background_tasks.add_task(cleanup_files_and_memory, rendered)
+        return FileResponse(rendered, media_type="audio/mpeg", filename=out_name)
+    except Exception as e:
+        logger.error(f"Audio effects failed: {e}")
+        return JSONResponse(status_code=500, content={"status": "error", "message": str(e)})
+
+
+# ── AI & Spectral Noise Suppressor ─────────────────────────────────
+@app.post("/clean-audio-noise")
+async def clean_audio_noise(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    noise_preset: Optional[str] = Form("medium"),
+    noise_reduction_db: Optional[float] = Form(None),
+    voice_focus: Optional[str] = Form(None),
+    x_task_id: str = Header(None, alias="X-Task-ID")
+):
+    """Removes background hum, fan noise, and hiss using Adaptive FFT De-Noise."""
+    update_progress(x_task_id, 10, "Uploading media for noise reduction...")
+    safe_name = _safe_filename(file.filename)
+    uid = uuid.uuid4().hex[:8]
+    input_path = UPLOAD_DIR / f"dn_{uid}_{safe_name}"
+    
+    ext = Path(safe_name).suffix.lower().lstrip(".")
+    is_video = ext in VIDEO_EXTENSIONS
+    out_ext = ext if is_video else "mp3"
+    out_name = f"{Path(safe_name).stem}_clean_{uid}.{out_ext}"
+    out_path = DOWNLOAD_DIR / out_name
+
+    with open(input_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    # Calculate filter string
+    is_voice_focus = str(voice_focus).lower() in ("true", "1", "yes")
+    if noise_reduction_db is not None:
+        nr_val = -abs(float(noise_reduction_db))
+        denoise_filter = f"afftdn=nf={nr_val}:tn=1"
+    else:
+        preset_filters = {
+            "light": "afftdn=nf=-20:tn=1",
+            "medium": "afftdn=nf=-30:tn=1",
+            "heavy": "afftdn=nf=-42:tn=1",
+            "voice_focus": "highpass=f=85,lowpass=f=3800,afftdn=nf=-30:tn=1",
+        }
+        denoise_filter = preset_filters.get(str(noise_preset).lower(), "afftdn=nf=-30:tn=1")
+
+    if is_voice_focus and "highpass" not in denoise_filter:
+        af = f"highpass=f=85,lowpass=f=3800,{denoise_filter}"
+    else:
+        af = denoise_filter
+
+    def _denoise():
+        try:
+            update_progress(x_task_id, 40, f"Processing audio with FFT noise suppressor...")
+            ffmpeg_exe = "ffmpeg"
+            if FFMPEG_DIR:
+                custom_path = Path(FFMPEG_DIR) / "ffmpeg.exe"
+                if custom_path.exists():
+                    ffmpeg_exe = str(custom_path)
+
+            if is_video:
+                cmd = [
+                    ffmpeg_exe, "-y",
+                    "-i", str(input_path),
+                    "-c:v", "copy",
+                    "-af", af,
+                    "-c:a", "aac",
+                    "-b:a", "192k",
+                    str(out_path)
+                ]
+            else:
+                cmd = [
+                    ffmpeg_exe, "-y",
+                    "-i", str(input_path),
+                    "-af", af,
+                    "-q:a", "2",
+                    str(out_path)
+                ]
+
+            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=240)
+            if proc.returncode != 0:
+                raise RuntimeError(f"Denoise error: {proc.stderr or proc.stdout}")
+
+            update_progress(x_task_id, 100, "Audio noise cleaned successfully!")
+            return out_path
+        finally:
+            cleanup_files_and_memory(input_path)
+
+    try:
+        cleaned = await asyncio.to_thread(_denoise)
+        background_tasks.add_task(cleanup_files_and_memory, cleaned)
+        media_type = _guess_media_type(out_ext)
+        return FileResponse(cleaned, media_type=media_type, filename=out_name)
+    except Exception as e:
+        logger.error(f"Denoising failed: {e}")
         return JSONResponse(status_code=500, content={"status": "error", "message": str(e)})
