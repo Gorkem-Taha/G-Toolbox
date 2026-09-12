@@ -3,6 +3,7 @@ Test Suite for G-Toolbox Image Upscaling Pipeline
 Verifies RGBA, Grayscale, Oversized image handling, and channel preservation.
 """
 
+import os
 import sys
 import numpy as np
 import cv2
@@ -78,7 +79,44 @@ def test_main_import_and_get_upscaler():
     import main
     assert hasattr(main, "get_upscaler"), "main.py missing get_upscaler"
     assert hasattr(main, "_UPSCALER_INSTANCE"), "main.py missing _UPSCALER_INSTANCE"
-    print("  -> PASSED: main.py imported cleanly, singleton and functions verified.")
+    assert hasattr(main, "_UPSCALER_INSTANCES"), "main.py missing _UPSCALER_INSTANCES"
+    print("  -> PASSED: main.py imported cleanly, multi-model singleton verified.")
+
+def test_purge_stale_files():
+    print("[TEST 5] Testing purge_stale_files disk hygiene...")
+    import main
+    import time
+    assert hasattr(main, "purge_stale_files"), "main.py missing purge_stale_files"
+    # Create a temporary dummy test file in UPLOAD_DIR
+    dummy_file = main.UPLOAD_DIR / "test_stale_temp.txt"
+    dummy_file.write_text("test cleanup")
+    # Simulate file created 1 hour ago
+    past_time = time.time() - 3600
+    os.utime(str(dummy_file), (past_time, past_time))
+    assert dummy_file.exists()
+    # Running purge with max_age_hours=0.5 (30 mins) should delete it
+    main.purge_stale_files(max_age_hours=0.5)
+    assert not dummy_file.exists(), "Dummy file was not purged"
+    print("  -> PASSED: Stale temporary file purged successfully.")
+
+def test_fastapi_endpoints():
+    print("[TEST 6] Testing FastAPI routes and endpoints via AsyncClient...")
+    import asyncio
+    import httpx
+    import main
+
+    async def _test_routes():
+        transport = httpx.ASGITransport(app=main.app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            res_home = await client.get("/")
+            assert res_home.status_code == 200, f"Home route failed: {res_home.status_code}"
+            res_upd = await client.get("/check-update")
+            assert res_upd.status_code == 200, f"Check-update failed: {res_upd.status_code}"
+            res_prog = await client.get("/progress/non-existent-task")
+            assert res_prog.status_code == 200, f"Progress status failed: {res_prog.status_code}"
+        print("  -> PASSED: Core endpoints (/, /check-update, /progress) responsive with HTTP 200.")
+
+    asyncio.run(_test_routes())
 
 if __name__ == "__main__":
     print("==================================================")
@@ -88,6 +126,8 @@ if __name__ == "__main__":
     test_grayscale_channel_handling()
     test_oversized_image_downscaling()
     test_main_import_and_get_upscaler()
+    test_purge_stale_files()
+    test_fastapi_endpoints()
     print("==================================================")
-    print("   ALL TESTS PASSED SUCCESSFULLY!                 ")
+    print("   ALL 6 TESTS PASSED SUCCESSFULLY!               ")
     print("==================================================")

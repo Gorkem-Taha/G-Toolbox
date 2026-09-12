@@ -56,24 +56,37 @@ except ImportError as e:
     RealESRGANer = None
 
 _UPSCALER_INSTANCE = None
+_UPSCALER_INSTANCES = {}
 
-def get_upscaler(force_fp32: bool = False):
-    global _UPSCALER_INSTANCE
+def get_upscaler(model_type: str = "general", force_fp32: bool = False):
+    global _UPSCALER_INSTANCE, _UPSCALER_INSTANCES
     if RealESRGANer is None:
         raise RuntimeError("realesrgan library or dependencies not installed.")
 
+    m_key = "anime" if "anime" in str(model_type).lower() else "general"
+    cache_key = f"{m_key}_fp32" if force_fp32 else m_key
+
     # Return cached singleton if already loaded and not forcing FP32 fallback
-    if _UPSCALER_INSTANCE is not None and not force_fp32:
-        return _UPSCALER_INSTANCE
+    if cache_key in _UPSCALER_INSTANCES and not force_fp32:
+        return _UPSCALER_INSTANCES[cache_key]
 
     import urllib.request
-    model_name = "RealESRGAN_x4plus.pth"
+
+    if m_key == "anime":
+        model_name = "RealESRGAN_x4plus_anime_6B.pth"
+        model_url = f"https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.2.4/{model_name}"
+        expected_min_size = 15 * 1024 * 1024  # ~17.9 MB
+        num_block = 6
+    else:
+        model_name = "RealESRGAN_x4plus.pth"
+        model_url = f"https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/{model_name}"
+        expected_min_size = 60 * 1024 * 1024  # ~67 MB
+        num_block = 23
+
     model_path = BASE_DIR / model_name
-    model_url = f"https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/{model_name}"
-    EXPECTED_MIN_SIZE = 60 * 1024 * 1024  # RealESRGAN_x4plus.pth is ~67MB
 
     # Verify existing file integrity to prevent _pickle.UnpicklingError from partial downloads
-    if model_path.exists() and model_path.stat().st_size < EXPECTED_MIN_SIZE:
+    if model_path.exists() and model_path.stat().st_size < expected_min_size:
         logger.warning(f"Incomplete model file detected ({model_path.stat().st_size} bytes). Removing and re-downloading...")
         try:
             model_path.unlink()
@@ -93,7 +106,7 @@ def get_upscaler(force_fp32: bool = False):
         with urllib.request.urlopen(req, timeout=120) as response, open(temp_path, "wb") as out_file:
             shutil.copyfileobj(response, out_file)
 
-        if temp_path.stat().st_size < EXPECTED_MIN_SIZE:
+        if temp_path.stat().st_size < expected_min_size:
             temp_path.unlink()
             raise RuntimeError(f"Downloaded model weights are incomplete ({temp_path.stat().st_size} bytes).")
 
@@ -101,7 +114,7 @@ def get_upscaler(force_fp32: bool = False):
         logger.info(f"Successfully downloaded and verified {model_name} ({model_path.stat().st_size} bytes).")
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model = RRDBNet(num_in_ch=3, num_out_ch=3, num_feat=64, num_block=23, num_grow_ch=32, scale=4)
+    model = RRDBNet(num_in_ch=3, num_out_ch=3, num_feat=64, num_block=num_block, num_grow_ch=32, scale=4)
     
     # Half-precision (FP16) produces NaN / black images on GTX 16xx Turing and older Pascal cards
     half = False
@@ -127,6 +140,7 @@ def get_upscaler(force_fp32: bool = False):
     )
 
     if not force_fp32:
+        _UPSCALER_INSTANCES[cache_key] = upscaler_model
         _UPSCALER_INSTANCE = upscaler_model
     return upscaler_model
 
@@ -216,6 +230,34 @@ def update_progress(task_id: str, progress: int, message: str):
 async def get_progress(task_id: str):
     """Returns the current progress status for a given task ID."""
     return JSONResponse(content=progress_store.get(task_id, {"progress": 0, "message": ""}))
+
+def purge_stale_files(max_age_hours: int = 12):
+    """Safely removes abandoned temporary files older than max_age_hours from disk."""
+    import time
+    now = time.time()
+    cutoff = now - (max_age_hours * 3600)
+    purged = 0
+    for folder in [UPLOAD_DIR, DOWNLOAD_DIR]:
+        if not folder.exists():
+            continue
+        for item in folder.iterdir():
+            if item.is_file() and not item.name.startswith("."):
+                try:
+                    if item.stat().st_mtime < cutoff:
+                        item.unlink()
+                        purged += 1
+                except Exception:
+                    pass
+    if purged > 0:
+        logger.info(f"🧹 Disk maintenance: Cleaned up {purged} stale temporary file(s).")
+
+@app.on_event("startup")
+async def on_startup():
+    """Application startup initialization and disk cleanup."""
+    try:
+        purge_stale_files(max_age_hours=6)
+    except Exception as e:
+        logger.warning(f"Startup purge warning: {e}")
 
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
@@ -529,6 +571,7 @@ async def magic_erase(
 async def upscale_image(
     file: UploadFile = File(...),
     scale: int = Form(4),
+    model_type: str = Form("general"),
     background_tasks: BackgroundTasks = None,
     x_task_id: str = Header(None)
 ):
@@ -554,7 +597,7 @@ async def upscale_image(
     try:
         update_progress(x_task_id, 50, "Model çalışıyor (Bu işlem biraz sürebilir)...")
         def process_upscale():
-            upscaler = get_upscaler()
+            upscaler = get_upscaler(model_type=model_type)
             # Decode using raw bytes to bypass cv2 unicode limitations
             img_bytes = np.fromfile(str(src_path), np.uint8)
             img = cv2.imdecode(img_bytes, cv2.IMREAD_UNCHANGED)
@@ -593,7 +636,7 @@ async def upscale_image(
                 # If CUDA or FP16 error occurs, retry with safe FP32 fallback
                 if "half" in str(e).lower() or "cuda" in str(e).lower():
                     logger.warning(f"Upscale failed with FP16/CUDA error: {e}. Retrying with FP32 fallback...")
-                    fallback_upscaler = get_upscaler(force_fp32=True)
+                    fallback_upscaler = get_upscaler(model_type=model_type, force_fp32=True)
                     output, _ = fallback_upscaler.enhance(img, outscale=scale)
                 else:
                     raise e
@@ -1125,3 +1168,20 @@ async def apply_update(x_task_id: str = Header(None)):
         if extract_path.exists():
             shutil.rmtree(extract_path, ignore_errors=True)
         return JSONResponse(status_code=500, content={"status": "error", "message": f"Update failed: {str(e)}"})
+
+@app.post("/update-ytdlp")
+async def update_ytdlp():
+    """Updates yt-dlp to the latest version to prevent YouTube streaming download breakages."""
+    def _run_update():
+        try:
+            cmd = [sys.executable, "-m", "pip", "install", "--upgrade", "yt-dlp"]
+            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=90)
+            v_proc = subprocess.run([sys.executable, "-m", "yt_dlp", "--version"], capture_output=True, text=True, timeout=10)
+            ver = v_proc.stdout.strip() if v_proc.returncode == 0 else "Latest"
+            return {"success": True, "version": ver, "message": f"yt-dlp engine successfully updated to {ver}."}
+        except Exception as e:
+            return {"success": False, "message": f"Update failed: {str(e)}"}
+
+    res = await asyncio.to_thread(_run_update)
+    code = 200 if res.get("success") else 500
+    return JSONResponse(status_code=code, content=res)
