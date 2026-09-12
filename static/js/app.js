@@ -938,6 +938,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     let upscaleFile = null;
     let selectedScale = 2; // Default scale
+    let selectedModel = "general"; // Default model
 
     if (dropUpscale) {
         setupDropZone(dropUpscale, inputUpscale, handleUpscaleFile, (e) => {
@@ -991,6 +992,31 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
+    const upscaleModelOptions = document.querySelectorAll(".upscale-model-btn");
+    upscaleModelOptions.forEach(btn => {
+        btn.addEventListener("click", () => {
+            upscaleModelOptions.forEach(b => {
+                b.classList.remove("ring-2", "ring-purple-500", "bg-black/40", "text-white");
+                b.classList.add("border-white/5", "bg-white/5", "text-gray-300");
+                const icon = b.querySelector("i");
+                if (icon) {
+                    icon.classList.remove("text-purple-400");
+                    icon.classList.add("text-gray-500");
+                }
+            });
+
+            btn.classList.add("ring-2", "ring-purple-500", "bg-black/40", "text-white");
+            btn.classList.remove("border-white/5", "bg-white/5", "text-gray-300");
+            const btnIcon = btn.querySelector("i");
+            if (btnIcon) {
+                btnIcon.classList.add("text-purple-400");
+                btnIcon.classList.remove("text-gray-500");
+            }
+
+            selectedModel = btn.dataset.model || "general";
+        });
+    });
+
     if (btnUpscaleApply) {
         btnUpscaleApply.addEventListener("click", () => {
             if (!upscaleFile) return;
@@ -1007,6 +1033,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const fd = new FormData();
             fd.append("file", upscaleFile);
             fd.append("scale", selectedScale);
+            fd.append("model_type", selectedModel);
 
             fetch("/upscale-image", {
                 method: "POST",
