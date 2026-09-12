@@ -17,7 +17,7 @@ from pathlib import Path
 
 import ffmpeg
 import yt_dlp
-from PIL import Image
+from PIL import Image, ExifTags
 from rembg import remove as rembg_remove
 from typing import List
 import zipfile
@@ -1225,3 +1225,298 @@ async def update_ytdlp():
     res = await asyncio.to_thread(_run_update)
     code = 200 if res.get("success") else 500
     return JSONResponse(status_code=code, content=res)
+
+
+# ── Demucs Audio Stem Separation ──────────────────────────────────
+@app.post("/separate-audio")
+async def separate_audio(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    stems: str = Form("vocals"),
+    x_task_id: str = Header(None, alias="X-Task-ID")
+):
+    """Separates audio into vocals and instrumental (or 4 stems) using Demucs."""
+    update_progress(x_task_id, 5, "Audio uploaded. Initializing Demucs AI...")
+    safe_name = _safe_filename(file.filename)
+    input_path = UPLOAD_DIR / f"{uuid.uuid4().hex}_{safe_name}"
+    
+    with open(input_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    out_folder = DOWNLOAD_DIR / f"separated_{uuid.uuid4().hex}"
+    out_folder.mkdir(parents=True, exist_ok=True)
+
+    def _process():
+        try:
+            update_progress(x_task_id, 25, "Separating audio stems with Demucs neural network...")
+            cmd = [
+                sys.executable, "-m", "demucs",
+                "-n", "htdemucs",
+                "--out", str(out_folder)
+            ]
+            if stems == "vocals":
+                cmd.extend(["--two-stems", "vocals"])
+            cmd.append(str(input_path))
+
+            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+            if proc.returncode != 0:
+                raise RuntimeError(f"Demucs processing error: {proc.stderr or proc.stdout}")
+
+            update_progress(x_task_id, 80, "Compressing separated audio stems into ZIP...")
+            track_dirs = list((out_folder / "htdemucs").glob("*"))
+            if not track_dirs:
+                raise RuntimeError("No output stems produced by Demucs.")
+            
+            target_track_dir = track_dirs[0]
+            zip_filename = f"{Path(safe_name).stem}_separated_stems.zip"
+            zip_path = DOWNLOAD_DIR / zip_filename
+            
+            with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+                for stem_file in target_track_dir.glob("*.wav"):
+                    zf.write(stem_file, arcname=stem_file.name)
+
+            update_progress(x_task_id, 100, "Audio separation complete!")
+            return zip_path
+        finally:
+            cleanup_files_and_memory(input_path)
+            shutil.rmtree(out_folder, ignore_errors=True)
+
+    try:
+        zip_path = await asyncio.to_thread(_process)
+        background_tasks.add_task(cleanup_files_and_memory, zip_path)
+        return FileResponse(
+            zip_path,
+            media_type="application/zip",
+            filename=zip_path.name
+        )
+    except Exception as e:
+        logger.error(f"Demucs separation failed: {e}")
+        return JSONResponse(status_code=500, content={"status": "error", "message": str(e)})
+
+
+# ── Faster-Whisper Local Transcription ────────────────────────────
+_WHISPER_MODEL = None
+
+def get_whisper_model(model_size: str = "base"):
+    global _WHISPER_MODEL
+    try:
+        from faster_whisper import WhisperModel
+    except ImportError:
+        raise RuntimeError("faster-whisper library is not installed.")
+    
+    if _WHISPER_MODEL is None:
+        device = "cuda" if (torch and torch.cuda.is_available()) else "cpu"
+        compute_type = "float16" if (torch and torch.cuda.is_available()) else "int8"
+        _WHISPER_MODEL = WhisperModel(model_size, device=device, compute_type=compute_type)
+    return _WHISPER_MODEL
+
+def format_timestamp(seconds: float) -> str:
+    """Formats float seconds into SRT timestamp HH:MM:SS,mmm."""
+    hrs = int(seconds // 3600)
+    mins = int((seconds % 3600) // 60)
+    secs = int(seconds % 60)
+    msecs = int(round((seconds - int(seconds)) * 1000))
+    return f"{hrs:02d}:{mins:02d}:{secs:02d},{msecs:03d}"
+
+@app.post("/transcribe-media")
+async def transcribe_media(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    output_format: str = Form("txt"),
+    language: str = Form("auto"),
+    model_size: str = Form("base"),
+    x_task_id: str = Header(None, alias="X-Task-ID")
+):
+    """Generates transcripts and subtitles from video or audio files using Faster-Whisper."""
+    update_progress(x_task_id, 10, "Loading audio and initializing Faster-Whisper model...")
+    safe_name = _safe_filename(file.filename)
+    input_path = UPLOAD_DIR / f"{uuid.uuid4().hex}_{safe_name}"
+
+    with open(input_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    def _transcribe():
+        try:
+            update_progress(x_task_id, 30, "Transcribing speech to text...")
+            model = get_whisper_model(model_size=model_size)
+            lang_param = None if language.lower() in ["auto", ""] else language.lower()
+
+            segments, info = model.transcribe(str(input_path), language=lang_param, beam_size=5)
+            update_progress(x_task_id, 75, f"Transcription completed ({info.language.upper()}, {info.duration:.1f}s). Formatting...")
+
+            text_lines = []
+            srt_entries = []
+            raw_segments = []
+
+            for i, seg in enumerate(segments, start=1):
+                clean_text = seg.text.strip()
+                text_lines.append(clean_text)
+                srt_entries.append(
+                    f"{i}\n{format_timestamp(seg.start)} --> {format_timestamp(seg.end)}\n{clean_text}\n"
+                )
+                raw_segments.append({
+                    "id": i,
+                    "start": seg.start,
+                    "end": seg.end,
+                    "text": clean_text
+                })
+
+            base_stem = Path(safe_name).stem
+            if output_format == "srt":
+                out_path = DOWNLOAD_DIR / f"{base_stem}_subtitles.srt"
+                out_path.write_text("\n".join(srt_entries), encoding="utf-8")
+                media_type = "text/plain"
+            elif output_format == "json":
+                return {
+                    "language": info.language,
+                    "duration": info.duration,
+                    "full_text": "\n".join(text_lines),
+                    "segments": raw_segments
+                }
+            else:
+                out_path = DOWNLOAD_DIR / f"{base_stem}_transcript.txt"
+                out_path.write_text("\n\n".join(text_lines), encoding="utf-8")
+                media_type = "text/plain"
+
+            update_progress(x_task_id, 100, "Transcription finished!")
+            return out_path, media_type
+        finally:
+            cleanup_files_and_memory(input_path)
+
+    try:
+        res = await asyncio.to_thread(_transcribe)
+        if isinstance(res, dict):
+            return JSONResponse(res)
+        out_path, media_type = res
+        background_tasks.add_task(cleanup_files_and_memory, out_path)
+        return FileResponse(out_path, media_type=media_type, filename=out_path.name)
+    except Exception as e:
+        logger.error(f"Transcription failed: {e}")
+        return JSONResponse(status_code=500, content={"status": "error", "message": str(e)})
+
+
+# ── EXIF & Metadata Inspector / Stripper ──────────────────────────
+@app.post("/view-metadata")
+async def view_metadata(file: UploadFile = File(...)):
+    """Extracts and inspects EXIF metadata tags from an image."""
+    try:
+        image = Image.open(file.file)
+        exif_data = image.getexif()
+        metadata = {}
+        if exif_data:
+            for tag_id, value in exif_data.items():
+                tag_name = ExifTags.TAGS.get(tag_id, str(tag_id))
+                if isinstance(value, bytes):
+                    metadata[tag_name] = f"<binary data: {len(value)} bytes>"
+                else:
+                    metadata[tag_name] = str(value)
+
+        return JSONResponse({
+            "filename": file.filename,
+            "format": image.format,
+            "size": f"{image.width}x{image.height}",
+            "tag_count": len(metadata),
+            "tags": metadata
+        })
+    except Exception as e:
+        return JSONResponse(status_code=400, content={"error": f"Failed to read image metadata: {str(e)}"})
+
+@app.post("/strip-metadata")
+async def strip_metadata(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
+    """Completely strips EXIF, GPS, camera model, and private metadata from an image."""
+    safe_name = _safe_filename(file.filename)
+    dest_path = DOWNLOAD_DIR / f"clean_{uuid.uuid4().hex}_{safe_name}"
+    try:
+        image = Image.open(file.file)
+        # Recreate image purely from pixel buffer to strip all hidden metadata
+        clean_img = Image.frombytes(image.mode, image.size, image.tobytes())
+
+        fmt = image.format or "PNG"
+        clean_img.save(dest_path, format=fmt)
+
+        background_tasks.add_task(cleanup_files_and_memory, dest_path)
+        return FileResponse(
+            dest_path,
+            media_type=f"image/{fmt.lower()}",
+            filename=f"clean_{safe_name}"
+        )
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"status": "error", "message": f"Strip failed: {str(e)}"})
+
+
+# ── Video to GIF / WebP Animation ────────────────────────────────
+@app.post("/video-to-anim")
+async def video_to_anim(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    start_time: str = Form("00:00:00"),
+    duration: float = Form(5.0),
+    fps: int = Form(15),
+    width: int = Form(480),
+    anim_format: str = Form("gif"),
+    quality: int = Form(80),
+    x_task_id: str = Header(None, alias="X-Task-ID")
+):
+    """Converts a specific segment of a video to optimized animated GIF or WebP."""
+    update_progress(x_task_id, 10, "Uploading video for animation render...")
+    safe_name = _safe_filename(file.filename)
+    input_path = UPLOAD_DIR / f"{uuid.uuid4().hex}_{safe_name}"
+    
+    with open(input_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    out_ext = "webp" if anim_format.lower() == "webp" else "gif"
+    out_path = DOWNLOAD_DIR / f"{Path(safe_name).stem}_anim_{uuid.uuid4().hex[:6]}.{out_ext}"
+
+    def _render():
+        try:
+            update_progress(x_task_id, 40, f"Rendering high-quality animated {out_ext.upper()} via FFmpeg...")
+            ffmpeg_exe = "ffmpeg"
+            if FFMPEG_DIR:
+                custom_path = Path(FFMPEG_DIR) / "ffmpeg.exe"
+                if custom_path.exists():
+                    ffmpeg_exe = str(custom_path)
+
+            if out_ext == "gif":
+                vf = f"fps={fps},scale={width}:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse"
+                cmd = [
+                    ffmpeg_exe, "-y",
+                    "-ss", str(start_time),
+                    "-t", str(duration),
+                    "-i", str(input_path),
+                    "-vf", vf,
+                    str(out_path)
+                ]
+            else:
+                vf = f"fps={fps},scale={width}:-1:flags=lanczos"
+                cmd = [
+                    ffmpeg_exe, "-y",
+                    "-ss", str(start_time),
+                    "-t", str(duration),
+                    "-i", str(input_path),
+                    "-vf", vf,
+                    "-vcodec", "libwebp",
+                    "-lossless", "0",
+                    "-q:v", str(quality),
+                    "-loop", "0",
+                    "-an",
+                    str(out_path)
+                ]
+
+            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
+            if proc.returncode != 0:
+                raise RuntimeError(f"FFmpeg error: {proc.stderr or proc.stdout}")
+
+            update_progress(x_task_id, 100, f"Rendered {out_ext.upper()} successfully!")
+            return out_path
+        finally:
+            cleanup_files_and_memory(input_path)
+
+    try:
+        rendered_file = await asyncio.to_thread(_render)
+        background_tasks.add_task(cleanup_files_and_memory, rendered_file)
+        media_type = "image/webp" if out_ext == "webp" else "image/gif"
+        return FileResponse(rendered_file, media_type=media_type, filename=rendered_file.name)
+    except Exception as e:
+        logger.error(f"Animation conversion failed: {e}")
+        return JSONResponse(status_code=500, content={"status": "error", "message": str(e)})

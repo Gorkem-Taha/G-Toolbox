@@ -186,6 +186,78 @@
                     <span data-i18n="btn_go_tool">Go to Tool</span> <i class="fa-solid fa-arrow-right"></i>
                 </button>
             </div>
+
+            <!-- Card 7: Vocal Separator -->
+            <div
+                class="glass p-8 rounded-3xl flex flex-col items-start transition-all hover:-translate-y-2 hover:border-rose-500/30 group">
+                <div
+                    class="w-16 h-16 rounded-2xl bg-rose-500/10 flex items-center justify-center mb-6 border border-rose-500/20 group-hover:bg-rose-500/20 transition-colors">
+                    <i class="fa-solid fa-music text-3xl text-rose-400"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-100 mb-3" data-i18n="menu_separator">Vocal Separator</h3>
+                <p class="text-gray-400 leading-relaxed mb-8 flex-1 text-[0.95rem]">
+                    <span data-i18n="desc_separator">Extract vocals and instrumental backing tracks from songs using Demucs AI.</span>
+                </p>
+                <button
+                    class="btn-go-tool w-full py-3.5 rounded-xl font-bold text-white bg-white/5 border border-white/10 hover:bg-gradient-to-r hover:from-rose-600 hover:to-pink-500 hover:shadow-[0_0_20px_rgba(244,63,94,0.4)] hover:border-transparent transition-all flex items-center justify-center gap-2"
+                    data-target="separator">
+                    <span data-i18n="btn_go_tool">Go to Tool</span> <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+
+            <!-- Card 8: AI Transcriber -->
+            <div
+                class="glass p-8 rounded-3xl flex flex-col items-start transition-all hover:-translate-y-2 hover:border-cyan-500/30 group">
+                <div
+                    class="w-16 h-16 rounded-2xl bg-cyan-500/10 flex items-center justify-center mb-6 border border-cyan-500/20 group-hover:bg-cyan-500/20 transition-colors">
+                    <i class="fa-solid fa-closed-captioning text-3xl text-cyan-400"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-100 mb-3" data-i18n="menu_transcriber">AI Transcriber</h3>
+                <p class="text-gray-400 leading-relaxed mb-8 flex-1 text-[0.95rem]">
+                    <span data-i18n="desc_transcriber">Generate speech-to-text transcripts and SRT subtitles with Faster-Whisper.</span>
+                </p>
+                <button
+                    class="btn-go-tool w-full py-3.5 rounded-xl font-bold text-white bg-white/5 border border-white/10 hover:bg-gradient-to-r hover:from-cyan-600 hover:to-blue-500 hover:shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:border-transparent transition-all flex items-center justify-center gap-2"
+                    data-target="transcriber">
+                    <span data-i18n="btn_go_tool">Go to Tool</span> <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+
+            <!-- Card 9: EXIF Metadata Stripper -->
+            <div
+                class="glass p-8 rounded-3xl flex flex-col items-start transition-all hover:-translate-y-2 hover:border-teal-500/30 group">
+                <div
+                    class="w-16 h-16 rounded-2xl bg-teal-500/10 flex items-center justify-center mb-6 border border-teal-500/20 group-hover:bg-teal-500/20 transition-colors">
+                    <i class="fa-solid fa-shield-halved text-3xl text-teal-400"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-100 mb-3" data-i18n="menu_metadata">EXIF & Privacy Cleaner</h3>
+                <p class="text-gray-400 leading-relaxed mb-8 flex-1 text-[0.95rem]">
+                    <span data-i18n="desc_metadata">Inspect and strip GPS tags, camera model, and hidden metadata from photos.</span>
+                </p>
+                <button
+                    class="btn-go-tool w-full py-3.5 rounded-xl font-bold text-white bg-white/5 border border-white/10 hover:bg-gradient-to-r hover:from-teal-600 hover:to-emerald-500 hover:shadow-[0_0_20px_rgba(20,184,166,0.4)] hover:border-transparent transition-all flex items-center justify-center gap-2"
+                    data-target="metadata">
+                    <span data-i18n="btn_go_tool">Go to Tool</span> <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+
+            <!-- Card 10: Video to GIF / WebP -->
+            <div
+                class="glass p-8 rounded-3xl flex flex-col items-start transition-all hover:-translate-y-2 hover:border-orange-500/30 group">
+                <div
+                    class="w-16 h-16 rounded-2xl bg-orange-500/10 flex items-center justify-center mb-6 border border-orange-500/20 group-hover:bg-orange-500/20 transition-colors">
+                    <i class="fa-solid fa-film text-3xl text-orange-400"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-100 mb-3" data-i18n="menu_animator">Video to GIF / WebP</h3>
+                <p class="text-gray-400 leading-relaxed mb-8 flex-1 text-[0.95rem]">
+                    <span data-i18n="desc_animator">Extract video segments into high-quality animated GIFs or lightweight WebP files.</span>
+                </p>
+                <button
+                    class="btn-go-tool w-full py-3.5 rounded-xl font-bold text-white bg-white/5 border border-white/10 hover:bg-gradient-to-r hover:from-orange-600 hover:to-amber-500 hover:shadow-[0_0_20px_rgba(249,115,22,0.4)] hover:border-transparent transition-all flex items-center justify-center gap-2"
+                    data-target="animator">
+                    <span data-i18n="btn_go_tool">Go to Tool</span> <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
         </div>
     </div>
 
@@ -236,6 +308,22 @@
                 <div class="sidebar-item" data-tool="filevault">
                     <i class="fa-solid fa-lock icon text-purple-400"></i>
                     <span data-i18n="menu_filevault">Vault Creator</span>
+                </div>
+                <div class="sidebar-item" data-tool="separator">
+                    <i class="fa-solid fa-music icon text-rose-400"></i>
+                    <span data-i18n="menu_separator">Vocal Separator</span>
+                </div>
+                <div class="sidebar-item" data-tool="transcriber">
+                    <i class="fa-solid fa-closed-captioning icon text-cyan-400"></i>
+                    <span data-i18n="menu_transcriber">AI Transcriber</span>
+                </div>
+                <div class="sidebar-item" data-tool="metadata">
+                    <i class="fa-solid fa-shield-halved icon text-teal-400"></i>
+                    <span data-i18n="menu_metadata">EXIF Cleaner</span>
+                </div>
+                <div class="sidebar-item" data-tool="animator">
+                    <i class="fa-solid fa-film icon text-orange-400"></i>
+                    <span data-i18n="menu_animator">Video to GIF</span>
                 </div>
             </nav>
 
@@ -810,6 +898,195 @@
                                 </button>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ═══ PAGE 7: VOCAL SEPARATOR (DEMUCS) ═══════════════ -->
+            <section class="tool-page flex-1 flex-col items-center justify-start hidden" id="page-separator">
+                <div class="w-full max-w-4xl flex flex-col items-center gap-6">
+                    <div class="drop-zone w-full p-10 flex flex-col items-center justify-center border-2 border-dashed border-white/10 rounded-3xl bg-black/20 hover:border-rose-500/40 transition-colors cursor-pointer"
+                        id="drop-zone-separator">
+                        <input type="file" id="file-input-separator" class="hidden" accept="audio/*,video/*" />
+                        <div class="w-16 h-16 rounded-2xl bg-rose-500/10 flex items-center justify-center mb-4 text-rose-400">
+                            <i class="fa-solid fa-music text-3xl"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-2">Ses veya Video Dosyasını Buraya Bırakın</h3>
+                        <p class="text-sm text-gray-500">veya seçmek için tıklayın (MP3, WAV, MP4 vb.)</p>
+                        <div class="file-info hidden mt-6 w-full max-w-md bg-white/5 p-4 rounded-xl flex items-center justify-between" id="info-separator">
+                            <div>
+                                <p class="file-info-name font-bold text-white text-sm" id="info-separator-name">—</p>
+                                <p class="file-info-size text-xs text-gray-400" id="info-separator-size">—</p>
+                            </div>
+                            <button class="text-xs text-red-400 hover:text-red-300 font-bold px-3 py-1 rounded-lg bg-red-500/10" id="btn-separator-clear">Temizle</button>
+                        </div>
+                    </div>
+
+                    <div class="w-full glass p-6 rounded-3xl flex flex-col gap-4">
+                        <label class="text-xs font-semibold uppercase tracking-wider text-gray-400">Ayrıştırma Modu</label>
+                        <div class="grid grid-cols-2 gap-4">
+                            <button type="button" class="separator-stem-btn py-3 px-4 rounded-xl border border-rose-500 bg-rose-500/20 text-white font-bold text-sm" data-stems="vocals">
+                                🎤 2 Stem (Vokal + Altyapı)
+                            </button>
+                            <button type="button" class="separator-stem-btn py-3 px-4 rounded-xl border border-white/10 bg-white/5 text-gray-300 font-semibold text-sm hover:border-white/20" data-stems="all">
+                                🥁 4 Stem (Vokal, Davul, Bas, Diğer)
+                            </button>
+                        </div>
+                        <button id="btn-separator-apply" class="w-full py-4 rounded-xl font-bold text-white bg-gradient-to-r from-rose-600 to-pink-600 hover:shadow-[0_0_20px_rgba(244,63,94,0.4)] transition-all flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> <span>Vokalleri ve Müziği Ayrıştır</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ═══ PAGE 8: AI TRANSCRIBER & SUBTITLES ═══════════════ -->
+            <section class="tool-page flex-1 flex-col items-center justify-start hidden" id="page-transcriber">
+                <div class="w-full max-w-4xl flex flex-col items-center gap-6">
+                    <div class="drop-zone w-full p-10 flex flex-col items-center justify-center border-2 border-dashed border-white/10 rounded-3xl bg-black/20 hover:border-cyan-500/40 transition-colors cursor-pointer"
+                        id="drop-zone-transcriber">
+                        <input type="file" id="file-input-transcriber" class="hidden" accept="audio/*,video/*" />
+                        <div class="w-16 h-16 rounded-2xl bg-cyan-500/10 flex items-center justify-center mb-4 text-cyan-400">
+                            <i class="fa-solid fa-closed-captioning text-3xl"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-2">Transkript Edilecek Medyayı Bırakın</h3>
+                        <p class="text-sm text-gray-500">Video veya ses dosyasını seçin</p>
+                        <div class="file-info hidden mt-6 w-full max-w-md bg-white/5 p-4 rounded-xl flex items-center justify-between" id="info-transcriber">
+                            <div>
+                                <p class="file-info-name font-bold text-white text-sm" id="info-transcriber-name">—</p>
+                                <p class="file-info-size text-xs text-gray-400" id="info-transcriber-size">—</p>
+                            </div>
+                            <button class="text-xs text-red-400 hover:text-red-300 font-bold px-3 py-1 rounded-lg bg-red-500/10" id="btn-transcriber-clear">Temizle</button>
+                        </div>
+                    </div>
+
+                    <div class="w-full glass p-6 rounded-3xl flex flex-col gap-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="text-xs font-semibold uppercase tracking-wider text-gray-400 block mb-2">Çıktı Formatı</label>
+                                <select id="transcriber-format" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-cyan-500">
+                                    <option value="txt">📄 Düz Metin (.txt)</option>
+                                    <option value="srt">🎬 Zaman Damgalı Altyazı (.srt)</option>
+                                    <option value="json">🔍 Yapılandırılmış JSON (.json)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-xs font-semibold uppercase tracking-wider text-gray-400 block mb-2">Dil Seçimi</label>
+                                <select id="transcriber-lang" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-cyan-500">
+                                    <option value="auto">🌐 Otomatik Algıla (Auto)</option>
+                                    <option value="tr">🇹🇷 Türkçe</option>
+                                    <option value="en">🇬🇧 English</option>
+                                    <option value="de">🇩🇪 Deutsch</option>
+                                    <option value="fr">🇫🇷 Français</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button id="btn-transcriber-apply" class="w-full py-4 rounded-xl font-bold text-white bg-gradient-to-r from-cyan-600 to-blue-600 hover:shadow-[0_0_20px_rgba(6,182,212,0.4)] transition-all flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-microphone-lines"></i> <span>Transkript / Altyazıyı Çıkar</span>
+                        </button>
+
+                        <div id="transcription-result-box" class="hidden mt-4 p-4 rounded-2xl bg-black/40 border border-white/10 text-left">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs font-bold text-cyan-400">Önizleme:</span>
+                                <button id="btn-copy-transcript" class="text-xs text-gray-400 hover:text-white flex items-center gap-1">
+                                    <i class="fa-regular fa-copy"></i> Kopyala
+                                </button>
+                            </div>
+                            <textarea id="transcription-text-preview" rows="6" readonly class="w-full bg-transparent text-gray-200 text-xs font-mono resize-none focus:outline-none"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ═══ PAGE 9: EXIF & METADATA CLEANER ═══════════════════ -->
+            <section class="tool-page flex-1 flex-col items-center justify-start hidden" id="page-metadata">
+                <div class="w-full max-w-4xl flex flex-col items-center gap-6">
+                    <div class="drop-zone w-full p-10 flex flex-col items-center justify-center border-2 border-dashed border-white/10 rounded-3xl bg-black/20 hover:border-teal-500/40 transition-colors cursor-pointer"
+                        id="drop-zone-metadata">
+                        <input type="file" id="file-input-metadata" class="hidden" accept="image/*" />
+                        <div class="w-16 h-16 rounded-2xl bg-teal-500/10 flex items-center justify-center mb-4 text-teal-400">
+                            <i class="fa-solid fa-shield-halved text-3xl"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-2">Gizliliği Temizlenecek Fotoğrafı Bırakın</h3>
+                        <p class="text-sm text-gray-500">JPG, PNG, WebP ve TIFF desteklenir</p>
+                        <div class="file-info hidden mt-6 w-full max-w-md bg-white/5 p-4 rounded-xl flex items-center justify-between" id="info-metadata">
+                            <div>
+                                <p class="file-info-name font-bold text-white text-sm" id="info-metadata-name">—</p>
+                                <p class="file-info-size text-xs text-gray-400" id="info-metadata-size">—</p>
+                            </div>
+                            <button class="text-xs text-red-400 hover:text-red-300 font-bold px-3 py-1 rounded-lg bg-red-500/10" id="btn-metadata-clear">Temizle</button>
+                        </div>
+                    </div>
+
+                    <div class="w-full glass p-6 rounded-3xl flex flex-col gap-4">
+                        <div class="flex gap-4">
+                            <button id="btn-metadata-inspect" class="flex-1 py-3.5 rounded-xl font-bold text-teal-300 bg-teal-500/10 border border-teal-500/20 hover:bg-teal-500/20 transition-all flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-magnifying-glass"></i> <span>Etiketleri Tara</span>
+                            </button>
+                            <button id="btn-metadata-strip" class="flex-1 py-3.5 rounded-xl font-bold text-white bg-gradient-to-r from-teal-600 to-emerald-600 hover:shadow-[0_0_20px_rgba(20,184,166,0.4)] transition-all flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-broom"></i> <span>EXIF'i Sıfırla & İndir</span>
+                            </button>
+                        </div>
+
+                        <div id="metadata-report-box" class="hidden p-4 rounded-2xl bg-black/40 border border-white/10 text-left">
+                            <h4 class="text-xs font-bold text-teal-400 mb-2" id="metadata-report-title">Tespit Edilen Metaveriler:</h4>
+                            <div id="metadata-tags-list" class="max-h-48 overflow-y-auto space-y-1 text-xs text-gray-300 font-mono"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ═══ PAGE 10: VIDEO TO GIF / WEBP ═════════════════════ -->
+            <section class="tool-page flex-1 flex-col items-center justify-start hidden" id="page-animator">
+                <div class="w-full max-w-4xl flex flex-col items-center gap-6">
+                    <div class="drop-zone w-full p-10 flex flex-col items-center justify-center border-2 border-dashed border-white/10 rounded-3xl bg-black/20 hover:border-orange-500/40 transition-colors cursor-pointer"
+                        id="drop-zone-animator">
+                        <input type="file" id="file-input-animator" class="hidden" accept="video/*" />
+                        <div class="w-16 h-16 rounded-2xl bg-orange-500/10 flex items-center justify-center mb-4 text-orange-400">
+                            <i class="fa-solid fa-film text-3xl"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-2">Animasyona Dönüştürülecek Videoyu Bırakın</h3>
+                        <p class="text-sm text-gray-500">MP4, MOV, MKV, WebM desteklenir</p>
+                        <div class="file-info hidden mt-6 w-full max-w-md bg-white/5 p-4 rounded-xl flex items-center justify-between" id="info-animator">
+                            <div>
+                                <p class="file-info-name font-bold text-white text-sm" id="info-animator-name">—</p>
+                                <p class="file-info-size text-xs text-gray-400" id="info-animator-size">—</p>
+                            </div>
+                            <button class="text-xs text-red-400 hover:text-red-300 font-bold px-3 py-1 rounded-lg bg-red-500/10" id="btn-animator-clear">Temizle</button>
+                        </div>
+                    </div>
+
+                    <div class="w-full glass p-6 rounded-3xl flex flex-col gap-4">
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            <div>
+                                <label class="text-xs text-gray-400 block mb-1">Başlangıç (sn / 00:00:00)</label>
+                                <input type="text" id="anim-start" value="00:00:00" class="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2 text-white text-sm">
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-400 block mb-1">Süre (saniye)</label>
+                                <input type="number" id="anim-duration" value="5" min="1" max="60" class="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2 text-white text-sm">
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-400 block mb-1">FPS (Kare Hızı)</label>
+                                <input type="number" id="anim-fps" value="15" min="5" max="30" class="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2 text-white text-sm">
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-400 block mb-1">Genişlik (px)</label>
+                                <input type="number" id="anim-width" value="480" step="20" class="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2 text-white text-sm">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4 mt-2">
+                            <button type="button" class="anim-format-btn py-3 px-4 rounded-xl border border-orange-500 bg-orange-500/20 text-white font-bold text-sm" data-format="gif">
+                                🎞️ Yüksek Kalite GIF
+                            </button>
+                            <button type="button" class="anim-format-btn py-3 px-4 rounded-xl border border-white/10 bg-white/5 text-gray-300 font-semibold text-sm hover:border-white/20" data-format="webp">
+                                🚀 Optimize WebP (Daha Küçük)
+                            </button>
+                        </div>
+
+                        <button id="btn-animator-apply" class="w-full py-4 rounded-xl font-bold text-white bg-gradient-to-r from-orange-600 to-amber-600 hover:shadow-[0_0_20px_rgba(249,115,22,0.4)] transition-all flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-play"></i> <span>Animasyonu Üret ve İndir</span>
+                        </button>
                     </div>
                 </div>
             </section>
