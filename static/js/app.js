@@ -1,3 +1,16 @@
+// ═════════════════════════════════════════════════════════════════
+// GLOBAL OPERATING MODE & API ROUTING
+// ═════════════════════════════════════════════════════════════════
+let currentMode = localStorage.getItem('gtoolbox_mode') || 'pc';
+let customServerUrl = localStorage.getItem('gtoolbox_server_url') || '';
+
+function getApiBaseUrl() {
+    if (currentMode === 'pc' && customServerUrl) {
+        return customServerUrl.replace(/\/+$/, '');
+    }
+    return '';
+}
+
 const translations = {
     en: {
         app_title: "G-Toolbox | Premium Toolbox",
@@ -323,7 +336,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         globalProgressInterval = setInterval(() => {
-            fetch(`/progress/${taskId}`)
+            fetch(`${getApiBaseUrl()}/progress/${taskId}`)
                 .then(r => r.json())
                 .then(data => {
                     if (data && typeof data.progress !== 'undefined') {
@@ -678,6 +691,32 @@ document.addEventListener("DOMContentLoaded", () => {
     btnUniConvert.addEventListener("click", () => {
         if (!universalSelectedFile || !universalSelectedFormatTo) return;
 
+        // Offline Client-side Local Mode for Images
+        const clientImages = ['png', 'jpg', 'jpeg', 'webp'];
+        const srcExt = (universalSelectedFile.name.split('.').pop() || '').toLowerCase();
+        if (currentMode === 'local' && clientImages.includes(srcExt) && clientImages.includes(universalSelectedFormatTo)) {
+            const img = new Image();
+            const objUrl = URL.createObjectURL(universalSelectedFile);
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.naturalWidth;
+                canvas.height = img.naturalHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                const mime = (universalSelectedFormatTo === 'jpg' || universalSelectedFormatTo === 'jpeg') ? 'image/jpeg' : (universalSelectedFormatTo === 'webp' ? 'image/webp' : 'image/png');
+                canvas.toBlob((blob) => {
+                    URL.revokeObjectURL(objUrl);
+                    const sourceName = universalSelectedFile.name.replace(/\.[^.]+$/, "");
+                    const outName = `${sourceName}.${universalSelectedFormatTo}`;
+                    downloadBlob(blob, outName);
+                    showToast("success", `🎉 [Yerel Cihaz] Dönüştürme Tamamlandı: ${outName}`);
+                    resetUniversalConverter();
+                }, mime, 0.92);
+            };
+            img.src = objUrl;
+            return;
+        }
+
         btnUniConvert.disabled = true;
         btnUniConvert.querySelector('span').textContent = i18n('converting');
         btnUniConvert.querySelector('i').className = "fa-solid fa-circle-notch fa-spin text-white text-xl";
@@ -689,7 +728,7 @@ document.addEventListener("DOMContentLoaded", () => {
         fd.append("file", universalSelectedFile);
         fd.append("target_format", universalSelectedFormatTo);
 
-        fetch("/convert-universal", {
+        fetch(`${getApiBaseUrl()}/convert-universal`, {
             method: "POST",
             headers: {
                 "X-Task-ID": taskId
@@ -894,7 +933,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 fd.append("image", magicOriginalFile);
                 fd.append("mask", maskBlob, "mask.png");
 
-                fetch("/magic-erase", {
+                fetch(`${getApiBaseUrl()}/magic-erase`, {
                     method: "POST",
                     headers: {
                         "X-Task-ID": taskId
@@ -1055,7 +1094,7 @@ document.addEventListener("DOMContentLoaded", () => {
             fd.append("scale", selectedScale);
             fd.append("model_type", selectedModel);
 
-            fetch("/upscale-image", {
+            fetch(`${getApiBaseUrl()}/upscale-image`, {
                 method: "POST",
                 headers: {
                     "X-Task-ID": taskId
@@ -1214,7 +1253,7 @@ document.addEventListener("DOMContentLoaded", () => {
             btnRemoveBg.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i><span>Sihirli Arka Planı Kaldır</span>`;
         });
 
-        xhr.open("POST", "/remove-background");
+        xhr.open("POST", `${getApiBaseUrl()}/remove-background`);
         xhr.setRequestHeader("X-Task-ID", taskId);
         xhr.send(fd);
     }
@@ -1313,7 +1352,7 @@ document.addEventListener("DOMContentLoaded", () => {
         spinner.classList.add("visible");
 
         try {
-            const res = await fetch("/fetch-video-info", {
+            const res = await fetch(`${getApiBaseUrl()}/fetch-video-info`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ url }),
@@ -1359,7 +1398,7 @@ document.addEventListener("DOMContentLoaded", () => {
         spinner.classList.add("visible");
 
         try {
-            const startRes = await fetch("/start-download", {
+            const startRes = await fetch(`${getApiBaseUrl()}/start-download`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -1385,7 +1424,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 btnDownloadVideo.innerHTML = `<div class="spinner visible" style="width:18px;height:18px;border-width:2px;display:inline-block"></div><span>Dosya hazırlanıyor…</span>`;
 
                 const a = document.createElement("a");
-                a.href = `/download-file/${taskId}`;
+                a.href = `${getApiBaseUrl()}/download-file/${taskId}`;
                 a.download = downloadResult.filename || "video.mp4";
                 document.body.appendChild(a);
                 a.click();
@@ -1410,7 +1449,7 @@ document.addEventListener("DOMContentLoaded", () => {
             await new Promise(r => setTimeout(r, 800));
 
             try {
-                const res = await fetch(`/download-status/${taskId}`);
+                const res = await fetch(`${getApiBaseUrl()}/download-status/${taskId}`);
                 const data = await res.json();
 
                 if (!data.success) {
@@ -1630,7 +1669,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         fd.append("password", pwd);
 
-        fetch(endpoint, {
+        fetch(`${getApiBaseUrl()}${endpoint}`, {
             method: "POST",
             headers: {
                 "X-Task-ID": taskId
@@ -2092,6 +2131,28 @@ document.addEventListener("DOMContentLoaded", () => {
                 showToast("error", "Lütfen bir görsel seçin.");
                 return;
             }
+
+            // Client-side instant offline stripping in Local Mode
+            if (currentMode === 'local') {
+                const img = new Image();
+                const objUrl = URL.createObjectURL(metaFile);
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.naturalWidth;
+                    canvas.height = img.naturalHeight;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0);
+                    canvas.toBlob((blob) => {
+                        URL.revokeObjectURL(objUrl);
+                        const outName = `clean_${metaFile.name}`;
+                        downloadBlob(blob, outName);
+                        showToast("success", `🛡️ [Yerel Cihaz] Metaveriler tarayıcıda temizlendi: ${outName}`);
+                    }, metaFile.type || 'image/png');
+                };
+                img.src = objUrl;
+                return;
+            }
+
             const fd = new FormData();
             fd.append("file", metaFile);
             try {
@@ -2204,19 +2265,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
 });
-
-// ═════════════════════════════════════════════════════════════════
-// DEVICE & MOBILE CONNECTION MODE MANAGEMENT
-// ═════════════════════════════════════════════════════════════════
-let currentMode = localStorage.getItem('gtoolbox_mode') || 'pc';
-let customServerUrl = localStorage.getItem('gtoolbox_server_url') || '';
-
-function getApiBaseUrl() {
-    if (currentMode === 'pc' && customServerUrl) {
-        return customServerUrl.replace(/\/+$/, '');
-    }
-    return '';
-}
 
 window.openDeviceModeModal = function() {
     const modal = document.getElementById('device-mode-modal');
