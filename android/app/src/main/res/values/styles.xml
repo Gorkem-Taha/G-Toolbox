@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.GToolbox" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">#9333ea</item>
+        <item name="colorPrimaryVariant">#7e22ce</item>
+        <item name="colorOnPrimary">#ffffff</item>
+        <item name="android:statusBarColor">#050507</item>
+        <item name="android:navigationBarColor">#050507</item>
+        <item name="android:windowBackground">#050507</item>
+    </style>
+</resources>

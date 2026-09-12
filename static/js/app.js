@@ -1809,3 +1809,163 @@ document.addEventListener("DOMContentLoaded", () => {
 
 });
 
+// ═════════════════════════════════════════════════════════════════
+// DEVICE & MOBILE CONNECTION MODE MANAGEMENT
+// ═════════════════════════════════════════════════════════════════
+let currentMode = localStorage.getItem('gtoolbox_mode') || 'pc';
+let customServerUrl = localStorage.getItem('gtoolbox_server_url') || '';
+
+function getApiBaseUrl() {
+    if (currentMode === 'pc' && customServerUrl) {
+        return customServerUrl.replace(/\/+$/, '');
+    }
+    return '';
+}
+
+window.openDeviceModeModal = function() {
+    const modal = document.getElementById('device-mode-modal');
+    if (!modal) return;
+    modal.classList.remove('hidden');
+    
+    // Fetch LAN IP info from backend if available
+    fetch('/api/network-info')
+        .then(r => r.json())
+        .then(data => {
+            const displayEl = document.getElementById('display-lan-url');
+            if (displayEl && data.mobile_url) {
+                displayEl.textContent = data.mobile_url;
+            }
+            const inputEl = document.getElementById('input-server-url');
+            if (inputEl && !inputEl.value) {
+                inputEl.value = customServerUrl || data.mobile_url || window.location.origin;
+            }
+        })
+        .catch(() => {
+            const displayEl = document.getElementById('display-lan-url');
+            if (displayEl) {
+                displayEl.textContent = window.location.origin;
+            }
+            const inputEl = document.getElementById('input-server-url');
+            if (inputEl && !inputEl.value) {
+                inputEl.value = customServerUrl || window.location.origin;
+            }
+        });
+
+    window.selectOperatingMode(currentMode);
+};
+
+window.closeDeviceModeModal = function() {
+    const modal = document.getElementById('device-mode-modal');
+    if (modal) modal.classList.add('hidden');
+};
+
+window.selectOperatingMode = function(mode) {
+    currentMode = mode;
+    const cardPc = document.getElementById('card-mode-pc');
+    const cardLocal = document.getElementById('card-mode-local');
+    const iconPc = document.getElementById('icon-check-pc');
+    const iconLocal = document.getElementById('icon-check-local');
+    const secPc = document.getElementById('section-pc-config');
+    const secLocal = document.getElementById('section-local-config');
+
+    if (mode === 'pc') {
+        if (cardPc) {
+            cardPc.className = "p-4 rounded-2xl border-2 border-purple-500 bg-purple-500/10 cursor-pointer transition-all flex flex-col justify-between";
+        }
+        if (cardLocal) {
+            cardLocal.className = "p-4 rounded-2xl border border-white/10 bg-white/5 cursor-pointer transition-all flex flex-col justify-between hover:border-white/20";
+        }
+        if (iconPc) iconPc.className = "fa-solid fa-circle-check text-purple-400";
+        if (iconLocal) iconLocal.className = "fa-regular fa-circle text-gray-500";
+        if (secPc) secPc.classList.remove('hidden');
+        if (secLocal) secLocal.classList.add('hidden');
+    } else {
+        if (cardPc) {
+            cardPc.className = "p-4 rounded-2xl border border-white/10 bg-white/5 cursor-pointer transition-all flex flex-col justify-between hover:border-white/20";
+        }
+        if (cardLocal) {
+            cardLocal.className = "p-4 rounded-2xl border-2 border-pink-500 bg-pink-500/10 cursor-pointer transition-all flex flex-col justify-between";
+        }
+        if (iconPc) iconPc.className = "fa-regular fa-circle text-gray-500";
+        if (iconLocal) iconLocal.className = "fa-solid fa-circle-check text-pink-400";
+        if (secPc) secPc.classList.add('hidden');
+        if (secLocal) secLocal.classList.remove('hidden');
+    }
+};
+
+window.testServerConnection = async function() {
+    const inputEl = document.getElementById('input-server-url');
+    const msgEl = document.getElementById('connection-status-msg');
+    if (!inputEl || !msgEl) return;
+    
+    let target = inputEl.value.trim().replace(/\/+$/, '');
+    if (!target) target = window.location.origin;
+
+    msgEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-yellow-400 animate-ping"></span> Bağlanılıyor: ${target}...`;
+
+    try {
+        const resp = await fetch(`${target}/api/network-info`, { method: 'GET', mode: 'cors' });
+        if (resp.ok) {
+            msgEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-green-400"></span> <span class="text-green-400 font-bold">Başarılı:</span> Sunucu aktif ve yanıt veriyor.`;
+        } else {
+            msgEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-red-400"></span> <span class="text-red-400 font-bold">Hata:</span> HTTP ${resp.status}`;
+        }
+    } catch (e) {
+        msgEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-red-400"></span> <span class="text-red-400 font-bold">Bağlantı Başarısız:</span> Sunucuya erişilemedi.`;
+    }
+};
+
+window.copyLanUrl = function() {
+    const displayEl = document.getElementById('display-lan-url');
+    if (!displayEl) return;
+    navigator.clipboard.writeText(displayEl.textContent.trim()).then(() => {
+        if (typeof showToast === 'function') {
+            showToast("info", "📋 Mobil bağlantı adresi kopyalandı!");
+        } else {
+            alert("Bağlantı kopyalandı!");
+        }
+    });
+};
+
+window.saveOperatingModeSettings = function() {
+    const inputEl = document.getElementById('input-server-url');
+    if (inputEl) {
+        customServerUrl = inputEl.value.trim().replace(/\/+$/, '');
+        localStorage.setItem('gtoolbox_server_url', customServerUrl);
+    }
+    localStorage.setItem('gtoolbox_mode', currentMode);
+
+    // Update status badge in header
+    const dot = document.getElementById('mode-status-dot');
+    const text = document.getElementById('mode-status-text');
+    if (dot && text) {
+        if (currentMode === 'pc') {
+            dot.className = "w-2 h-2 rounded-full bg-green-400";
+            text.textContent = "PC Server";
+        } else {
+            dot.className = "w-2 h-2 rounded-full bg-pink-400";
+            text.textContent = "Yerel Mobil";
+        }
+    }
+
+    window.closeDeviceModeModal();
+    if (typeof showToast === 'function') {
+        showToast("success", `✅ Mod güncellendi: ${currentMode === 'pc' ? 'PC Sunucusu (GPU)' : 'Yerel Cihaz Modu'}`);
+    }
+};
+
+// Initial badge render on load
+document.addEventListener('DOMContentLoaded', () => {
+    const dot = document.getElementById('mode-status-dot');
+    const text = document.getElementById('mode-status-text');
+    if (dot && text) {
+        if (currentMode === 'pc') {
+            dot.className = "w-2 h-2 rounded-full bg-green-400";
+            text.textContent = "PC Server";
+        } else {
+            dot.className = "w-2 h-2 rounded-full bg-pink-400";
+            text.textContent = "Yerel Mobil";
+        }
+    }
+});
+
