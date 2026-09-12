@@ -1,26 +1,28 @@
-# ⚡ G-Toolbox | Premium AI-Powered Local Toolkit
+# ⚡ G-Toolbox | Premium AI-Powered Local Toolkit & Mobile Studio
 
-![Version](https://img.shields.io/badge/version-4.0.0-blue.svg)
+![Version](https://img.shields.io/badge/version-4.1.0-blue.svg)
 ![License](https://img.shields.io/badge/license-Non--Commercial-red.svg)
-![Platform](https://img.shields.io/badge/platform-Windows-lightgrey.svg)
+![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Android-lightgrey.svg)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
+![Build](https://img.shields.io/badge/build-Native%20Desktop%20%26%20APK-purple.svg)
 
-G-Toolbox is a premium, all-in-one local workspace that combines state-of-the-art Artificial Intelligence (Computer Vision) models, military-grade encryption, and universal file conversion tools into a single, sleek VIP interface. 
+G-Toolbox is a premium, all-in-one local workspace that combines state-of-the-art Artificial Intelligence (Computer Vision) models, military-grade encryption, universal media conversion, and cross-platform mobile connectivity into a single, sleek VIP interface. 
 
 > ⚠️ **IMPORTANT LICENSE & COMMERCIAL USE WARNING**
-> This software is strictly licensed for **Personal and Educational Use Only**. Using G-Toolbox (or its underlying code) for commercial purposes, within a corporate network, for client projects, or in any revenue-generating capacity is **STRICTLY PROHIBITED** without a valid Commercial License. For commercial licensing inquiries and subscription plans, please contact the developer.
+> This software is strictly licensed for **Personal and Educational Use Only**. Using G-Toolbox (or its underlying code) for commercial purposes, within a corporate network, for client projects, or in any revenue-generating capacity is **STRICTLY PROHIBITED** without a valid Commercial License. For commercial licensing inquiries, please contact the developer.
 
 ---
 
 ## 🔒 The Ultimate Privacy: Your Data Stays Yours
 
-In a world where every SaaS application uploads your private documents and photos to the cloud, **G-Toolbox operates 100% locally on your machine.** * **Zero Cloud Uploads:** Your files never leave your computer.
+In a world where every SaaS application uploads your private documents and photos to the cloud, **G-Toolbox operates 100% locally on your machine.**
+* **Zero Cloud Uploads:** Your files never leave your computer or local network.
 * **No API Keys Required:** We use open-source, local AI models. No hidden subscription fees or credit limits.
 * **Complete Offline Capability:** Once installed, you can disconnect your internet and continue working with military-grade encryption and AI generation.
 
 ---
 
-## 📸 Screenshots
+## 📸 Screenshots & UI
 
 ### 🏠 The Workspace (Home)
 ![G-Toolbox Homepage](/static/menu.png)
@@ -28,95 +30,139 @@ In a world where every SaaS application uploads your private documents and photo
 
 ### 🎨 AI Studio & Tools
 ![AI Tools](/static/bc_remove.png)
-*Real-time progress bars and seamless AI integration.*
+*Real-time progress bars, dual-engine AI selection, and seamless hardware acceleration.*
 
 ---
-## 🚀 Detailed Tool Descriptions
 
-### 1. 🌌 AI Image Upscaler (Super Resolution)
-Upscale low-resolution or blurry images to stunning 4K quality without losing detail, powered by the **Real-ESRGAN** model.
-> ⚠️ **Hardware Warning:** This tool is extremely resource-intensive. When running at 4x scale, it will heavily utilize your Graphics Card (GPU) or CPU. **It is completely normal to hear your computer's cooling fans spin up to maximum speed.** The system uses *Tiling Optimization* to prevent your PC from freezing during this process.
+## 🚀 Detailed Tool Descriptions & Capabilities
+
+### 1. 🌌 AI Image Upscaler (Dual Engine Super Resolution)
+Upscale low-resolution or blurry images up to 4x (4K/8K resolution) without detail loss, powered by **Real-ESRGAN**.
+* **Realistic / Photo Engine (`RealESRGAN_x4plus`):** 67 MB, 23-block deep neural network for natural photography, textures, and landscapes.
+* **Anime / Digital Illustration Engine (`RealESRGAN_x4plus_anime_6B`):** 17.9 MB, 6-block lightweight network. 4x faster inference with razor-sharp lines and zero digital artifacting.
+* **Full RGBA Transparency Support:** Transparent PNGs have their alpha channel isolated and seamlessly recombined via Lanczos filtering.
+* **Hardware Safe (FP16 Fallback):** Automatically detects GTX 16xx (Turing) and older Pascal GPUs to prevent black/NaN image output.
+* **VRAM Singleton:** Models are cached in memory (`_UPSCALER_INSTANCES`) to prevent memory leaks.
 
 ### 2. 🪄 Magic Eraser (AI Inpainting)
-Remove unwanted objects, text, or people from any photo. Powered by the **LaMa** model, it intelligently analyzes surrounding pixels to recreate the background flawlessly.
-> 💡 *Note:* Requires moderate RAM usage during processing.
+Remove unwanted objects, watermarks, text, or people from any photo. Powered by the **LaMa** model, it intelligently analyzes surrounding pixels to recreate the background flawlessly.
 
 ### 3. ✂️ Deep Background Remover
-Instantly cut out the main subject of any photo with perfect edge detection, powered by the **U^2-Net** model. Say goodbye to manual masking.
+Instantly cut out the main subject of any photo with sub-pixel edge detection, powered by **U^2-Net** (`rembg`). Say goodbye to manual masking.
 
 ### 4. 🔒 The File Vault (AES-256 Encryption)
-Military-grade file and folder encryption. Select a single file or an entire folder—the backend will automatically compress and lock it into a `.enc` vault.
-> 🛑 **Security Warning:** There is NO backdoor. If you forget the password you set, your files cannot be recovered by anyone, not even supercomputers.
+Military-grade file and folder encryption. Select a single file or an entire folder—the backend will automatically compress and lock it into an encrypted `.enc` vault with PBKDF2 key derivation.
 
-### 5. 📥 Universal Media Downloader
-Download high-quality videos or extract audio directly from the web straight to your local drive. Powered by **yt-dlp** and **FFmpeg**, bypassing the need for sketchy, ad-filled online downloaders. Supports real-time progress tracking!
+### 5. 📥 Universal Media Downloader & yt-dlp Auto-Updater
+Download high-quality videos or extract lossless audio directly from the web to your local drive.
+* Powered by **yt-dlp** and **FFmpeg** with real-time progress tracking.
+* **One-Click yt-dlp Updater (`/update-ytdlp`):** Upgrade the internal streaming downloader engine in seconds to prevent YouTube API breakages.
 
-### 6. 🔄 Universal File Converter
-Convert images and audio formats locally using **FFmpeg** architecture without uploading your sensitive files to online servers. Keep your workflow offline and private.
+### 6. 🔄 Universal File Converter & Media Tools
+Convert image, audio, and video formats locally using **FFmpeg** architecture without uploading sensitive files to third-party servers.
 
-### 7. ☁️ OTA Auto-Updater (Sync)
-Stay up-to-date effortlessly. Click the "Sync" button in the app, and G-Toolbox will securely fetch the latest features from GitHub and patch itself without touching your personal files or virtual environment.
+### 7. 🧹 Automated Disk Hygiene
+The server automatically purges orphaned temporary files in `uploads/` and `downloads/` on startup and during scheduled intervals, keeping your storage clean.
+
+---
+
+## 📱 Mobile Dual-Mode & Android APK
+
+G-Toolbox features a universal **Dual-Mode System** for mobile phones and tablets:
+
+```
+                  ┌────────────────────────────────────────────────┐
+                  │          G-Toolbox Operating Modes             │
+                  └───────────────────────┬────────────────────────┘
+                                          │
+                  ┌───────────────────────┴────────────────────────┐
+                  ▼                                                ▼
+     [Mode 1: PC Server / Remote]                     [Mode 2: Local On-Device]
+   • Phone connects over Wi-Fi/LAN                  • Completely offline / standalone
+   • Uses PC's GTX/RTX GPU power                    • Client-side (HTML5 Canvas/WASM)
+   • 4x AI Upscale & 4K video downloads             • Image format conversion & compression
+   • Zero phone heating or battery drain            • Runs when PC is powered off
+```
+
+1. **PC Server Mode (GPU-Accelerated):**
+   * Pair your Android device to your computer via Wi-Fi (`http://YOUR_PC_IP:8000`).
+   * Heavy AI inference and video downloads run on your computer's GPU and stream the final result back to your phone.
+   * Features automatic LAN IP detection (`/api/network-info`) and full CORS support.
+2. **Local Device Mode (On-Device / Offline):**
+   * Use your mobile processor directly in the browser or APK. Perfect for quick image conversions, compression, and privacy cleaning when away from your PC.
+3. **Android APK Wrapper (`android/`):**
+   * Native Android WebView wrapper with camera, media gallery permissions, and file chooser support.
+   * **Automated Cloud Builds:** Automated GitHub Actions workflow (`.github/workflows/build-apk.yml`) builds fresh `.apk` packages on every commit—no 10GB Android Studio setup required on your PC.
+4. **PWA (Progressive Web App):**
+   * Open G-Toolbox in mobile Chrome or Edge and tap **"Add to Home Screen"** or **"Install App"** for a full-screen app experience.
+
+---
+
+## 🖥️ Windows Native Desktop App (`.exe`)
+
+Instead of opening a browser tab, G-Toolbox can run as a native, borderless Windows desktop program:
+
+* **Instant Launch:** Double-click `launch_desktop.bat` to launch the native Edge Chromium WebView2 window immediately.
+* **Standalone Executable Builder:** Run `build_desktop.bat` to package the entire project into a self-contained executable folder at `dist\G-Toolbox\G-Toolbox.exe` using PyInstaller.
 
 ---
 
 ## 💻 System Requirements
 
-Because G-Toolbox runs actual AI models locally, your hardware dictates the processing speed.
-
 ### 🟢 Minimum Requirements (Runs on CPU - Slower Processing)
-* **OS:** Windows 10 (64-bit)
+* **OS:** Windows 10 / Windows 11 (64-bit) or Android 8.0+
 * **Processor (CPU):** Intel Core i3 / i5 (8th Gen+) or AMD Ryzen 3
-* **Memory (RAM):** 8 GB (Expect high usage during AI tasks)
-* **Graphics:** Integrated Graphics (Intel HD / AMD Vega)
-* **Storage:** 3 GB free space (For environments and AI models)
+* **Memory (RAM):** 8 GB
+* **Graphics:** Integrated Graphics (Intel UHD / AMD Vega)
+* **Storage:** 3 GB free space
 
 ### 🚀 Recommended Requirements (Runs on GPU - Lightning Fast)
 * **OS:** Windows 10 / Windows 11 (64-bit)
 * **Processor (CPU):** Intel Core i5 / i7 (10th Gen+) or AMD Ryzen 5 / 7
 * **Memory (RAM):** 16 GB or higher
-* **Graphics (GPU):** **NVIDIA GPU** (GTX 1660, RTX 2060, RTX 3050 or better) with at least 4GB+ VRAM. *CUDA acceleration is automatically detected and utilized.*
+* **Graphics (GPU):** **NVIDIA GPU** (GTX 1660, RTX 2060, RTX 3060, RTX 40xx or better) with 4GB+ VRAM. *CUDA 12.1 is automatically detected and utilized.*
 * **Storage:** SSD with 5 GB free space.
 
 ---
-## 🛠️ Installation Guide
 
-> Forget complicated command lines and paths. G-Toolbox comes with fully automated, foolproof setup scripts designed specifically for Windows environments.
+## 🛠️ Quick Start Guide
 
-### 📦 Step 1: Download the Project
-You can either download this repository as a **`.zip`** file and extract it to your desired folder, or clone it directly via terminal:
+### 📦 Step 1: Clone or Download
 ```bash
-git clone [https://github.com/Gorkem-Taha/G-Toolbox.git](https://github.com/Gorkem-Taha/G-Toolbox.git)
+git clone https://github.com/Gorkem-Taha/G-Toolbox.git
+cd G-Toolbox
 ```
-### ⚙️ Step 2: Install Dependencies
-Navigate to the extracted folder and double-click the installation.bat file.
 
-🛡️ Isolated Environment: It automatically creates a Python Virtual Environment (venv) to ensure it never interferes with your computer's global system settings.
+### ⚙️ Step 2: Automated Setup
+Run `installation.bat` to set up the isolated Python virtual environment:
+* Choose **GPU Mode** if you have an NVIDIA card (installs PyTorch CUDA 12.1).
+* Choose **CPU Mode** for standard computers.
 
-🧠 Smart Engine Selection: During the setup, the terminal will pause and ask you to choose your AI processing engine (for background removal):
+### 🚀 Step 3: Run the Application
+You can run G-Toolbox in your preferred environment:
 
-1) CPU Mode: Select this for standard computers. (Highly recommended if you are unsure).
+* **As Native Windows Desktop App:** Double-click `launch_desktop.bat`
+* **As Web & Mobile LAN Server:** Double-click `Start.bat` (accessible at `http://localhost:8000` on PC and `http://YOUR_PC_IP:8000` on phone)
+* **Build Standalone .exe:** Double-click `build_desktop.bat`
 
-2) GPU Mode: Select this ONLY if you have an NVIDIA graphics card. It unlocks lightning-fast processing!
+---
 
-3) Skip: Use this if you are re-running the setup just to fix or update general libraries.
+## 🧪 Automated Testing
 
-⏳ Patience is Key: It will download massive AI frameworks (like PyTorch and FastAPI). Depending on your internet speed, this may take 5-15 minutes. Grab a coffee!
+G-Toolbox includes a rigorous, self-contained test suite ensuring zero regressions:
 
-### 🚀 Step 3: Launch the App
-Double-click the Start.bat file.
+```bash
+# Run Core Image & AI Unit Tests
+python tests/test_upscale.py
 
-A black terminal window will appear, booting up the local AI server. Leave this window running in the background.
+# Run Desktop Native App & Network Discovery Tests
+python tests/test_desktop.py
+```
 
-Open your favorite web browser and navigate to your private, offline workspace:
-👉 http://localhost:8000
-
-### 🧹 Step 4: Clean Uninstall (Optional)
-If you ever want to completely remove G-Toolbox and reclaim your disk space, DO NOT just delete the project folder! Instead, double-click the DELETE.bat file.
-
-🗑️ Deep Clean: This script acts as a smart uninstaller. It safely removes the virtual environment AND hunts down the hidden AI model cache files (which can consume gigabytes of hidden space) stored deep within your Windows user folders, ensuring a 100% clean removal.
+All tests pass out-of-the-box (RGBA transparency preservation, grayscale conversion, resolution clamping, multi-model singleton, disk hygiene, and network discovery).
 
 ---
 
 ## 📜 License
 This project is licensed under the [CC BY-NC 4.0 License](LICENSE).  
-Developed by **[Görkem Taha](https://github.com/Gorkem-Taha)**
+Developed with ❤️ by **[Görkem Taha](https://github.com/Gorkem-Taha)**
