@@ -38,6 +38,15 @@ const translations = {
         desc_metadata: "Inspect and strip GPS tags, camera model, and hidden metadata from photos.",
         menu_animator: "Video to GIF / WebP",
         desc_animator: "Extract video segments into high-quality animated GIFs or lightweight WebP files.",
+        menu_subtitles: "Subtitle Burner",
+        desc_subtitles: "Burn SRT or VTT subtitles directly into video with custom styling.",
+        menu_pdftools: "PDF Toolkit",
+        desc_pdftools: "Merge multiple PDFs, extract page ranges, or extract text into TXT.",
+        menu_audiofx: "Audio Effects & Speed",
+        desc_audiofx: "Slowed+Reverb, Nightcore, speed, tempo, and pitch manipulation.",
+        menu_noisecleaner: "Noise Cleaner",
+        desc_noisecleaner: "Remove background hiss, fan noise, and hum with adaptive FFT noise filtering.",
+        btn_purge_vram: "Purge VRAM",
         btn_go_tool: "Go to Tool",
         sidebar_tools: "Tools",
         sidebar_footer: "All files are processed locally",
@@ -169,6 +178,15 @@ const translations = {
         desc_metadata: "Fotoğraflardaki GPS konumunu, cihaz modelini ve gizli metaverileri temizleyin.",
         menu_animator: "Video to GIF / WebP",
         desc_animator: "Videolardan zaman aralığı seçerek yüksek kaliteli GIF veya WebP animasyonları oluşturun.",
+        menu_subtitles: "Altyazı Gömücü",
+        desc_subtitles: "SRT veya VTT altyazılarını özel font ve stil ayarlarıyla videoya kalıcı olarak gömün.",
+        menu_pdftools: "PDF Araç Seti",
+        desc_pdftools: "Çoklu PDF birleştirme, sayfa bölme/ayırma ve metin çıkarma işlemleri.",
+        menu_audiofx: "Ses Efektleri & Hız",
+        desc_audiofx: "Slowed+Reverb, Nightcore, tempo ve perde değiştirme efektleri uygulayın.",
+        menu_noisecleaner: "Dip Gürültü Temizleyici",
+        desc_noisecleaner: "Adaptif FFT filtreleme ile dip gürültü, dip ses ve fan uğultularını temizleyin.",
+        btn_purge_vram: "VRAM Boşalt",
         btn_go_tool: "Araca Git",
         sidebar_tools: "Araçlar",
         sidebar_footer: "Tüm dosyalar yerel olarak işlenir",
@@ -387,6 +405,10 @@ document.addEventListener("DOMContentLoaded", () => {
             transcriber: { title: i18n('menu_transcriber'), subtitle: i18n('desc_transcriber') },
             metadata: { title: i18n('menu_metadata'), subtitle: i18n('desc_metadata') },
             animator: { title: i18n('menu_animator'), subtitle: i18n('desc_animator') },
+            subtitles: { title: i18n('menu_subtitles'), subtitle: i18n('desc_subtitles') },
+            pdftools: { title: i18n('menu_pdftools'), subtitle: i18n('desc_pdftools') },
+            audiofx: { title: i18n('menu_audiofx'), subtitle: i18n('desc_audiofx') },
+            noisecleaner: { title: i18n('menu_noisecleaner'), subtitle: i18n('desc_noisecleaner') },
         });
 
         // If there's an active tool, update the header text immediately
@@ -2264,7 +2286,727 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    // ═════════════════════════════════════════════════════════════════
+    // 11. SUBTITLE BURNER
+    // ═════════════════════════════════════════════════════════════════
+    let subVideoFile = null;
+    let subSrtFile = null;
+
+    const dropSubVideo = document.getElementById("drop-zone-subtitles-video");
+    const inputSubVideo = document.getElementById("file-input-subtitles-video");
+    const infoSubVideo = document.getElementById("info-subtitles-video");
+    const nameSubVideo = document.getElementById("info-subtitles-video-name");
+    const sizeSubVideo = document.getElementById("info-subtitles-video-size");
+    const btnSubVideoClear = document.getElementById("btn-subtitles-video-clear");
+
+    const dropSubSub = document.getElementById("drop-zone-subtitles-sub");
+    const inputSubSub = document.getElementById("file-input-subtitles-sub");
+    const infoSubSub = document.getElementById("info-subtitles-sub");
+    const nameSubSub = document.getElementById("info-subtitles-sub-name");
+    const sizeSubSub = document.getElementById("info-subtitles-sub-size");
+    const btnSubSubClear = document.getElementById("btn-subtitles-sub-clear");
+
+    const selectSubFontSize = document.getElementById("sub-fontsize");
+    const selectSubFontColor = document.getElementById("sub-fontcolor");
+    const btnSubApply = document.getElementById("btn-subtitles-apply");
+
+    if (dropSubVideo && inputSubVideo) {
+        dropSubVideo.addEventListener("click", (e) => {
+            if (e.target !== btnSubVideoClear && !btnSubVideoClear?.contains(e.target)) {
+                inputSubVideo.click();
+            }
+        });
+        inputSubVideo.addEventListener("change", () => {
+            if (inputSubVideo.files && inputSubVideo.files[0]) {
+                subVideoFile = inputSubVideo.files[0];
+                if (nameSubVideo) nameSubVideo.textContent = subVideoFile.name;
+                if (sizeSubVideo) sizeSubVideo.textContent = formatBytes(subVideoFile.size);
+                if (infoSubVideo) infoSubVideo.classList.remove("hidden");
+            }
+        });
+        btnSubVideoClear?.addEventListener("click", (e) => {
+            e.stopPropagation();
+            subVideoFile = null;
+            inputSubVideo.value = "";
+            if (infoSubVideo) infoSubVideo.classList.add("hidden");
+        });
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropSubVideo.addEventListener(eventName, (e) => { e.preventDefault(); dropSubVideo.classList.add('border-indigo-500'); });
+        });
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropSubVideo.addEventListener(eventName, (e) => { e.preventDefault(); dropSubVideo.classList.remove('border-indigo-500'); });
+        });
+        dropSubVideo.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            if (dt && dt.files && dt.files[0]) {
+                subVideoFile = dt.files[0];
+                if (nameSubVideo) nameSubVideo.textContent = subVideoFile.name;
+                if (sizeSubVideo) sizeSubVideo.textContent = formatBytes(subVideoFile.size);
+                if (infoSubVideo) infoSubVideo.classList.remove("hidden");
+            }
+        });
+    }
+
+    if (dropSubSub && inputSubSub) {
+        dropSubSub.addEventListener("click", (e) => {
+            if (e.target !== btnSubSubClear && !btnSubSubClear?.contains(e.target)) {
+                inputSubSub.click();
+            }
+        });
+        inputSubSub.addEventListener("change", () => {
+            if (inputSubSub.files && inputSubSub.files[0]) {
+                subSrtFile = inputSubSub.files[0];
+                if (nameSubSub) nameSubSub.textContent = subSrtFile.name;
+                if (sizeSubSub) sizeSubSub.textContent = formatBytes(subSrtFile.size);
+                if (infoSubSub) infoSubSub.classList.remove("hidden");
+            }
+        });
+        btnSubSubClear?.addEventListener("click", (e) => {
+            e.stopPropagation();
+            subSrtFile = null;
+            inputSubSub.value = "";
+            if (infoSubSub) infoSubSub.classList.add("hidden");
+        });
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropSubSub.addEventListener(eventName, (e) => { e.preventDefault(); dropSubSub.classList.add('border-indigo-500'); });
+        });
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropSubSub.addEventListener(eventName, (e) => { e.preventDefault(); dropSubSub.classList.remove('border-indigo-500'); });
+        });
+        dropSubSub.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            if (dt && dt.files && dt.files[0]) {
+                subSrtFile = dt.files[0];
+                if (nameSubSub) nameSubSub.textContent = subSrtFile.name;
+                if (sizeSubSub) sizeSubSub.textContent = formatBytes(subSrtFile.size);
+                if (infoSubSub) infoSubSub.classList.remove("hidden");
+            }
+        });
+    }
+
+    if (btnSubApply) {
+        btnSubApply.addEventListener("click", async () => {
+            if (!subVideoFile) {
+                showToast("error", "Lütfen bir video dosyası seçin.");
+                return;
+            }
+            if (!subSrtFile) {
+                showToast("error", "Lütfen bir altyazı (.srt, .vtt) dosyası seçin.");
+                return;
+            }
+
+            const taskId = generateTaskId();
+            btnSubApply.disabled = true;
+            startGlobalProgress(taskId);
+
+            const fd = new FormData();
+            fd.append("video", subVideoFile);
+            fd.append("subtitle", subSrtFile);
+            fd.append("font_size", selectSubFontSize ? selectSubFontSize.value : "24");
+            fd.append("font_color", selectSubFontColor ? selectSubFontColor.value : "&H00FFFFFF");
+
+            try {
+                const apiBase = getApiBaseUrl();
+                const resp = await fetch(`${apiBase}/burn-subtitles`, {
+                    method: "POST",
+                    headers: { "X-Task-ID": taskId },
+                    body: fd
+                });
+                if (!resp.ok) {
+                    const err = await resp.json().catch(() => ({}));
+                    throw new Error(err.message || "Altyazı gömme işlemi başarısız oldu.");
+                }
+                const blob = await resp.blob();
+                const outName = `${subVideoFile.name.replace(/\.[^.]+$/, "")}_subtitled.mp4`;
+                downloadBlob(blob, outName);
+                stopGlobalProgress(true, "Altyazı Başarıyla Gömdü!");
+                showToast("success", `🎬 Altyazılı video indirildi: ${outName}`);
+            } catch (err) {
+                stopGlobalProgress(false);
+                showToast("error", `⚠️ ${err.message}`);
+            } finally {
+                btnSubApply.disabled = false;
+            }
+        });
+    }
+
+    // ═════════════════════════════════════════════════════════════════
+    // 12. PDF TOOLKIT
+    // ═════════════════════════════════════════════════════════════════
+    let pdfMergeFiles = [];
+    let pdfSplitFile = null;
+    let pdfTextFile = null;
+
+    const pdfTabs = document.querySelectorAll(".pdf-mode-tab");
+    const pdfPanels = {
+        merge: document.getElementById("panel-pdf-merge"),
+        split: document.getElementById("panel-pdf-split"),
+        text: document.getElementById("panel-pdf-text")
+    };
+
+    pdfTabs.forEach(tab => {
+        tab.addEventListener("click", () => {
+            const mode = tab.dataset.mode;
+            pdfTabs.forEach(t => {
+                t.className = "pdf-mode-tab flex-1 py-2.5 px-3 rounded-xl font-medium text-xs transition-all text-gray-400 hover:text-white flex items-center justify-center gap-1.5";
+            });
+            tab.className = "pdf-mode-tab flex-1 py-2.5 px-3 rounded-xl font-bold text-xs transition-all bg-red-600 text-white shadow-md flex items-center justify-center gap-1.5";
+            Object.values(pdfPanels).forEach(p => p && p.classList.add("hidden"));
+            if (pdfPanels[mode]) pdfPanels[mode].classList.remove("hidden");
+        });
+    });
+
+    const dropPdfMerge = document.getElementById("drop-zone-pdf-merge");
+    const inputPdfMerge = document.getElementById("file-input-pdf-merge");
+    const listPdfMerge = document.getElementById("pdf-merge-list");
+    const btnPdfMergeApply = document.getElementById("btn-pdf-merge-apply");
+
+    function renderPdfMergeList() {
+        if (!listPdfMerge) return;
+        if (pdfMergeFiles.length === 0) {
+            listPdfMerge.classList.add("hidden");
+            listPdfMerge.innerHTML = "";
+            return;
+        }
+        listPdfMerge.classList.remove("hidden");
+        listPdfMerge.innerHTML = pdfMergeFiles.map((f, idx) => `
+            <div class="flex items-center justify-between bg-black/40 border border-white/10 px-3 py-2 rounded-xl text-xs text-white">
+                <span class="truncate max-w-[280px]">📄 ${idx + 1}. ${f.name}</span>
+                <span class="text-gray-400 text-[11px]">${formatBytes(f.size)}</span>
+            </div>
+        `).join("");
+    }
+
+    if (dropPdfMerge && inputPdfMerge) {
+        dropPdfMerge.addEventListener("click", () => inputPdfMerge.click());
+        inputPdfMerge.addEventListener("change", () => {
+            if (inputPdfMerge.files) {
+                pdfMergeFiles = Array.from(inputPdfMerge.files);
+                renderPdfMergeList();
+            }
+        });
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropPdfMerge.addEventListener(eventName, (e) => { e.preventDefault(); dropPdfMerge.classList.add('border-red-500'); });
+        });
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropPdfMerge.addEventListener(eventName, (e) => { e.preventDefault(); dropPdfMerge.classList.remove('border-red-500'); });
+        });
+        dropPdfMerge.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            if (dt && dt.files) {
+                pdfMergeFiles = Array.from(dt.files).filter(f => f.name.toLowerCase().endsWith('.pdf'));
+                renderPdfMergeList();
+            }
+        });
+    }
+
+    if (btnPdfMergeApply) {
+        btnPdfMergeApply.addEventListener("click", async () => {
+            if (pdfMergeFiles.length < 2) {
+                showToast("error", "Lütfen birleştirmek için en az 2 PDF seçin.");
+                return;
+            }
+            const taskId = generateTaskId();
+            btnPdfMergeApply.disabled = true;
+            startGlobalProgress(taskId);
+
+            const fd = new FormData();
+            pdfMergeFiles.forEach(f => fd.append("files", f));
+
+            try {
+                const apiBase = getApiBaseUrl();
+                const resp = await fetch(`${apiBase}/pdf-merge`, {
+                    method: "POST",
+                    headers: { "X-Task-ID": taskId },
+                    body: fd
+                });
+                if (!resp.ok) {
+                    const err = await resp.json().catch(() => ({}));
+                    throw new Error(err.message || "PDF birleştirme hatası.");
+                }
+                const blob = await resp.blob();
+                downloadBlob(blob, "birlestirilmis_belge.pdf");
+                stopGlobalProgress(true, "PDF'ler Başarıyla Birleştirildi!");
+                showToast("success", "📄 Birleştirilmiş PDF indirildi!");
+            } catch (err) {
+                stopGlobalProgress(false);
+                showToast("error", `⚠️ ${err.message}`);
+            } finally {
+                btnPdfMergeApply.disabled = false;
+            }
+        });
+    }
+
+    const dropPdfSplit = document.getElementById("drop-zone-pdf-split");
+    const inputPdfSplit = document.getElementById("file-input-pdf-split");
+    const infoPdfSplit = document.getElementById("info-pdf-split");
+    const namePdfSplit = document.getElementById("info-pdf-split-name");
+    const sizePdfSplit = document.getElementById("info-pdf-split-size");
+    const btnPdfSplitClear = document.getElementById("btn-pdf-split-clear");
+    const inputPdfPages = document.getElementById("pdf-split-pages");
+    const btnPdfSplitApply = document.getElementById("btn-pdf-split-apply");
+
+    if (dropPdfSplit && inputPdfSplit) {
+        dropPdfSplit.addEventListener("click", (e) => {
+            if (e.target !== btnPdfSplitClear && !btnPdfSplitClear?.contains(e.target)) {
+                inputPdfSplit.click();
+            }
+        });
+        inputPdfSplit.addEventListener("change", () => {
+            if (inputPdfSplit.files && inputPdfSplit.files[0]) {
+                pdfSplitFile = inputPdfSplit.files[0];
+                if (namePdfSplit) namePdfSplit.textContent = pdfSplitFile.name;
+                if (sizePdfSplit) sizePdfSplit.textContent = formatBytes(pdfSplitFile.size);
+                if (infoPdfSplit) infoPdfSplit.classList.remove("hidden");
+            }
+        });
+        btnPdfSplitClear?.addEventListener("click", (e) => {
+            e.stopPropagation();
+            pdfSplitFile = null;
+            inputPdfSplit.value = "";
+            if (infoPdfSplit) infoPdfSplit.classList.add("hidden");
+        });
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropPdfSplit.addEventListener(eventName, (e) => { e.preventDefault(); dropPdfSplit.classList.add('border-red-500'); });
+        });
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropPdfSplit.addEventListener(eventName, (e) => { e.preventDefault(); dropPdfSplit.classList.remove('border-red-500'); });
+        });
+        dropPdfSplit.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            if (dt && dt.files && dt.files[0]) {
+                pdfSplitFile = dt.files[0];
+                if (namePdfSplit) namePdfSplit.textContent = pdfSplitFile.name;
+                if (sizePdfSplit) sizePdfSplit.textContent = formatBytes(pdfSplitFile.size);
+                if (infoPdfSplit) infoPdfSplit.classList.remove("hidden");
+            }
+        });
+    }
+
+    if (btnPdfSplitApply) {
+        btnPdfSplitApply.addEventListener("click", async () => {
+            if (!pdfSplitFile) {
+                showToast("error", "Lütfen bölünecek bir PDF dosyası seçin.");
+                return;
+            }
+            const pages = inputPdfPages ? inputPdfPages.value.trim() : "";
+            if (!pages) {
+                showToast("error", "Lütfen çıkarılacak sayfa veya aralıkları girin (Örn: 1-3).");
+                return;
+            }
+
+            const taskId = generateTaskId();
+            btnPdfSplitApply.disabled = true;
+            startGlobalProgress(taskId);
+
+            const fd = new FormData();
+            fd.append("file", pdfSplitFile);
+            fd.append("page_ranges", pages);
+
+            try {
+                const apiBase = getApiBaseUrl();
+                const resp = await fetch(`${apiBase}/pdf-split`, {
+                    method: "POST",
+                    headers: { "X-Task-ID": taskId },
+                    body: fd
+                });
+                if (!resp.ok) {
+                    const err = await resp.json().catch(() => ({}));
+                    throw new Error(err.message || "Sayfa bölme işlemi başarısız.");
+                }
+                const blob = await resp.blob();
+                const outName = `${pdfSplitFile.name.replace(/\.[^.]+$/, "")}_sayfalar.pdf`;
+                downloadBlob(blob, outName);
+                stopGlobalProgress(true, "Sayfalar Başarıyla Çıkarıldı!");
+                showToast("success", `✂️ Bölünmüş PDF indirildi: ${outName}`);
+            } catch (err) {
+                stopGlobalProgress(false);
+                showToast("error", `⚠️ ${err.message}`);
+            } finally {
+                btnPdfSplitApply.disabled = false;
+            }
+        });
+    }
+
+    const dropPdfText = document.getElementById("drop-zone-pdf-text");
+    const inputPdfText = document.getElementById("file-input-pdf-text");
+    const infoPdfText = document.getElementById("info-pdf-text");
+    const namePdfText = document.getElementById("info-pdf-text-name");
+    const sizePdfText = document.getElementById("info-pdf-text-size");
+    const btnPdfTextClear = document.getElementById("btn-pdf-text-clear");
+    const btnPdfTextApply = document.getElementById("btn-pdf-text-apply");
+    const boxPdfTextResult = document.getElementById("pdf-text-result-box");
+    const contentPdfText = document.getElementById("pdf-text-content");
+    const btnCopyPdfText = document.getElementById("btn-copy-pdf-text");
+    const btnDownloadPdfText = document.getElementById("btn-download-pdf-text");
+
+    if (dropPdfText && inputPdfText) {
+        dropPdfText.addEventListener("click", (e) => {
+            if (e.target !== btnPdfTextClear && !btnPdfTextClear?.contains(e.target)) {
+                inputPdfText.click();
+            }
+        });
+        inputPdfText.addEventListener("change", () => {
+            if (inputPdfText.files && inputPdfText.files[0]) {
+                pdfTextFile = inputPdfText.files[0];
+                if (namePdfText) namePdfText.textContent = pdfTextFile.name;
+                if (sizePdfText) sizePdfText.textContent = formatBytes(pdfTextFile.size);
+                if (infoPdfText) infoPdfText.classList.remove("hidden");
+            }
+        });
+        btnPdfTextClear?.addEventListener("click", (e) => {
+            e.stopPropagation();
+            pdfTextFile = null;
+            inputPdfText.value = "";
+            if (infoPdfText) infoPdfText.classList.add("hidden");
+            if (boxPdfTextResult) boxPdfTextResult.classList.add("hidden");
+        });
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropPdfText.addEventListener(eventName, (e) => { e.preventDefault(); dropPdfText.classList.add('border-red-500'); });
+        });
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropPdfText.addEventListener(eventName, (e) => { e.preventDefault(); dropPdfText.classList.remove('border-red-500'); });
+        });
+        dropPdfText.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            if (dt && dt.files && dt.files[0]) {
+                pdfTextFile = dt.files[0];
+                if (namePdfText) namePdfText.textContent = pdfTextFile.name;
+                if (sizePdfText) sizePdfText.textContent = formatBytes(pdfTextFile.size);
+                if (infoPdfText) infoPdfText.classList.remove("hidden");
+            }
+        });
+    }
+
+    if (btnPdfTextApply) {
+        btnPdfTextApply.addEventListener("click", async () => {
+            if (!pdfTextFile) {
+                showToast("error", "Lütfen bir PDF dosyası seçin.");
+                return;
+            }
+            const taskId = generateTaskId();
+            btnPdfTextApply.disabled = true;
+            startGlobalProgress(taskId);
+
+            const fd = new FormData();
+            fd.append("file", pdfTextFile);
+
+            try {
+                const apiBase = getApiBaseUrl();
+                const resp = await fetch(`${apiBase}/pdf-extract-text`, {
+                    method: "POST",
+                    headers: { "X-Task-ID": taskId },
+                    body: fd
+                });
+                if (!resp.ok) {
+                    const err = await resp.json().catch(() => ({}));
+                    throw new Error(err.message || "PDF metin çıkarma hatası.");
+                }
+                const data = await resp.json();
+                if (contentPdfText) contentPdfText.value = data.text || "";
+                if (boxPdfTextResult) boxPdfTextResult.classList.remove("hidden");
+                stopGlobalProgress(true, "Metin Başarıyla Çıkarıldı!");
+                showToast("success", `📄 ${data.pages || 0} sayfalık metin çıkarıldı!`);
+            } catch (err) {
+                stopGlobalProgress(false);
+                showToast("error", `⚠️ ${err.message}`);
+            } finally {
+                btnPdfTextApply.disabled = false;
+            }
+        });
+    }
+
+    if (btnCopyPdfText && contentPdfText) {
+        btnCopyPdfText.addEventListener("click", () => {
+            navigator.clipboard.writeText(contentPdfText.value).then(() => {
+                showToast("info", "📋 Metin panoya kopyalandı!");
+            });
+        });
+    }
+
+    if (btnDownloadPdfText && contentPdfText) {
+        btnDownloadPdfText.addEventListener("click", () => {
+            const blob = new Blob([contentPdfText.value], { type: "text/plain;charset=utf-8" });
+            const outName = `${pdfTextFile ? pdfTextFile.name.replace(/\.[^.]+$/, "") : "belge"}_metin.txt`;
+            downloadBlob(blob, outName);
+        });
+    }
+
+    // ═════════════════════════════════════════════════════════════════
+    // 13. AUDIO EFFECTS & SPEED
+    // ═════════════════════════════════════════════════════════════════
+    let audioFxFile = null;
+    const dropAudioFx = document.getElementById("drop-zone-audiofx");
+    const inputAudioFx = document.getElementById("file-input-audiofx");
+    const infoAudioFx = document.getElementById("info-audiofx");
+    const nameAudioFx = document.getElementById("info-audiofx-name");
+    const sizeAudioFx = document.getElementById("info-audiofx-size");
+    const btnAudioFxClear = document.getElementById("btn-audiofx-clear");
+
+    const sliderFxTempo = document.getElementById("slider-fx-tempo");
+    const labelFxTempo = document.getElementById("label-fx-tempo");
+    const sliderFxPitch = document.getElementById("slider-fx-pitch");
+    const labelFxPitch = document.getElementById("label-fx-pitch");
+    const checkFxReverb = document.getElementById("check-fx-reverb");
+    const btnAudioFxApply = document.getElementById("btn-audiofx-apply");
+
+    const btnPresetSlowed = document.getElementById("btn-preset-slowed");
+    const btnPresetNightcore = document.getElementById("btn-preset-nightcore");
+    const btnPresetFast = document.getElementById("btn-preset-fast");
+    const btnPresetReset = document.getElementById("btn-preset-reset");
+
+    function updateFxLabels() {
+        if (sliderFxTempo && labelFxTempo) labelFxTempo.textContent = `${parseFloat(sliderFxTempo.value).toFixed(2)}x`;
+        if (sliderFxPitch && labelFxPitch) labelFxPitch.textContent = `${parseFloat(sliderFxPitch.value).toFixed(2)}x`;
+    }
+
+    sliderFxTempo?.addEventListener("input", updateFxLabels);
+    sliderFxPitch?.addEventListener("input", updateFxLabels);
+
+    btnPresetSlowed?.addEventListener("click", () => {
+        if (sliderFxTempo) sliderFxTempo.value = "0.85";
+        if (sliderFxPitch) sliderFxPitch.value = "0.85";
+        if (checkFxReverb) checkFxReverb.checked = true;
+        updateFxLabels();
+        showToast("info", "🐌 Slowed + Reverb ayarları yüklendi");
+    });
+
+    btnPresetNightcore?.addEventListener("click", () => {
+        if (sliderFxTempo) sliderFxTempo.value = "1.25";
+        if (sliderFxPitch) sliderFxPitch.value = "1.25";
+        if (checkFxReverb) checkFxReverb.checked = false;
+        updateFxLabels();
+        showToast("info", "🐿️ Nightcore ayarları yüklendi");
+    });
+
+    btnPresetFast?.addEventListener("click", () => {
+        if (sliderFxTempo) sliderFxTempo.value = "1.25";
+        if (sliderFxPitch) sliderFxPitch.value = "1.00";
+        if (checkFxReverb) checkFxReverb.checked = false;
+        updateFxLabels();
+        showToast("info", "⚡ 1.25x Hızlı ayarları yüklendi");
+    });
+
+    btnPresetReset?.addEventListener("click", () => {
+        if (sliderFxTempo) sliderFxTempo.value = "1.00";
+        if (sliderFxPitch) sliderFxPitch.value = "1.00";
+        if (checkFxReverb) checkFxReverb.checked = false;
+        updateFxLabels();
+        showToast("info", "🔄 Standart (1.0x) sıfırlandı");
+    });
+
+    if (dropAudioFx && inputAudioFx) {
+        dropAudioFx.addEventListener("click", (e) => {
+            if (e.target !== btnAudioFxClear && !btnAudioFxClear?.contains(e.target)) {
+                inputAudioFx.click();
+            }
+        });
+        inputAudioFx.addEventListener("change", () => {
+            if (inputAudioFx.files && inputAudioFx.files[0]) {
+                audioFxFile = inputAudioFx.files[0];
+                if (nameAudioFx) nameAudioFx.textContent = audioFxFile.name;
+                if (sizeAudioFx) sizeAudioFx.textContent = formatBytes(audioFxFile.size);
+                if (infoAudioFx) infoAudioFx.classList.remove("hidden");
+            }
+        });
+        btnAudioFxClear?.addEventListener("click", (e) => {
+            e.stopPropagation();
+            audioFxFile = null;
+            inputAudioFx.value = "";
+            if (infoAudioFx) infoAudioFx.classList.add("hidden");
+        });
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropAudioFx.addEventListener(eventName, (e) => { e.preventDefault(); dropAudioFx.classList.add('border-emerald-500'); });
+        });
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropAudioFx.addEventListener(eventName, (e) => { e.preventDefault(); dropAudioFx.classList.remove('border-emerald-500'); });
+        });
+        dropAudioFx.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            if (dt && dt.files && dt.files[0]) {
+                audioFxFile = dt.files[0];
+                if (nameAudioFx) nameAudioFx.textContent = audioFxFile.name;
+                if (sizeAudioFx) sizeAudioFx.textContent = formatBytes(audioFxFile.size);
+                if (infoAudioFx) infoAudioFx.classList.remove("hidden");
+            }
+        });
+    }
+
+    if (btnAudioFxApply) {
+        btnAudioFxApply.addEventListener("click", async () => {
+            if (!audioFxFile) {
+                showToast("error", "Lütfen bir ses veya video dosyası seçin.");
+                return;
+            }
+            const taskId = generateTaskId();
+            btnAudioFxApply.disabled = true;
+            startGlobalProgress(taskId);
+
+            const fd = new FormData();
+            fd.append("file", audioFxFile);
+            fd.append("tempo", sliderFxTempo ? sliderFxTempo.value : "1.0");
+            fd.append("pitch", sliderFxPitch ? sliderFxPitch.value : "1.0");
+            fd.append("reverb", checkFxReverb && checkFxReverb.checked ? "true" : "false");
+
+            try {
+                const apiBase = getApiBaseUrl();
+                const resp = await fetch(`${apiBase}/audio-effects`, {
+                    method: "POST",
+                    headers: { "X-Task-ID": taskId },
+                    body: fd
+                });
+                if (!resp.ok) {
+                    const err = await resp.json().catch(() => ({}));
+                    throw new Error(err.message || "Ses efekti uygulama başarısız.");
+                }
+                const blob = await resp.blob();
+                const outName = `${audioFxFile.name.replace(/\.[^.]+$/, "")}_fx.mp3`;
+                downloadBlob(blob, outName);
+                stopGlobalProgress(true, "Efekt Başarıyla Uygulandı!");
+                showToast("success", `🎵 Efektli ses indirildi: ${outName}`);
+            } catch (err) {
+                stopGlobalProgress(false);
+                showToast("error", `⚠️ ${err.message}`);
+            } finally {
+                btnAudioFxApply.disabled = false;
+            }
+        });
+    }
+
+    // ═════════════════════════════════════════════════════════════════
+    // 14. NOISE CLEANER
+    // ═════════════════════════════════════════════════════════════════
+    let noiseCleanerFile = null;
+    const dropNoise = document.getElementById("drop-zone-noisecleaner");
+    const inputNoise = document.getElementById("file-input-noisecleaner");
+    const infoNoise = document.getElementById("info-noisecleaner");
+    const nameNoise = document.getElementById("info-noisecleaner-name");
+    const sizeNoise = document.getElementById("info-noisecleaner-size");
+    const btnNoiseClear = document.getElementById("btn-noisecleaner-clear");
+
+    const sliderNoiseNr = document.getElementById("slider-noise-nr");
+    const labelNoiseStrength = document.getElementById("label-noise-strength");
+    const checkNoiseVoiceFocus = document.getElementById("check-noise-voice-focus");
+    const btnNoiseApply = document.getElementById("btn-noisecleaner-apply");
+
+    sliderNoiseNr?.addEventListener("input", () => {
+        if (labelNoiseStrength) {
+            const val = parseInt(sliderNoiseNr.value, 10);
+            let desc = "Dengeli";
+            if (val <= 8) desc = "Hafif";
+            else if (val >= 20) desc = "Yoğun Filtre";
+            labelNoiseStrength.textContent = `${val} dB (${desc})`;
+        }
+    });
+
+    if (dropNoise && inputNoise) {
+        dropNoise.addEventListener("click", (e) => {
+            if (e.target !== btnNoiseClear && !btnNoiseClear?.contains(e.target)) {
+                inputNoise.click();
+            }
+        });
+        inputNoise.addEventListener("change", () => {
+            if (inputNoise.files && inputNoise.files[0]) {
+                noiseCleanerFile = inputNoise.files[0];
+                if (nameNoise) nameNoise.textContent = noiseCleanerFile.name;
+                if (sizeNoise) sizeNoise.textContent = formatBytes(noiseCleanerFile.size);
+                if (infoNoise) infoNoise.classList.remove("hidden");
+            }
+        });
+        btnNoiseClear?.addEventListener("click", (e) => {
+            e.stopPropagation();
+            noiseCleanerFile = null;
+            inputNoise.value = "";
+            if (infoNoise) infoNoise.classList.add("hidden");
+        });
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropNoise.addEventListener(eventName, (e) => { e.preventDefault(); dropNoise.classList.add('border-sky-500'); });
+        });
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropNoise.addEventListener(eventName, (e) => { e.preventDefault(); dropNoise.classList.remove('border-sky-500'); });
+        });
+        dropNoise.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            if (dt && dt.files && dt.files[0]) {
+                noiseCleanerFile = dt.files[0];
+                if (nameNoise) nameNoise.textContent = noiseCleanerFile.name;
+                if (sizeNoise) sizeNoise.textContent = formatBytes(noiseCleanerFile.size);
+                if (infoNoise) infoNoise.classList.remove("hidden");
+            }
+        });
+    }
+
+    if (btnNoiseApply) {
+        btnNoiseApply.addEventListener("click", async () => {
+            if (!noiseCleanerFile) {
+                showToast("error", "Lütfen bir ses veya video dosyası seçin.");
+                return;
+            }
+            const taskId = generateTaskId();
+            btnNoiseApply.disabled = true;
+            startGlobalProgress(taskId);
+
+            const fd = new FormData();
+            fd.append("file", noiseCleanerFile);
+            fd.append("noise_reduction_db", sliderNoiseNr ? sliderNoiseNr.value : "12");
+            fd.append("voice_focus", checkNoiseVoiceFocus && checkNoiseVoiceFocus.checked ? "true" : "false");
+
+            try {
+                const apiBase = getApiBaseUrl();
+                const resp = await fetch(`${apiBase}/clean-audio-noise`, {
+                    method: "POST",
+                    headers: { "X-Task-ID": taskId },
+                    body: fd
+                });
+                if (!resp.ok) {
+                    const err = await resp.json().catch(() => ({}));
+                    throw new Error(err.message || "Dip gürültü temizleme hatası.");
+                }
+                const blob = await resp.blob();
+                const outName = `${noiseCleanerFile.name.replace(/\.[^.]+$/, "")}_temiz.mp3`;
+                downloadBlob(blob, outName);
+                stopGlobalProgress(true, "Gürültü Başarıyla Temizlendi!");
+                showToast("success", `✨ Temizlenmiş ses indirildi: ${outName}`);
+            } catch (err) {
+                stopGlobalProgress(false);
+                showToast("error", `⚠️ ${err.message}`);
+            } finally {
+                btnNoiseApply.disabled = false;
+            }
+        });
+    }
+
 });
+
+window.purgeVram = async function() {
+    const btn = document.getElementById('btn-purge-vram');
+    const btnHome = document.getElementById('btn-purge-vram-home');
+    if (btn) btn.disabled = true;
+    if (btnHome) btnHome.disabled = true;
+
+    try {
+        const apiBase = getApiBaseUrl();
+        const resp = await fetch(`${apiBase}/api/purge-vram`, { method: "POST" });
+        if (resp.ok) {
+            const data = await resp.json();
+            const ramMb = data.status?.ram?.used_mb ? `${data.status.ram.used_mb} MB RAM` : '';
+            if (typeof showToast === 'function') {
+                showToast("success", `🧹 VRAM ve modeller başarıyla boşaltıldı! (${ramMb})`);
+            } else {
+                alert("VRAM ve modeller boşaltıldı!");
+            }
+        } else {
+            throw new Error(`HTTP ${resp.status}`);
+        }
+    } catch (e) {
+        if (typeof showToast === 'function') {
+            showToast("error", "⚠️ VRAM boşaltma isteği başarısız oldu.");
+        }
+    } finally {
+        if (btn) btn.disabled = false;
+        if (btnHome) btnHome.disabled = false;
+    }
+};
 
 window.openDeviceModeModal = function() {
     const modal = document.getElementById('device-mode-modal');

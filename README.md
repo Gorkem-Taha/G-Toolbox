@@ -1,10 +1,10 @@
 # ⚡ G-Toolbox | Premium AI-Powered Local Toolkit & Mobile Studio
 
-![Version](https://img.shields.io/badge/version-4.1.0-blue.svg)
+![Version](https://img.shields.io/badge/version-4.2.0-blue.svg)
 ![License](https://img.shields.io/badge/license-Non--Commercial-red.svg)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Android-lightgrey.svg)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
-![Build](https://img.shields.io/badge/build-Native%20Desktop%20%26%20APK-purple.svg)
+![Build](https://img.shields.io/badge/build-Native%20Desktop%20%26%20Installer%20%26%20APK-purple.svg)
 
 G-Toolbox is a premium, all-in-one local workspace that combines state-of-the-art Artificial Intelligence (Computer Vision) models, military-grade encryption, universal media conversion, and cross-platform mobile connectivity into a single, sleek VIP interface. 
 
@@ -61,8 +61,9 @@ Download high-quality videos or extract lossless audio directly from the web to 
 ### 6. 🔄 Universal File Converter & Media Tools
 Convert image, audio, and video formats locally using **FFmpeg** architecture without uploading sensitive files to third-party servers.
 
-### 7. 🧹 Automated Disk Hygiene
-The server automatically purges orphaned temporary files in `uploads/` and `downloads/` on startup and during scheduled intervals, keeping your storage clean.
+### 7. 🧹 Automated Disk Hygiene & VRAM Unloader
+* **Disk Purge:** Automatically removes orphaned temporary files in `uploads/` and `downloads/` on startup and during scheduled intervals.
+* **Smart VRAM Purger (`/api/purge-vram`):** One-click button in the UI header to flush cached AI models (LaMa, Real-ESRGAN, Whisper) and release dedicated GPU VRAM / CPU RAM.
 
 ### 8. 🎙️ AI Vocal & Stems Separator (Demucs / UVR Lite)
 Split songs or recorded audio into clean studio stems powered by **Meta's Demucs**.
@@ -86,6 +87,23 @@ Convert video clips to lightweight, smooth animated GIFs or modern animated WebP
 * **Time Slice Precision:** Define exact start (`HH:MM:SS`) and end times (or duration).
 * **Two-Pass PaletteGen:** Generates a custom 256-color palette for crisp, non-dithered GIFs.
 * **Custom Framerate & Scaling:** Control FPS (10-30), target width (320px to 1080px), and WebP compression quality.
+
+### 12. 💬 Video Subtitle Burner (Hardsub)
+Permanently embed SRT or VTT subtitle tracks into video files with custom fonts, colors, and border styles via FFmpeg.
+
+### 13. 📄 Swiss Army PDF Toolkit
+Complete client-side and backend PDF suite powered by `pypdf`:
+* **PDF Merge:** Combine multiple documents preserving original order.
+* **PDF Split:** Extract specific pages or intervals (e.g. `1-3, 5, 8-10`) into an independent PDF.
+* **PDF Text Extraction:** Extract digital text from all pages into structured `.txt`.
+
+### 14. 🎚️ Audio Effects & Speed Engine (Slowed+Reverb & Nightcore)
+* **Slowed + Reverb:** Creates atmospheric spatial audio with tempo reduction and decay reverb.
+* **Nightcore:** High-energy pitch shifting and tempo acceleration.
+* **Fine-Tuning:** Custom sliders for speed/tempo (0.5x - 2.0x), pitch (0.5x - 2.0x), and room reverb.
+
+### 15. 🧹 Spectral & Adaptive Noise Suppressor (FFT De-Noise)
+Removes static hiss, fan whir, air conditioner hum, and room noise from microphone recordings or video audio using Adaptive Fast Fourier Transform filtering (`afftdn`) and Voice Focus bandpass.
 
 ---
 
@@ -121,12 +139,13 @@ G-Toolbox features a universal **Dual-Mode System** for mobile phones and tablet
 
 ---
 
-## 🖥️ Windows Native Desktop App (`.exe`)
+## 🖥️ Windows Native Desktop App & Setup Installer (`.exe`)
 
-Instead of opening a browser tab, G-Toolbox can run as a native, borderless Windows desktop program:
+Instead of opening a browser tab, G-Toolbox can run as a native, borderless Windows desktop program or install like a commercial Windows app:
 
 * **Instant Launch:** Double-click `launch_desktop.bat` to launch the native Edge Chromium WebView2 window immediately.
 * **Standalone Executable Builder:** Run `build_desktop.bat` to package the entire project into a self-contained executable folder at `dist\G-Toolbox\G-Toolbox.exe` using PyInstaller.
+* **One-Click Setup Installer (`build_installer.bat`):** Generates a professional Windows Setup Wizard (`Output\G-Toolbox-Setup.exe`) using Inno Setup 6 with desktop shortcuts, Start Menu integration, and clean uninstallation.
 
 ---
 
