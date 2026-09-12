@@ -26,18 +26,28 @@ if exist venv (
 call venv\Scripts\activate.bat
 
 echo.
-echo [STEP 2] Choose engine:
-echo 1) CPU Mode
-echo 2) GPU Mode
+echo [STEP 2] Choose AI acceleration engine:
+echo 1) CPU Mode (Standard computers)
+echo 2) GPU Mode (NVIDIA CUDA acceleration)
 echo 3) Skip
 echo.
 set /p choice="Enter (1/2/3): "
 
-if "%choice%"=="1" pip install "rembg[cpu]"
-if "%choice%"=="2" pip install "rembg[gpu]"
+if "%choice%"=="1" (
+    echo [INFO] Installing CPU-optimized PyTorch and rembg...
+    pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+    pip install "rembg[cpu]"
+)
+if "%choice%"=="2" (
+    echo [INFO] Installing NVIDIA CUDA-accelerated PyTorch and rembg...
+    pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+    pip install "rembg[gpu]"
+)
 
-echo [STEP 3] Installing requirements...
+echo.
+echo [STEP 3] Installing remaining requirements...
 pip install -r requirements.txt
 
-echo Setup finished!
+echo.
+echo Setup finished successfully!
 pause
