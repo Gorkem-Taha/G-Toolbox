@@ -64,6 +64,29 @@ Convert image, audio, and video formats locally using **FFmpeg** architecture wi
 ### 7. 🧹 Automated Disk Hygiene
 The server automatically purges orphaned temporary files in `uploads/` and `downloads/` on startup and during scheduled intervals, keeping your storage clean.
 
+### 8. 🎙️ AI Vocal & Stems Separator (Demucs / UVR Lite)
+Split songs or recorded audio into clean studio stems powered by **Meta's Demucs**.
+* **Dual Stem Mode:** Instantly separate into Vocals and Instrumental backings.
+* **4-Stem Quad Mode:** Separate full tracks into Vocals, Drums, Bass, and Other instruments.
+* **Package & Download:** Auto-bundles generated stems into a single high-fidelity `.zip` archive with real-time processing progress.
+
+### 9. 📝 Local AI Transcriber & Subtitle Generator (Faster-Whisper)
+Generate instant timestamps and text transcripts from video or audio files 100% locally with **faster-whisper**.
+* **Hardware Acceleration:** Auto-selects GPU FP16 or CPU INT8 for ultra-fast transcription.
+* **Multi-Format Export:** Download transcripts as `.srt` subtitles, `.txt` readable transcripts, or structured `.json` with segment-level timestamps.
+* **Language Support:** Auto-detection across 90+ languages, with optimized presets for Turkish, English, German, and French.
+
+### 10. 🛡️ EXIF & Privacy Metadata Stripper
+Inspect and scrub sensitive metadata embedded in photos before sharing online.
+* **Full EXIF Inspection:** View GPS coordinates, camera model, lens parameters, date taken, and software tags.
+* **Zero-Trace Stripping:** Strips EXIF, IPTC, XMP, and device fingerprints at pixel buffer level while preserving original image resolution and quality.
+
+### 11. 🎬 High-Performance GIF & WebP Animator
+Convert video clips to lightweight, smooth animated GIFs or modern animated WebP files using **FFmpeg**.
+* **Time Slice Precision:** Define exact start (`HH:MM:SS`) and end times (or duration).
+* **Two-Pass PaletteGen:** Generates a custom 256-color palette for crisp, non-dithered GIFs.
+* **Custom Framerate & Scaling:** Control FPS (10-30), target width (320px to 1080px), and WebP compression quality.
+
 ---
 
 ## 📱 Mobile Dual-Mode & Android APK
@@ -152,14 +175,16 @@ You can run G-Toolbox in your preferred environment:
 G-Toolbox includes a rigorous, self-contained test suite ensuring zero regressions:
 
 ```bash
-# Run Core Image & AI Unit Tests
-python tests/test_upscale.py
+# Run All Tests
+python -m unittest discover tests
 
-# Run Desktop Native App & Network Discovery Tests
-python tests/test_desktop.py
+# Or run individual test suites:
+python tests/test_new_features.py  # Vocal, Whisper, Metadata, Animator routes
+python tests/test_desktop.py       # Desktop Native App & Network Discovery
+python tests/test_upscale.py       # AI Image & Core Upscaling
 ```
 
-All tests pass out-of-the-box (RGBA transparency preservation, grayscale conversion, resolution clamping, multi-model singleton, disk hygiene, and network discovery).
+All tests pass out-of-the-box (RGBA transparency preservation, grayscale conversion, resolution clamping, multi-model singleton, disk hygiene, metadata stripping, timestamp formatting, and network discovery).
 
 ---
 

@@ -17,6 +17,14 @@ const translations = {
         desc_upscaler: "Make your low-quality photos up to 4X clearer and more detailed with AI.",
         menu_filevault: "Vault Creator",
         desc_filevault: "Create secure locked archives by encrypting your files and folders with military-grade AES-256.",
+        menu_separator: "Vocal Separator",
+        desc_separator: "Extract vocals and instrumental backing tracks from songs using Demucs AI.",
+        menu_transcriber: "AI Transcriber",
+        desc_transcriber: "Generate speech-to-text transcripts and SRT subtitles with Faster-Whisper.",
+        menu_metadata: "EXIF & Privacy Cleaner",
+        desc_metadata: "Inspect and strip GPS tags, camera model, and hidden metadata from photos.",
+        menu_animator: "Video to GIF / WebP",
+        desc_animator: "Extract video segments into high-quality animated GIFs or lightweight WebP files.",
         btn_go_tool: "Go to Tool",
         sidebar_tools: "Tools",
         sidebar_footer: "All files are processed locally",
@@ -140,6 +148,14 @@ const translations = {
         desc_upscaler: "Düşük kaliteli fotoğraflarınızı yapay zeka ile 4 kata kadar daha net ve detaylı hale getirin.",
         menu_filevault: "Kasa Oluşturucu",
         desc_filevault: "Dosya ve klasörlerinizi askeri düzeyde AES-256 ile şifreleyerek güvenli kilitli arşivler oluşturun.",
+        menu_separator: "Vokal Ayırıcı",
+        desc_separator: "Demucs yapay zekası ile şarkılardan vokal ve enstrümantal altyapıları ayrıştırın.",
+        menu_transcriber: "YZ Transkript & Altyazı",
+        desc_transcriber: "Faster-Whisper ile video ve seslerden anında metin veya SRT altyazısı üretin.",
+        menu_metadata: "EXIF & Gizlilik Temizleyici",
+        desc_metadata: "Fotoğraflardaki GPS konumunu, cihaz modelini ve gizli metaverileri temizleyin.",
+        menu_animator: "Video to GIF / WebP",
+        desc_animator: "Videolardan zaman aralığı seçerek yüksek kaliteli GIF veya WebP animasyonları oluşturun.",
         btn_go_tool: "Araca Git",
         sidebar_tools: "Araçlar",
         sidebar_footer: "Tüm dosyalar yerel olarak işlenir",
@@ -354,6 +370,10 @@ document.addEventListener("DOMContentLoaded", () => {
             upscaler: { title: i18n('menu_upscaler'), subtitle: i18n('desc_upscaler') },
             videodownloader: { title: i18n('menu_videodownloader'), subtitle: i18n('desc_videodownloader') },
             filevault: { title: i18n('vault_title'), subtitle: i18n('vault_desc') },
+            separator: { title: i18n('menu_separator'), subtitle: i18n('desc_separator') },
+            transcriber: { title: i18n('menu_transcriber'), subtitle: i18n('desc_transcriber') },
+            metadata: { title: i18n('menu_metadata'), subtitle: i18n('desc_metadata') },
+            animator: { title: i18n('menu_animator'), subtitle: i18n('desc_animator') },
         });
 
         // If there's an active tool, update the header text immediately
@@ -1803,6 +1823,382 @@ document.addEventListener("DOMContentLoaded", () => {
             } finally {
                 btnSyncUpdate.disabled = false;
                 btnSyncUpdate.classList.remove("opacity-50");
+            }
+        });
+    }
+
+    // ═════════════════════════════════════════════════════════════
+    // 1. VOCAL SEPARATOR (DEMUCS)
+    // ═════════════════════════════════════════════════════════════
+    let separatorFile = null;
+    let selectedStems = "vocals";
+    const dropSep = document.getElementById("drop-zone-separator");
+    const inputSep = document.getElementById("file-input-separator");
+    const infoSep = document.getElementById("info-separator");
+    const nameSep = document.getElementById("info-separator-name");
+    const sizeSep = document.getElementById("info-separator-size");
+    const btnSepClear = document.getElementById("btn-separator-clear");
+    const btnSepApply = document.getElementById("btn-separator-apply");
+    const stemBtns = document.querySelectorAll(".separator-stem-btn");
+
+    if (dropSep && inputSep) {
+        dropSep.addEventListener("click", (e) => {
+            if (e.target !== btnSepClear && !btnSepClear.contains(e.target)) {
+                inputSep.click();
+            }
+        });
+
+        inputSep.addEventListener("change", (e) => {
+            if (e.target.files.length) {
+                separatorFile = e.target.files[0];
+                nameSep.textContent = separatorFile.name;
+                sizeSep.textContent = formatBytes(separatorFile.size);
+                infoSep.classList.remove("hidden");
+            }
+        });
+
+        btnSepClear.addEventListener("click", (e) => {
+            e.stopPropagation();
+            separatorFile = null;
+            inputSep.value = "";
+            infoSep.classList.add("hidden");
+        });
+
+        stemBtns.forEach(btn => {
+            btn.addEventListener("click", () => {
+                stemBtns.forEach(b => {
+                    b.className = "separator-stem-btn py-3 px-4 rounded-xl border border-white/10 bg-white/5 text-gray-300 font-semibold text-sm hover:border-white/20";
+                });
+                btn.className = "separator-stem-btn py-3 px-4 rounded-xl border border-rose-500 bg-rose-500/20 text-white font-bold text-sm";
+                selectedStems = btn.dataset.stems;
+            });
+        });
+
+        btnSepApply.addEventListener("click", async () => {
+            if (!separatorFile) {
+                showToast("error", "Lütfen bir ses veya video dosyası seçin.");
+                return;
+            }
+
+            const taskId = generateTaskId();
+            btnSepApply.disabled = true;
+            startGlobalProgress(taskId);
+
+            const fd = new FormData();
+            fd.append("file", separatorFile);
+            fd.append("stems", selectedStems);
+
+            try {
+                const apiBase = getApiBaseUrl();
+                const resp = await fetch(`${apiBase}/separate-audio`, {
+                    method: "POST",
+                    headers: { "X-Task-ID": taskId },
+                    body: fd
+                });
+                if (!resp.ok) {
+                    const err = await resp.json().catch(() => ({}));
+                    throw new Error(err.message || "Ayrıştırma başarısız oldu.");
+                }
+                const blob = await resp.blob();
+                const outName = `${separatorFile.name.replace(/\.[^.]+$/, "")}_stems.zip`;
+                downloadBlob(blob, outName);
+                stopGlobalProgress(true, "Ayrıştırma Tamamlandı!");
+                showToast("success", `🎵 Ayrıştırılmış parçalar indirildi: ${outName}`);
+            } catch (err) {
+                stopGlobalProgress(false);
+                showToast("error", `⚠️ ${err.message}`);
+            } finally {
+                btnSepApply.disabled = false;
+            }
+        });
+    }
+
+    // ═════════════════════════════════════════════════════════════
+    // 2. AI TRANSCRIBER (FASTER-WHISPER)
+    // ═════════════════════════════════════════════════════════════
+    let transcriberFile = null;
+    const dropTrans = document.getElementById("drop-zone-transcriber");
+    const inputTrans = document.getElementById("file-input-transcriber");
+    const infoTrans = document.getElementById("info-transcriber");
+    const nameTrans = document.getElementById("info-transcriber-name");
+    const sizeTrans = document.getElementById("info-transcriber-size");
+    const btnTransClear = document.getElementById("btn-transcriber-clear");
+    const btnTransApply = document.getElementById("btn-transcriber-apply");
+    const transFormat = document.getElementById("transcriber-format");
+    const transLang = document.getElementById("transcriber-lang");
+    const transResultBox = document.getElementById("transcription-result-box");
+    const transPreview = document.getElementById("transcription-text-preview");
+    const btnCopyTrans = document.getElementById("btn-copy-transcript");
+
+    if (dropTrans && inputTrans) {
+        dropTrans.addEventListener("click", (e) => {
+            if (e.target !== btnTransClear && !btnTransClear.contains(e.target)) {
+                inputTrans.click();
+            }
+        });
+
+        inputTrans.addEventListener("change", (e) => {
+            if (e.target.files.length) {
+                transcriberFile = e.target.files[0];
+                nameTrans.textContent = transcriberFile.name;
+                sizeTrans.textContent = formatBytes(transcriberFile.size);
+                infoTrans.classList.remove("hidden");
+            }
+        });
+
+        btnTransClear.addEventListener("click", (e) => {
+            e.stopPropagation();
+            transcriberFile = null;
+            inputTrans.value = "";
+            infoTrans.classList.add("hidden");
+            transResultBox.classList.add("hidden");
+        });
+
+        if (btnCopyTrans) {
+            btnCopyTrans.addEventListener("click", () => {
+                if (transPreview.value) {
+                    navigator.clipboard.writeText(transPreview.value);
+                    showToast("info", "📋 Transkript metni panoya kopyalandı!");
+                }
+            });
+        }
+
+        btnTransApply.addEventListener("click", async () => {
+            if (!transcriberFile) {
+                showToast("error", "Lütfen bir ses veya video dosyası seçin.");
+                return;
+            }
+
+            const taskId = generateTaskId();
+            btnTransApply.disabled = true;
+            startGlobalProgress(taskId);
+
+            const fd = new FormData();
+            fd.append("file", transcriberFile);
+            fd.append("output_format", transFormat ? transFormat.value : "txt");
+            fd.append("language", transLang ? transLang.value : "auto");
+            fd.append("model_size", "base");
+
+            try {
+                const apiBase = getApiBaseUrl();
+                const resp = await fetch(`${apiBase}/transcribe-media`, {
+                    method: "POST",
+                    headers: { "X-Task-ID": taskId },
+                    body: fd
+                });
+                if (!resp.ok) {
+                    const err = await resp.json().catch(() => ({}));
+                    throw new Error(err.message || "Transkripsiyon başarısız oldu.");
+                }
+
+                const contentType = resp.headers.get("content-type") || "";
+                if (contentType.includes("application/json")) {
+                    const data = await resp.json();
+                    transPreview.value = data.full_text || JSON.stringify(data, null, 2);
+                    transResultBox.classList.remove("hidden");
+                } else {
+                    const blob = await resp.blob();
+                    const text = await blob.text();
+                    transPreview.value = text.substring(0, 1500) + (text.length > 1500 ? "\n... (tamamı indirildi)" : "");
+                    transResultBox.classList.remove("hidden");
+                    const ext = transFormat.value === "srt" ? "srt" : "txt";
+                    downloadBlob(blob, `${transcriberFile.name.replace(/\.[^.]+$/, "")}_transcript.${ext}`);
+                }
+
+                stopGlobalProgress(true, "Transkripsiyon Tamamlandı!");
+                showToast("success", "🎙️ Transkript başarıyla oluşturuldu.");
+            } catch (err) {
+                stopGlobalProgress(false);
+                showToast("error", `⚠️ ${err.message}`);
+            } finally {
+                btnTransApply.disabled = false;
+            }
+        });
+    }
+
+    // ═════════════════════════════════════════════════════════════
+    // 3. EXIF & PRIVACY METADATA CLEANER
+    // ═════════════════════════════════════════════════════════════
+    let metaFile = null;
+    const dropMeta = document.getElementById("drop-zone-metadata");
+    const inputMeta = document.getElementById("file-input-metadata");
+    const infoMeta = document.getElementById("info-metadata");
+    const nameMeta = document.getElementById("info-metadata-name");
+    const sizeMeta = document.getElementById("info-metadata-size");
+    const btnMetaClear = document.getElementById("btn-metadata-clear");
+    const btnMetaInspect = document.getElementById("btn-metadata-inspect");
+    const btnMetaStrip = document.getElementById("btn-metadata-strip");
+    const metaReportBox = document.getElementById("metadata-report-box");
+    const metaTagsList = document.getElementById("metadata-tags-list");
+
+    if (dropMeta && inputMeta) {
+        dropMeta.addEventListener("click", (e) => {
+            if (e.target !== btnMetaClear && !btnMetaClear.contains(e.target)) {
+                inputMeta.click();
+            }
+        });
+
+        inputMeta.addEventListener("change", (e) => {
+            if (e.target.files.length) {
+                metaFile = e.target.files[0];
+                nameMeta.textContent = metaFile.name;
+                sizeMeta.textContent = formatBytes(metaFile.size);
+                infoMeta.classList.remove("hidden");
+            }
+        });
+
+        btnMetaClear.addEventListener("click", (e) => {
+            e.stopPropagation();
+            metaFile = null;
+            inputMeta.value = "";
+            infoMeta.classList.add("hidden");
+            metaReportBox.classList.add("hidden");
+        });
+
+        btnMetaInspect.addEventListener("click", async () => {
+            if (!metaFile) {
+                showToast("error", "Lütfen incelenecek bir görsel seçin.");
+                return;
+            }
+            const fd = new FormData();
+            fd.append("file", metaFile);
+            try {
+                const apiBase = getApiBaseUrl();
+                const resp = await fetch(`${apiBase}/view-metadata`, { method: "POST", body: fd });
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.error || "Etiketler okunamadı.");
+
+                metaTagsList.innerHTML = "";
+                const entries = Object.entries(data.tags || {});
+                if (entries.length === 0) {
+                    metaTagsList.innerHTML = '<p class="text-green-400">✅ Bu görselde gizli EXIF/GPS etiketi bulunamadı. Görsel zaten temiz!</p>';
+                } else {
+                    entries.forEach(([k, v]) => {
+                        const item = document.createElement("div");
+                        item.className = "flex justify-between py-1 border-b border-white/5";
+                        item.innerHTML = `<span class="text-gray-400">${k}:</span> <span class="text-teal-300 font-semibold truncate max-w-[240px]">${v}</span>`;
+                        metaTagsList.appendChild(item);
+                    });
+                }
+                metaReportBox.classList.remove("hidden");
+                showToast("info", `🔍 ${data.tag_count} adet metaveri etiketi tarandı.`);
+            } catch (err) {
+                showToast("error", `⚠️ ${err.message}`);
+            }
+        });
+
+        btnMetaStrip.addEventListener("click", async () => {
+            if (!metaFile) {
+                showToast("error", "Lütfen bir görsel seçin.");
+                return;
+            }
+            const fd = new FormData();
+            fd.append("file", metaFile);
+            try {
+                const apiBase = getApiBaseUrl();
+                const resp = await fetch(`${apiBase}/strip-metadata`, { method: "POST", body: fd });
+                if (!resp.ok) throw new Error("Metaveri temizleme başarısız oldu.");
+                const blob = await resp.blob();
+                const outName = `clean_${metaFile.name}`;
+                downloadBlob(blob, outName);
+                showToast("success", `🛡️ Metaveriler silindi ve temiz görsel indirildi: ${outName}`);
+            } catch (err) {
+                showToast("error", `⚠️ ${err.message}`);
+            }
+        });
+    }
+
+    // ═════════════════════════════════════════════════════════════
+    // 4. VIDEO TO GIF / WEBP ANIMATOR
+    // ═════════════════════════════════════════════════════════════
+    let animFile = null;
+    let selectedAnimFormat = "gif";
+    const dropAnim = document.getElementById("drop-zone-animator");
+    const inputAnim = document.getElementById("file-input-animator");
+    const infoAnim = document.getElementById("info-animator");
+    const nameAnim = document.getElementById("info-animator-name");
+    const sizeAnim = document.getElementById("info-animator-size");
+    const btnAnimClear = document.getElementById("btn-animator-clear");
+    const btnAnimApply = document.getElementById("btn-animator-apply");
+    const animFormatBtns = document.querySelectorAll(".anim-format-btn");
+    const animStart = document.getElementById("anim-start");
+    const animDuration = document.getElementById("anim-duration");
+    const animFps = document.getElementById("anim-fps");
+    const animWidth = document.getElementById("anim-width");
+
+    if (dropAnim && inputAnim) {
+        dropAnim.addEventListener("click", (e) => {
+            if (e.target !== btnAnimClear && !btnAnimClear.contains(e.target)) {
+                inputAnim.click();
+            }
+        });
+
+        inputAnim.addEventListener("change", (e) => {
+            if (e.target.files.length) {
+                animFile = e.target.files[0];
+                nameAnim.textContent = animFile.name;
+                sizeAnim.textContent = formatBytes(animFile.size);
+                infoAnim.classList.remove("hidden");
+            }
+        });
+
+        btnAnimClear.addEventListener("click", (e) => {
+            e.stopPropagation();
+            animFile = null;
+            inputAnim.value = "";
+            infoAnim.classList.add("hidden");
+        });
+
+        animFormatBtns.forEach(btn => {
+            btn.addEventListener("click", () => {
+                animFormatBtns.forEach(b => {
+                    b.className = "anim-format-btn py-3 px-4 rounded-xl border border-white/10 bg-white/5 text-gray-300 font-semibold text-sm hover:border-white/20";
+                });
+                btn.className = "anim-format-btn py-3 px-4 rounded-xl border border-orange-500 bg-orange-500/20 text-white font-bold text-sm";
+                selectedAnimFormat = btn.dataset.format;
+            });
+        });
+
+        btnAnimApply.addEventListener("click", async () => {
+            if (!animFile) {
+                showToast("error", "Lütfen bir video dosyası seçin.");
+                return;
+            }
+
+            const taskId = generateTaskId();
+            btnAnimApply.disabled = true;
+            startGlobalProgress(taskId);
+
+            const fd = new FormData();
+            fd.append("file", animFile);
+            fd.append("start_time", animStart ? animStart.value : "00:00:00");
+            fd.append("duration", animDuration ? animDuration.value : "5");
+            fd.append("fps", animFps ? animFps.value : "15");
+            fd.append("width", animWidth ? animWidth.value : "480");
+            fd.append("anim_format", selectedAnimFormat);
+            fd.append("quality", "80");
+
+            try {
+                const apiBase = getApiBaseUrl();
+                const resp = await fetch(`${apiBase}/video-to-anim`, {
+                    method: "POST",
+                    headers: { "X-Task-ID": taskId },
+                    body: fd
+                });
+                if (!resp.ok) {
+                    const err = await resp.json().catch(() => ({}));
+                    throw new Error(err.message || "Animasyon oluşturma başarısız oldu.");
+                }
+                const blob = await resp.blob();
+                const outName = `${animFile.name.replace(/\.[^.]+$/, "")}_anim.${selectedAnimFormat}`;
+                downloadBlob(blob, outName);
+                stopGlobalProgress(true, "Animasyon Başarıyla Üretildi!");
+                showToast("success", `🎞️ Animasyon indirildi: ${outName}`);
+            } catch (err) {
+                stopGlobalProgress(false);
+                showToast("error", `⚠️ ${err.message}`);
+            } finally {
+                btnAnimApply.disabled = false;
             }
         });
     }

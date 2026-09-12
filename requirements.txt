@@ -17,3 +17,5 @@ realesrgan
 pyAesCrypt
 pypdf
 pywebview
+faster-whisper
+demucs
