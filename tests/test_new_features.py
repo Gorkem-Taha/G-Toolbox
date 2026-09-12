@@ -63,6 +63,36 @@ class TestNewFeatures(unittest.TestCase):
         self.assertIn("/view-metadata", route_paths)
         self.assertIn("/strip-metadata", route_paths)
         self.assertIn("/video-to-anim", route_paths)
+        self.assertIn("/convert-universal", route_paths)
+
+    def test_convert_universal_endpoint(self):
+        """Verify that /convert-universal converts an image properly without src_path NameError."""
+        import asyncio
+        from httpx import AsyncClient, ASGITransport
+
+        img = Image.new("RGB", (64, 64), color="red")
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        png_bytes = buf.getvalue()
+
+        async def _test():
+            transport = ASGITransport(app=app)
+            async with AsyncClient(transport=transport, base_url="http://test") as client:
+                files = {"file": ("test_image.png", png_bytes, "image/png")}
+                data = {"target_format": "webp"}
+                res = await client.post("/convert-universal", files=files, data=data)
+                self.assertEqual(res.status_code, 200)
+                out_img = Image.open(io.BytesIO(res.content))
+                self.assertEqual(out_img.format, "WEBP")
+                self.assertEqual(out_img.size, (64, 64))
+
+        asyncio.run(_test())
+
+    def test_ffmpeg_path_registration(self):
+        """Verify that FFMPEG_DIR is automatically injected into os.environ PATH."""
+        import os
+        if main.FFMPEG_DIR:
+            self.assertIn(main.FFMPEG_DIR, os.environ.get("PATH", ""))
 
 
 if __name__ == "__main__":

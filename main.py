@@ -31,6 +31,16 @@ try:
 except ImportError:
     LAMA_AVAILABLE = False
 
+_LAMA_INSTANCE = None
+
+def get_lama_model():
+    global _LAMA_INSTANCE
+    if _LAMA_INSTANCE is None:
+        if not LAMA_AVAILABLE:
+            raise RuntimeError("simple-lama-inpainting library is not available.")
+        _LAMA_INSTANCE = SimpleLama()
+    return _LAMA_INSTANCE
+
 try:
     import cv2
     import numpy as np
@@ -217,7 +227,9 @@ def _find_ffmpeg() -> str | None:
 
 FFMPEG_DIR = _find_ffmpeg()
 if FFMPEG_DIR:
-    logger.info(f"✅ ffmpeg found: {FFMPEG_DIR}")
+    if FFMPEG_DIR not in os.environ.get("PATH", ""):
+        os.environ["PATH"] = f"{FFMPEG_DIR};{os.environ.get('PATH', '')}"
+    logger.info(f"✅ ffmpeg found and added to PATH: {FFMPEG_DIR}")
 else:
     logger.warning(
         "⚠️ ffmpeg not found! Video download (merge/convert) may not work. "
@@ -261,12 +273,19 @@ progress_store: dict[str, dict] = {}
 
 def update_progress(task_id: str, progress: int, message: str):
     if task_id:
-        progress_store[task_id] = {"progress": progress, "message": message}
+        import time
+        if len(progress_store) > 150:
+            cutoff = time.time() - 1800
+            expired = [k for k, v in progress_store.items() if v.get("ts", 0) < cutoff]
+            for k in expired:
+                progress_store.pop(k, None)
+        progress_store[task_id] = {"progress": progress, "message": message, "ts": time.time()}
 
 @app.get("/progress/{task_id}")
 async def get_progress(task_id: str):
     """Returns the current progress status for a given task ID."""
-    return JSONResponse(content=progress_store.get(task_id, {"progress": 0, "message": ""}))
+    info = progress_store.get(task_id, {"progress": 0, "message": ""})
+    return JSONResponse(content={"progress": info.get("progress", 0), "message": info.get("message", "")})
 
 def purge_stale_files(max_age_hours: int = 12):
     """Safely removes abandoned temporary files older than max_age_hours from disk."""
@@ -446,6 +465,10 @@ async def convert_universal(
     out_name = f"{stem}_{uid}.{target_format}"
     out_path = DOWNLOAD_DIR / out_name
 
+    src_path = UPLOAD_DIR / f"uni_{uid}_{safe_name}"
+    with open(src_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
     ext = Path(safe_name).suffix.lower().lstrip(".")
 
     images = {"png", "jpg", "jpeg", "webp", "bmp", "gif", "tiff", "ico"}
@@ -573,13 +596,11 @@ async def magic_erase(
     try:
         update_progress(x_task_id, 50, "LaMa model is executing over the masked regions...")
         def process_lama():
-            from simple_lama_inpainting import SimpleLama
-            lama_model = SimpleLama()
+            lama_model = get_lama_model()
             orig = Image.open(img_path)
             # Mask format needs to be grayscale (L) where white is inpaint area
             mask_img = Image.open(mask_path).convert("L") 
             result = lama_model(orig, mask_img)
-            del lama_model
             result.save(out_path, format="PNG")
 
         await asyncio.to_thread(process_lama)
@@ -970,18 +991,23 @@ async def download_file(task_id: str):
 
 
 def _convert_image(src: str, dst: str, fmt: str) -> None:
-    """Converts image formats using Pillow."""
+    """Converts image formats using Pillow safely handling all color modes."""
     img = Image.open(src)
 
-    if fmt in ("jpg", "jpeg", "bmp") and img.mode in ("RGBA", "P"):
-        img = img.convert("RGB")
+    if fmt in ("jpg", "jpeg", "bmp"):
+        if img.mode not in ("RGB", "L"):
+            img = img.convert("RGB")
 
-    if fmt == "ico":
+    elif fmt == "ico":
         if img.mode in ("RGBA", "P"):
             img = img.convert("RGBA")
         else:
             img = img.convert("RGB")
         img.thumbnail((256, 256), Image.LANCZOS)
+
+    elif fmt == "png":
+        if img.mode == "CMYK":
+            img = img.convert("RGB")
 
     pillow_fmt = fmt.upper()
     if pillow_fmt == "JPG":
@@ -991,14 +1017,19 @@ def _convert_image(src: str, dst: str, fmt: str) -> None:
 
 
 def _convert_media(src: str, dst: str) -> None:
-    """Converts video and audio media formats using ffmpeg-python."""
-    (
-        ffmpeg
-        .input(src)
-        .output(dst)
-        .overwrite_output()
-        .run(quiet=True)
-    )
+    """Converts video and audio media formats using ffmpeg-python with error diagnostics."""
+    try:
+        (
+            ffmpeg
+            .input(src)
+            .output(dst)
+            .overwrite_output()
+            .run(quiet=True, capture_stdout=True, capture_stderr=True)
+        )
+    except ffmpeg.Error as e:
+        err_msg = e.stderr.decode('utf-8', errors='ignore') if e.stderr else str(e)
+        logger.error(f"FFmpeg conversion error: {err_msg}")
+        raise RuntimeError(f"FFmpeg conversion failed: {err_msg[:200]}")
 
 
 def _guess_media_type(ext: str) -> str:
@@ -1249,18 +1280,31 @@ async def separate_audio(
     def _process():
         try:
             update_progress(x_task_id, 25, "Separating audio stems with Demucs neural network...")
-            cmd = [
-                sys.executable, "-m", "demucs",
+            demucs_opts = [
                 "-n", "htdemucs",
                 "--out", str(out_folder)
             ]
             if stems == "vocals":
-                cmd.extend(["--two-stems", "vocals"])
-            cmd.append(str(input_path))
+                demucs_opts.extend(["--two-stems", "vocals"])
+            demucs_opts.append(str(input_path))
 
-            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
-            if proc.returncode != 0:
-                raise RuntimeError(f"Demucs processing error: {proc.stderr or proc.stdout}")
+            # Try in-process execution first to support PyInstaller frozen desktop apps
+            in_process_success = False
+            try:
+                import demucs.separate
+                demucs.separate.main(demucs_opts)
+                in_process_success = True
+            except Exception as in_err:
+                logger.warning(f"In-process Demucs encountered notice: {in_err}. Checking subprocess...")
+
+            if not in_process_success:
+                py_exe = sys.executable
+                if getattr(sys, "frozen", False):
+                    py_exe = shutil.which("python") or shutil.which("python3") or sys.executable
+                cmd = [py_exe, "-m", "demucs"] + demucs_opts
+                proc = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+                if proc.returncode != 0:
+                    raise RuntimeError(f"Demucs processing error: {proc.stderr or proc.stdout}")
 
             update_progress(x_task_id, 80, "Compressing separated audio stems into ZIP...")
             track_dirs = list((out_folder / "htdemucs").glob("*"))
@@ -1295,20 +1339,21 @@ async def separate_audio(
 
 
 # ── Faster-Whisper Local Transcription ────────────────────────────
-_WHISPER_MODEL = None
+_WHISPER_MODELS: dict[str, object] = {}
 
 def get_whisper_model(model_size: str = "base"):
-    global _WHISPER_MODEL
+    global _WHISPER_MODELS
     try:
         from faster_whisper import WhisperModel
     except ImportError:
         raise RuntimeError("faster-whisper library is not installed.")
     
-    if _WHISPER_MODEL is None:
+    key = str(model_size).lower().strip() or "base"
+    if key not in _WHISPER_MODELS:
         device = "cuda" if (torch and torch.cuda.is_available()) else "cpu"
         compute_type = "float16" if (torch and torch.cuda.is_available()) else "int8"
-        _WHISPER_MODEL = WhisperModel(model_size, device=device, compute_type=compute_type)
-    return _WHISPER_MODEL
+        _WHISPER_MODELS[key] = WhisperModel(key, device=device, compute_type=compute_type)
+    return _WHISPER_MODELS[key]
 
 def format_timestamp(seconds: float) -> str:
     """Formats float seconds into SRT timestamp HH:MM:SS,mmm."""
@@ -1398,7 +1443,7 @@ async def transcribe_media(
 # ── EXIF & Metadata Inspector / Stripper ──────────────────────────
 @app.post("/view-metadata")
 async def view_metadata(file: UploadFile = File(...)):
-    """Extracts and inspects EXIF metadata tags from an image."""
+    """Extracts and inspects EXIF metadata tags including GPS coordinates from an image."""
     try:
         image = Image.open(file.file)
         exif_data = image.getexif()
@@ -1410,6 +1455,19 @@ async def view_metadata(file: UploadFile = File(...)):
                     metadata[tag_name] = f"<binary data: {len(value)} bytes>"
                 else:
                     metadata[tag_name] = str(value)
+
+            # Extract GPSInfo sub-IFD (Pillow 10+)
+            try:
+                gps_ifd = exif_data.get_ifd(ExifTags.IFD.GPSInfo)
+                if gps_ifd:
+                    for gps_id, val in gps_ifd.items():
+                        gps_tag_name = ExifTags.GPSTAGS.get(gps_id, f"GPS_{gps_id}")
+                        if isinstance(val, bytes):
+                            metadata[f"GPS.{gps_tag_name}"] = f"<binary: {len(val)} bytes>"
+                        else:
+                            metadata[f"GPS.{gps_tag_name}"] = str(val)
+            except Exception:
+                pass
 
         return JSONResponse({
             "filename": file.filename,
@@ -1432,6 +1490,10 @@ async def strip_metadata(background_tasks: BackgroundTasks, file: UploadFile = F
         clean_img = Image.frombytes(image.mode, image.size, image.tobytes())
 
         fmt = image.format or "PNG"
+        if fmt.upper() in ("JPG", "JPEG"):
+            if clean_img.mode not in ("RGB", "L"):
+                clean_img = clean_img.convert("RGB")
+
         clean_img.save(dest_path, format=fmt)
 
         background_tasks.add_task(cleanup_files_and_memory, dest_path)
@@ -1478,7 +1540,7 @@ async def video_to_anim(
                     ffmpeg_exe = str(custom_path)
 
             if out_ext == "gif":
-                vf = f"fps={fps},scale={width}:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse"
+                vf = f"fps={fps},scale={width}:-2:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse"
                 cmd = [
                     ffmpeg_exe, "-y",
                     "-ss", str(start_time),
@@ -1488,7 +1550,7 @@ async def video_to_anim(
                     str(out_path)
                 ]
             else:
-                vf = f"fps={fps},scale={width}:-1:flags=lanczos"
+                vf = f"fps={fps},scale={width}:-2:flags=lanczos"
                 cmd = [
                     ffmpeg_exe, "-y",
                     "-ss", str(start_time),
