@@ -55,34 +55,79 @@ except ImportError as e:
     RRDBNet = None
     RealESRGANer = None
 
-def get_upscaler():
+_UPSCALER_INSTANCE = None
+
+def get_upscaler(force_fp32: bool = False):
+    global _UPSCALER_INSTANCE
     if RealESRGANer is None:
         raise RuntimeError("realesrgan library or dependencies not installed.")
+
+    # Return cached singleton if already loaded and not forcing FP32 fallback
+    if _UPSCALER_INSTANCE is not None and not force_fp32:
+        return _UPSCALER_INSTANCE
 
     import urllib.request
     model_name = "RealESRGAN_x4plus.pth"
     model_path = BASE_DIR / model_name
     model_url = f"https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/{model_name}"
-    
+    EXPECTED_MIN_SIZE = 60 * 1024 * 1024  # RealESRGAN_x4plus.pth is ~67MB
+
+    # Verify existing file integrity to prevent _pickle.UnpicklingError from partial downloads
+    if model_path.exists() and model_path.stat().st_size < EXPECTED_MIN_SIZE:
+        logger.warning(f"Incomplete model file detected ({model_path.stat().st_size} bytes). Removing and re-downloading...")
+        try:
+            model_path.unlink()
+        except Exception as e:
+            logger.error(f"Could not remove corrupted model file: {e}")
+
     if not model_path.exists():
-        logger.info(f"Downloading {model_name}...")
-        urllib.request.urlretrieve(model_url, str(model_path))
+        logger.info(f"Downloading {model_name} from {model_url}...")
+        temp_path = BASE_DIR / f"{model_name}.tmp"
+        if temp_path.exists():
+            temp_path.unlink()
+
+        req = urllib.request.Request(
+            model_url,
+            headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+        )
+        with urllib.request.urlopen(req, timeout=120) as response, open(temp_path, "wb") as out_file:
+            shutil.copyfileobj(response, out_file)
+
+        if temp_path.stat().st_size < EXPECTED_MIN_SIZE:
+            temp_path.unlink()
+            raise RuntimeError(f"Downloaded model weights are incomplete ({temp_path.stat().st_size} bytes).")
+
+        temp_path.replace(model_path)
+        logger.info(f"Successfully downloaded and verified {model_name} ({model_path.stat().st_size} bytes).")
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = RRDBNet(num_in_ch=3, num_out_ch=3, num_feat=64, num_block=23, num_grow_ch=32, scale=4)
     
-    half = True if torch.cuda.is_available() else False
+    # Half-precision (FP16) produces NaN / black images on GTX 16xx Turing and older Pascal cards
+    half = False
+    if torch.cuda.is_available() and not force_fp32:
+        try:
+            gpu_name = torch.cuda.get_device_name(0).lower()
+            if not any(x in gpu_name for x in ["1650", "1660", "gtx 10", "gtx 9"]):
+                half = True
+        except Exception:
+            half = False
+
+    tile_size = 256 if (torch.cuda.is_available() and half) else 192
 
     upscaler_model = RealESRGANer(
         scale=4,
         model_path=str(model_path),
         model=model,
-        tile=256,
+        tile=tile_size,
         tile_pad=10,
         pre_pad=0,
         half=half,
         device=device
     )
+
+    if not force_fp32:
+        _UPSCALER_INSTANCE = upscaler_model
     return upscaler_model
 
 from fastapi import BackgroundTasks, FastAPI, File, Form, UploadFile, Request, Header
@@ -514,16 +559,63 @@ async def upscale_image(
             img_bytes = np.fromfile(str(src_path), np.uint8)
             img = cv2.imdecode(img_bytes, cv2.IMREAD_UNCHANGED)
             if img is None:
-                raise ValueError("Image could not be read.")
+                raise ValueError("Image could not be read or is corrupted.")
             
-            output, _ = upscaler.enhance(img, outscale=scale)
+            # Dimension safety guard: avoid extreme resolutions causing system freeze / OOM
+            h, w = img.shape[:2]
+            max_dim = 3840
+            if max(h, w) > max_dim:
+                factor = max_dim / max(h, w)
+                new_w, new_h = int(w * factor), int(h * factor)
+                img = cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_AREA)
+
+            # Handle transparency (RGBA) and grayscale channels safely
+            has_alpha = False
+            alpha_channel = None
+
+            if len(img.shape) == 2:
+                # 1-channel Grayscale -> convert to 3-channel BGR
+                img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+            elif len(img.shape) == 3:
+                if img.shape[2] == 4:
+                    # 4-channel RGBA: extract alpha, enhance BGR, resize alpha with Lanczos
+                    has_alpha = True
+                    alpha_channel = img[:, :, 3]
+                    img = img[:, :, :3]
+                elif img.shape[2] == 1:
+                    img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+                elif img.shape[2] > 4:
+                    img = img[:, :, :3]
+
+            try:
+                output, _ = upscaler.enhance(img, outscale=scale)
+            except Exception as e:
+                # If CUDA or FP16 error occurs, retry with safe FP32 fallback
+                if "half" in str(e).lower() or "cuda" in str(e).lower():
+                    logger.warning(f"Upscale failed with FP16/CUDA error: {e}. Retrying with FP32 fallback...")
+                    fallback_upscaler = get_upscaler(force_fp32=True)
+                    output, _ = fallback_upscaler.enhance(img, outscale=scale)
+                else:
+                    raise e
+            
+            # Recombine alpha channel if original image was transparent
+            if has_alpha and alpha_channel is not None:
+                out_h, out_w = output.shape[:2]
+                alpha_resized = cv2.resize(alpha_channel, (out_w, out_h), interpolation=cv2.INTER_LANCZOS4)
+                if len(output.shape) == 3 and output.shape[2] == 3:
+                    output = np.dstack([output, alpha_resized])
+
+            # Choose safe output extension (RGBA requires PNG format)
+            out_ext = ext.lower() if ext else '.png'
+            if has_alpha and out_ext in ('.jpg', '.jpeg'):
+                out_ext = '.png'
             
             # Encode and save via tofile to prevent Unicode save issues
-            is_success, buffer = cv2.imencode(ext.lower() if ext else '.png', output)
+            is_success, buffer = cv2.imencode(out_ext, output)
             if is_success:
                 buffer.tofile(str(out_path))
             else:
-                raise ValueError("Image could not be saved.")
+                raise ValueError("Upscaled image could not be encoded.")
             
         await asyncio.to_thread(process_upscale)
         
