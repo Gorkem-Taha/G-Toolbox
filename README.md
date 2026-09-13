@@ -139,53 +139,18 @@ G-Toolbox features a universal **Dual-Mode System** for mobile phones and tablet
 
 ---
 
-## 🖥️ Windows Native Desktop App & Setup Installer (`.exe`)
-
-Instead of opening a browser tab, G-Toolbox can run as a native, borderless Windows desktop program or install like a commercial Windows app:
-
-* **Instant Launch:** Double-click `launch_desktop.bat` to launch the native Edge Chromium WebView2 window immediately.
-* **Standalone Executable Builder:** Run `build_desktop.bat` to package the entire project into a self-contained executable folder at `dist\G-Toolbox\G-Toolbox.exe` using PyInstaller.
-* **One-Click Setup Installer (`build_installer.bat`):** Generates a professional Windows Setup Wizard (`Output\G-Toolbox-Setup.exe`) using Inno Setup 6 with desktop shortcuts, Start Menu integration, and clean uninstallation.
-
 ---
 
-## 💻 System Requirements
+## 🚀 Official Releases: Windows `.exe` & Android `APK`
 
-### 🟢 Minimum Requirements (Runs on CPU - Slower Processing)
-* **OS:** Windows 10 / Windows 11 (64-bit) or Android 8.0+
-* **Processor (CPU):** Intel Core i3 / i5 (8th Gen+) or AMD Ryzen 3
-* **Memory (RAM):** 8 GB
-* **Graphics:** Integrated Graphics (Intel UHD / AMD Vega)
-* **Storage:** 3 GB free space
+G-Toolbox delivers a zero-friction, production-grade experience without requiring terminal or script execution:
 
-### 🚀 Recommended Requirements (Runs on GPU - Lightning Fast)
-* **OS:** Windows 10 / Windows 11 (64-bit)
-* **Processor (CPU):** Intel Core i5 / i7 (10th Gen+) or AMD Ryzen 5 / 7
-* **Memory (RAM):** 16 GB or higher
-* **Graphics (GPU):** **NVIDIA GPU** (GTX 1660, RTX 2060, RTX 3060, RTX 40xx or better) with 4GB+ VRAM. *CUDA 12.1 is automatically detected and utilized.*
-* **Storage:** SSD with 5 GB free space.
+* **Windows Desktop (`G-Toolbox.exe`):** Simply double-click `G-Toolbox.exe`. It boots the background engine silently, performs automated AI integrity verification, and launches the native GPU-accelerated desktop window.
+* **Android Mobile (`G-Toolbox.apk`):** Install the native Android APK. On first launch, the Setup Wizard prompts whether to run offline on mobile silicon or pair seamlessly with your PC's 4K GPU engine.
 
----
-
-## 🛠️ Quick Start Guide
-
-### 📦 Step 1: Clone or Download
-```bash
-git clone https://github.com/Gorkem-Taha/G-Toolbox.git
-cd G-Toolbox
-```
-
-### ⚙️ Step 2: Automated Setup
-Run `installation.bat` to set up the isolated Python virtual environment:
-* Choose **GPU Mode** if you have an NVIDIA card (installs PyTorch CUDA 12.1).
-* Choose **CPU Mode** for standard computers.
-
-### 🚀 Step 3: Run the Application
-You can run G-Toolbox in your preferred environment:
-
-* **As Native Windows Desktop App:** Double-click `launch_desktop.bat`
-* **As Web & Mobile LAN Server:** Double-click `Start.bat` (accessible at `http://localhost:8000` on PC and `http://YOUR_PC_IP:8000` on phone)
-* **Build Standalone .exe:** Double-click `build_desktop.bat`
+### 🐧 What About Linux?
+* **Portable AppImage:** Linux users can package G-Toolbox into a single-file executable `G-Toolbox.AppImage` (bundled with WebKitGTK and embedded Python runtime) that runs across Ubuntu, Debian, Fedora, and Arch with a single click (`chmod +x && ./G-Toolbox.AppImage`).
+* **Desktop Launcher:** Integrates directly into GNOME/KDE application menus via `gtoolbox.desktop`.
 
 ---
 

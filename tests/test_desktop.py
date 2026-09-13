@@ -101,6 +101,19 @@ class TestDesktopApp(unittest.TestCase):
         self.assertIn("/api/save-task-file", route_paths)
         self.assertIn("/api/save-blob-file", route_paths)
 
+    def test_ai_status_endpoint(self):
+        """Verify that /api/ai-status returns 200 with model keys."""
+        from main import app, check_ai_models_status
+        status = check_ai_models_status()
+        self.assertIn("models", status)
+        self.assertIn("realesrgan_general", status["models"])
+        self.assertIn("lama", status["models"])
+        self.assertIn("u2net", status["models"])
+
+        route_paths = [r.path for r in app.routes]
+        self.assertIn("/api/ai-status", route_paths)
+        self.assertIn("/api/install-ai-models", route_paths)
+
 
 if __name__ == "__main__":
     unittest.main()

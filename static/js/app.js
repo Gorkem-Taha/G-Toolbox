@@ -296,7 +296,37 @@ const translations = {
         preset_slowed_loaded: "Slowed + Reverb preset loaded",
         preset_nightcore_loaded: "Nightcore preset loaded",
         preset_fast_loaded: "1.25x Fast preset loaded",
-        preset_reset_loaded: "Standard (1.0x) preset loaded"
+        preset_reset_loaded: "Standard (1.0x) preset loaded",
+
+        // AI Setup & Mobile Onboarding
+        ai_setup_title: "AI Models Setup",
+        ai_setup_subtitle: "G-Toolbox Local AI Models",
+        ai_setup_desc: "Would you like to download the AI models (4K Upscaler, Magic Eraser, and Background Remover) now to process your media with full quality?",
+        ai_setup_note: "* All models run 100% locally and privately on your machine. You can skip this and install later from Settings.",
+        btn_skip_for_now: "Skip for Now (Later)",
+        btn_install_ai_models: "Yes, Download AI Models",
+        mobile_onboard_title: "G-Toolbox Mobile Setup",
+        mobile_onboard_subtitle: "AI & Connection Preference",
+        mobile_onboard_desc: "How would you like to run AI features on your mobile device?",
+        opt_mobile_local_title: "Local Device Mode (Offline Mobile)",
+        opt_mobile_local_desc: "Processes images and metadata directly using your phone's processor. Zero network required.",
+        opt_mobile_pc_title: "Connect to PC Server (Recommended - GPU)",
+        opt_mobile_pc_desc: "Connects to G-Toolbox running on your PC; unlock 4K Upscaling, Vocal Separator, and Video Downloader.",
+        label_enter_pc_url: "Your G-Toolbox PC Server Address:",
+        btn_complete_setup: "Complete Setup & Start",
+        models_installed_ok: "Installed",
+        models_missing: "Not Installed",
+        models_downloading: "Downloading models...",
+        models_ready: "All AI Models Ready!",
+        video_starting: "Starting…",
+        video_downloading: "Downloading…",
+        video_merging: "Merging and converting…",
+        video_save_as: "Opening Save As…",
+        video_saved: "Video successfully saved:\n",
+        video_save_canceled: "Video save canceled.",
+        file_saved: "File saved:\n",
+        file_save_canceled: "Save canceled.",
+        no_exif_found: "No hidden EXIF/GPS tags found in this image. Clean!"
     },
     tr: {
         app_title: "G-Toolbox | Premium Araç Seti",
@@ -567,7 +597,37 @@ const translations = {
         preset_slowed_loaded: "Slowed + Reverb ayarları yüklendi",
         preset_nightcore_loaded: "Nightcore ayarları yüklendi",
         preset_fast_loaded: "1.25x Hızlı ayarları yüklendi",
-        preset_reset_loaded: "Standart (1.0x) ayarları yüklendi"
+        preset_reset_loaded: "Standart (1.0x) ayarları yüklendi",
+
+        // AI Setup & Mobile Onboarding
+        ai_setup_title: "Yapay Zeka Kurulumu",
+        ai_setup_subtitle: "G-Toolbox Yerel AI Modelleri",
+        ai_setup_desc: "G-Toolbox yapay zeka özelliklerini (4K Görsel Büyütme, Sihirli Nesne Silici ve Arka Plan Kaldırma) kullanmak için gerekli modelleri şimdi indirmek ister misiniz?",
+        ai_setup_note: "* Tüm modeller bilgisayarınızda %100 çevrimdışı ve gizli çalışır. İstediğiniz zaman bu işlemi atlayabilir ve daha sonra Ayarlar menüsünden kurabilirsiniz.",
+        btn_skip_for_now: "Şimdilik Atla (Daha Sonra)",
+        btn_install_ai_models: "Evet, Yapay Zekayı İndir",
+        mobile_onboard_title: "G-Toolbox Mobil Kurulum",
+        mobile_onboard_subtitle: "Yapay Zeka ve Bağlantı Tercihi",
+        mobile_onboard_desc: "Mobilde yapay zekayı nasıl kullanmak istersiniz?",
+        opt_mobile_local_title: "Yerel Cihaz Modu (Offline Mobil)",
+        opt_mobile_local_desc: "Görsel dönüştürme ve EXIF temizleme işlemlerini doğrudan telefonunuzun işlemcisinde yapar. Ağ gerektirmez.",
+        opt_mobile_pc_title: "Bilgisayara Bağla (Önerilen - Güçlü GPU)",
+        opt_mobile_pc_desc: "Bilgisayarınızda açık olan G-Toolbox'a bağlanır; 4K Büyütme, Vokal Ayırma ve YouTube İndirici gücünü kullanır.",
+        label_enter_pc_url: "Bilgisayarınızdaki G-Toolbox Sunucu Adresi:",
+        btn_complete_setup: "Kurulumu Tamamla ve Başla",
+        models_installed_ok: "Yüklü",
+        models_missing: "Yüklü Değil",
+        models_downloading: "Modeller indiriliyor...",
+        models_ready: "Tüm Modeller Hazır!",
+        video_starting: "Başlatılıyor…",
+        video_downloading: "İndiriliyor…",
+        video_merging: "Birleştirme ve dönüştürme yapılıyor…",
+        video_save_as: "Farklı Kaydet açılıyor…",
+        video_saved: "Video başarıyla kaydedildi:\n",
+        video_save_canceled: "Video kaydetme işlemi iptal edildi.",
+        file_saved: "Dosya kaydedildi:\n",
+        file_save_canceled: "Kaydetme işlemi iptal edildi.",
+        no_exif_found: "Bu görselde gizli EXIF/GPS etiketi bulunamadı. Görsel zaten temiz!"
     }
 };
 
@@ -1577,16 +1637,16 @@ document.addEventListener("DOMContentLoaded", () => {
                 barBg.style.width = "0%";
                 document.getElementById("percent-bg").textContent = "0%";
                 btnRemoveBg.disabled = false;
-                btnRemoveBg.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i><span>Sihirli Arka Planı Kaldır</span>`;
+                btnRemoveBg.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i><span>${i18n('btn_remove_bg')}</span>`;
             }, 1500);
         });
 
         xhr.addEventListener("error", () => {
             stopGlobalProgress(false);
             aiProcessing.classList.add("hidden");
-            showToast("error", "⚠️ Sunucu bağlantı hatası.");
+            showToast("error", `⚠️ ${i18n('server_error')}`);
             btnRemoveBg.disabled = false;
-            btnRemoveBg.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i><span>Sihirli Arka Planı Kaldır</span>`;
+            btnRemoveBg.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i><span>${i18n('btn_remove_bg')}</span>`;
         });
 
         xhr.open("POST", `${getApiBaseUrl()}/remove-background`);
@@ -1729,7 +1789,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         btnDownloadVideo.disabled = true;
-        btnDownloadVideo.innerHTML = `<div class="spinner visible" style="width:18px;height:18px;border-width:2px;display:inline-block"></div><span>Başlatılıyor…</span>`;
+        btnDownloadVideo.innerHTML = `<div class="spinner visible" style="width:18px;height:18px;border-width:2px;display:inline-block"></div><span>${i18n('video_starting')}</span>`;
         downloadLoading.classList.remove("hidden");
         spinner.classList.add("visible");
 
@@ -1746,18 +1806,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const startData = await startRes.json();
             if (!startData.success) {
-                showToast("error", `⚠️ ${startData.message || "İndirme başlatılamadı."}`);
+                showToast("error", `⚠️ ${startData.message || i18n('download_failed')}`);
                 resetVideoUI();
                 return;
             }
 
             const taskId = startData.task_id;
-            btnDownloadVideo.innerHTML = `<div class="spinner visible" style="width:18px;height:18px;border-width:2px;display:inline-block"></div><span>İndiriliyor… %0</span>`;
+            btnDownloadVideo.innerHTML = `<div class="spinner visible" style="width:18px;height:18px;border-width:2px;display:inline-block"></div><span>${i18n('video_downloading')} 0%</span>`;
 
             const downloadResult = await pollDownloadStatus(taskId);
 
             if (downloadResult.status === "done") {
-                btnDownloadVideo.innerHTML = `<div class="spinner visible" style="width:18px;height:18px;border-width:2px;display:inline-block"></div><span>Farklı Kaydet açılıyor…</span>`;
+                btnDownloadVideo.innerHTML = `<div class="spinner visible" style="width:18px;height:18px;border-width:2px;display:inline-block"></div><span>${i18n('video_save_as')}</span>`;
 
                 let savedViaNative = false;
                 if (currentMode === 'pc' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
@@ -1774,10 +1834,10 @@ document.addEventListener("DOMContentLoaded", () => {
                             const saveJson = await saveRes.json();
                             if (saveJson.success && saveJson.saved_path) {
                                 savedViaNative = true;
-                                showToast("success", `🎉 Video başarıyla kaydedildi:\n${saveJson.saved_path}`);
+                                showToast("success", `🎉 ${i18n('video_saved')}${saveJson.saved_path}`);
                             } else if (saveJson.canceled) {
                                 savedViaNative = true;
-                                showToast("info", "Video kaydetme işlemi kullanıcı tarafından iptal edildi.");
+                                showToast("info", i18n('video_save_canceled'));
                             }
                         }
                     } catch (e) {
@@ -1792,14 +1852,14 @@ document.addEventListener("DOMContentLoaded", () => {
                     document.body.appendChild(a);
                     a.click();
                     a.remove();
-                    showToast("success", `🎉 İndirme Başarılı! — ${downloadResult.filename}`);
+                    showToast("success", `🎉 ${i18n('download_success')} — ${downloadResult.filename}`);
                 }
             } else {
-                showToast("error", `⚠️ ${downloadResult.error || "İndirme başarısız."}`);
+                showToast("error", `⚠️ ${downloadResult.error || i18n('download_failed')}`);
             }
 
         } catch (err) {
-            showToast("error", "⚠️ Sunucu bağlantı hatası.");
+            showToast("error", `⚠️ ${i18n('server_error')}`);
         } finally {
             resetVideoUI();
         }
@@ -1822,13 +1882,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 const pct = data.progress || 0;
                 const speedInfo = data.speed ? ` · ${data.speed}` : "";
 
-                btnDownloadVideo.innerHTML = `<div class="spinner visible" style="width:18px;height:18px;border-width:2px;display:inline-block"></div><span>İndiriliyor… %${pct}${speedInfo}</span>`;
+                btnDownloadVideo.innerHTML = `<div class="spinner visible" style="width:18px;height:18px;border-width:2px;display:inline-block"></div><span>${i18n('video_downloading')} ${pct}%${speedInfo}</span>`;
 
                 if (loadingText) {
                     if (pct >= 97) {
-                        loadingText.textContent = "Birleştirme ve dönüştürme yapılıyor…";
+                        loadingText.textContent = i18n('video_merging');
                     } else {
-                        loadingText.textContent = `Video İndiriliyor… %${pct}${speedInfo}`;
+                        loadingText.textContent = `${i18n('video_downloading')} ${pct}%${speedInfo}`;
                     }
                 }
 
@@ -1839,7 +1899,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
 
             } catch (e) {
-                return { status: "error", error: "Sunucu bağlantısı kesildi." };
+                return { status: "error", error: i18n('server_error') };
             }
         }
     }
@@ -3539,7 +3599,7 @@ window.saveOperatingModeSettings = function() {
     }
 };
 
-// Initial badge render on load
+// Initial badge render & onboarding/integrity checks on load
 document.addEventListener('DOMContentLoaded', () => {
     const dot = document.getElementById('mode-status-dot');
     const text = document.getElementById('mode-status-text');
@@ -3552,5 +3612,197 @@ document.addEventListener('DOMContentLoaded', () => {
             text.textContent = "Yerel Mobil";
         }
     }
+
+    // Startup check: Mobile Onboarding Wizard for APK / Mobile users
+    setTimeout(() => {
+        if (typeof window.checkMobileOnboarding === 'function') {
+            window.checkMobileOnboarding();
+        }
+        // Startup check: AI Models integrity check on Windows / PC desktop
+        if (typeof window.checkAiIntegrity === 'function') {
+            window.checkAiIntegrity();
+        }
+    }, 600);
 });
+
+// ═════════════════════════════════════════════════════════════════
+// AI SETUP & INTEGRITY CHECK (Windows & Web)
+// ═════════════════════════════════════════════════════════════════
+window.checkAiIntegrity = async function(isManual = false) {
+    if (currentMode !== 'pc') return;
+
+    try {
+        const resp = await fetch(`${getApiBaseUrl()}/api/ai-status`);
+        if (!resp.ok) return;
+        const data = await resp.json();
+
+        const badgeGen = document.getElementById('badge-ai-realesrgan');
+        const badgeLama = document.getElementById('badge-ai-lama');
+        const badgeU2 = document.getElementById('badge-ai-u2net');
+
+        if (badgeGen && data.models && data.models.realesrgan_general) {
+            badgeGen.innerHTML = data.models.realesrgan_general.installed 
+                ? `<span class="text-green-400 font-bold">✅ ${i18n('models_installed_ok')}</span>`
+                : `<span class="text-amber-400 font-bold">⚠️ ${i18n('models_missing')} (67MB)</span>`;
+        }
+        if (badgeLama && data.models && data.models.lama) {
+            badgeLama.innerHTML = data.models.lama.installed 
+                ? `<span class="text-green-400 font-bold">✅ ${i18n('models_installed_ok')}</span>`
+                : `<span class="text-amber-400 font-bold">⚠️ ${i18n('models_missing')} (200MB)</span>`;
+        }
+        if (badgeU2 && data.models && data.models.u2net) {
+            badgeU2.innerHTML = data.models.u2net.installed 
+                ? `<span class="text-green-400 font-bold">✅ ${i18n('models_installed_ok')}</span>`
+                : `<span class="text-amber-400 font-bold">⚠️ ${i18n('models_missing')} (176MB)</span>`;
+        }
+
+        const dismissed = localStorage.getItem('gtoolbox_ai_setup_dismissed');
+        if ((!data.essential_installed && !dismissed) || isManual) {
+            const modal = document.getElementById('ai-setup-modal');
+            if (modal) modal.classList.remove('hidden');
+        }
+    } catch (e) {
+        console.warn("AI integrity check skipped:", e);
+    }
+};
+
+window.closeAiSetupModal = function(rememberDismiss = false) {
+    const modal = document.getElementById('ai-setup-modal');
+    if (modal) modal.classList.add('hidden');
+    if (rememberDismiss) {
+        localStorage.setItem('gtoolbox_ai_setup_dismissed', 'true');
+    }
+};
+
+window.startAiInstallation = async function() {
+    const btn = document.getElementById('btn-start-ai-install');
+    const progressBox = document.getElementById('ai-install-progress-box');
+    const statusText = document.getElementById('ai-install-status-text');
+    const percentText = document.getElementById('ai-install-percent');
+    const bar = document.getElementById('ai-install-progress-bar');
+
+    if (btn) btn.disabled = true;
+    if (progressBox) progressBox.classList.remove('hidden');
+
+    try {
+        await fetch(`${getApiBaseUrl()}/api/install-ai-models`, { method: 'POST' });
+
+        const poll = setInterval(async () => {
+            try {
+                const res = await fetch(`${getApiBaseUrl()}/api/ai-status`);
+                const data = await res.json();
+                const prog = data.install_progress;
+
+                if (prog) {
+                    if (statusText) statusText.textContent = prog.current_model || i18n('models_downloading');
+                    if (percentText) percentText.textContent = `${prog.progress}%`;
+                    if (bar) bar.style.width = `${prog.progress}%`;
+
+                    if (prog.status === 'done' || prog.progress >= 100) {
+                        clearInterval(poll);
+                        if (statusText) statusText.textContent = `🎉 ${i18n('models_ready')}`;
+                        showToast("success", `🎉 ${i18n('models_ready')}`);
+                        setTimeout(() => {
+                            window.closeAiSetupModal(true);
+                            window.checkAiIntegrity();
+                        }, 1200);
+                    } else if (prog.status === 'error') {
+                        clearInterval(poll);
+                        if (statusText) statusText.textContent = `⚠️ Hata: ${prog.error}`;
+                        if (btn) btn.disabled = false;
+                        showToast("error", `⚠️ ${prog.error}`);
+                    }
+                }
+            } catch (e) {
+                console.warn("Poll failed", e);
+            }
+        }, 1000);
+    } catch (e) {
+        showToast("error", "Bağlantı hatası: Modeller indirilemedi.");
+        if (btn) btn.disabled = false;
+    }
+};
+
+// ═════════════════════════════════════════════════════════════════
+// MOBILE ONBOARDING (APK / Mobile First Launch)
+// ═════════════════════════════════════════════════════════════════
+let selectedMobileOnboardMode = 'pc';
+
+window.checkMobileOnboarding = function() {
+    const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+        || window.location.pathname.includes('/mobile')
+        || !!window.Capacitor
+        || !!window.cordova;
+
+    const onboarded = localStorage.getItem('gtoolbox_mobile_onboarded');
+
+    if (isMobileDevice && !onboarded) {
+        const modal = document.getElementById('mobile-onboarding-modal');
+        if (modal) modal.classList.remove('hidden');
+    }
+};
+
+window.selectMobileOnboardingOption = function(mode) {
+    selectedMobileOnboardMode = mode;
+    const optLocal = document.getElementById('opt-onboard-local');
+    const optPc = document.getElementById('opt-onboard-pc');
+    const inputSec = document.getElementById('onboard-pc-input-section');
+
+    if (mode === 'local') {
+        if (optLocal) optLocal.className = "cursor-pointer p-4 rounded-2xl bg-pink-500/10 border-2 border-pink-500 transition-all";
+        if (optPc) optPc.className = "cursor-pointer p-4 rounded-2xl bg-white/5 border border-white/10 hover:border-purple-500/40 transition-all";
+        if (inputSec) inputSec.classList.add('hidden');
+    } else {
+        if (optLocal) optLocal.className = "cursor-pointer p-4 rounded-2xl bg-white/5 border border-white/10 hover:border-pink-500/40 transition-all";
+        if (optPc) optPc.className = "cursor-pointer p-4 rounded-2xl bg-purple-500/10 border-2 border-purple-500 transition-all";
+        if (inputSec) inputSec.classList.remove('hidden');
+    }
+};
+
+window.testOnboardServerConnection = async function() {
+    const input = document.getElementById('input-onboard-server-url');
+    const msg = document.getElementById('onboard-connection-msg');
+    if (!input || !msg) return;
+
+    let target = input.value.trim().replace(/\/+$/, '');
+    if (!target) {
+        msg.innerHTML = '<span class="text-amber-400 font-bold">Lütfen bir adres girin (Örn: http://192.168.1.100:8000)</span>';
+        return;
+    }
+
+    msg.innerHTML = `<span class="text-yellow-400">Bağlanılıyor: ${target}...</span>`;
+    try {
+        const r = await fetch(`${target}/api/network-info`, { mode: 'cors' });
+        if (r.ok) {
+            msg.innerHTML = '<span class="text-green-400 font-bold">✅ Başarılı: Bilgisayar bulundu ve yanıt veriyor!</span>';
+        } else {
+            msg.innerHTML = `<span class="text-red-400 font-bold">⚠️ Hata: HTTP ${r.status}</span>`;
+        }
+    } catch (e) {
+        msg.innerHTML = '<span class="text-red-400 font-bold">❌ Bağlantı Başarısız. Bilgisayarda G-Toolbox.exe açık mı?</span>';
+    }
+};
+
+window.applyMobileOnboarding = function() {
+    localStorage.setItem('gtoolbox_mobile_onboarded', 'true');
+    if (selectedMobileOnboardMode === 'local') {
+        currentMode = 'mobile';
+        customServerUrl = '';
+        localStorage.setItem('gtoolbox_mode', 'mobile');
+        localStorage.removeItem('gtoolbox_server_url');
+        showToast("info", "📱 Yerel Cihaz Modu seçildi.");
+    } else {
+        currentMode = 'pc';
+        const input = document.getElementById('input-onboard-server-url');
+        if (input && input.value.trim()) {
+            customServerUrl = input.value.trim().replace(/\/+$/, '');
+            localStorage.setItem('gtoolbox_server_url', customServerUrl);
+        }
+        localStorage.setItem('gtoolbox_mode', 'pc');
+        showToast("success", "💻 PC Sunucusuna bağlanıldı.");
+    }
+
+    const modal = document.getElementById('mobile-onboarding-modal');
+    if (modal) modal.classList.add('hidden');
+};
 

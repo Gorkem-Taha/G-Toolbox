@@ -1647,6 +1647,136 @@
         </div>
     </div>
 
+    <!-- ═══ WINDOWS AI SETUP / INTEGRITY MODAL ════════════════════════ -->
+    <div id="ai-setup-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+        <div class="bg-gray-950 border border-purple-500/40 rounded-3xl max-w-lg w-full p-6 shadow-[0_0_50px_rgba(168,85,247,0.25)] relative animate-fade-in text-white">
+            <div class="flex items-center justify-between mb-4 pb-3 border-b border-white/10">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center text-lg">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-extrabold" data-i18n="ai_setup_title">Yapay Zeka Kurulumu</h3>
+                        <p class="text-xs text-gray-400" data-i18n="ai_setup_subtitle">G-Toolbox Yerel AI Modelleri</p>
+                    </div>
+                </div>
+                <button onclick="closeAiSetupModal(true)" class="text-gray-400 hover:text-white transition-colors p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <div class="space-y-4">
+                <p class="text-sm text-gray-300 leading-relaxed" data-i18n="ai_setup_desc">
+                    G-Toolbox yapay zeka özelliklerini (4K Görsel Büyütme, Sihirli Nesne Silici ve Arka Plan Kaldırma) kullanmak için gerekli modelleri şimdi indirmek ister misiniz?
+                </p>
+
+                <div class="bg-black/40 border border-white/10 rounded-2xl p-4 space-y-2.5 text-xs">
+                    <div class="flex items-center justify-between">
+                        <span class="flex items-center gap-2"><i class="fa-solid fa-image text-purple-400"></i> Real-ESRGAN (4K Upscale)</span>
+                        <span id="badge-ai-realesrgan" class="text-gray-400">Kontrol ediliyor...</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="flex items-center gap-2"><i class="fa-solid fa-eraser text-amber-400"></i> LaMa Inpainting (Nesne Silici)</span>
+                        <span id="badge-ai-lama" class="text-gray-400">Kontrol ediliyor...</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="flex items-center gap-2"><i class="fa-solid fa-scissors text-teal-400"></i> U2-Net (Arka Plan Kaldırma)</span>
+                        <span id="badge-ai-u2net" class="text-gray-400">Kontrol ediliyor...</span>
+                    </div>
+                </div>
+
+                <!-- Progress container -->
+                <div id="ai-install-progress-box" class="hidden space-y-2">
+                    <div class="flex justify-between text-xs font-semibold">
+                        <span id="ai-install-status-text" class="text-purple-300">Modeller indiriliyor...</span>
+                        <span id="ai-install-percent" class="text-purple-400">0%</span>
+                    </div>
+                    <div class="w-full h-2.5 bg-black/60 rounded-full overflow-hidden border border-white/10">
+                        <div id="ai-install-progress-bar" class="h-full bg-gradient-to-r from-purple-600 via-pink-500 to-amber-400 transition-all duration-300" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <p class="text-[11px] text-gray-500 italic" data-i18n="ai_setup_note">
+                    * Tüm modeller bilgisayarınızda %100 çevrimdışı ve gizli çalışır. İstediğiniz zaman bu işlemi atlayabilir ve daha sonra Ayarlar menüsünden kurabilirsiniz.
+                </p>
+            </div>
+
+            <div class="mt-6 flex items-center justify-end gap-3">
+                <button id="btn-skip-ai-install" onclick="closeAiSetupModal(true)" class="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-bold transition-all" data-i18n="btn_skip_for_now">
+                    Şimdilik Atla (Daha Sonra)
+                </button>
+                <button id="btn-start-ai-install" onclick="startAiInstallation()" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-amber-500 text-white text-xs font-extrabold shadow-[0_0_20px_rgba(168,85,247,0.4)] hover:opacity-90 transition-all flex items-center gap-2">
+                    <i class="fa-solid fa-download"></i> <span data-i18n="btn_install_ai_models">Evet, Yapay Zekayı İndir</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ MOBILE ONBOARDING MODAL (APK / MOBILE APP) ════════════════ -->
+    <div id="mobile-onboarding-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
+        <div class="bg-gray-950 border border-purple-500/40 rounded-3xl max-w-lg w-full p-6 shadow-[0_0_50px_rgba(168,85,247,0.3)] relative animate-fade-in text-white">
+            <div class="flex items-center gap-3 mb-4 pb-3 border-b border-white/10">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-purple-600 to-pink-500 text-white flex items-center justify-center text-lg shadow-md">
+                    <i class="fa-solid fa-mobile-screen-button"></i>
+                </div>
+                <div>
+                    <h3 class="text-base font-extrabold" data-i18n="mobile_onboard_title">G-Toolbox Mobil Kurulum</h3>
+                    <p class="text-xs text-gray-400" data-i18n="mobile_onboard_subtitle">Yapay Zeka ve Bağlantı Tercihi</p>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <p class="text-xs text-gray-300 leading-relaxed" data-i18n="mobile_onboard_desc">
+                    Mobilde yapay zekayı nasıl kullanmak istersiniz?
+                </p>
+
+                <!-- Option A: Local Mobile -->
+                <div onclick="selectMobileOnboardingOption('local')" id="opt-onboard-local" class="cursor-pointer p-4 rounded-2xl bg-white/5 border border-white/10 hover:border-pink-500/40 transition-all">
+                    <div class="flex items-center gap-2.5 font-bold text-sm text-pink-400 mb-1">
+                        <i class="fa-solid fa-microchip"></i> <span data-i18n="opt_mobile_local_title">Yerel Cihaz Modu (Offline Mobil)</span>
+                    </div>
+                    <p class="text-xs text-gray-400" data-i18n="opt_mobile_local_desc">
+                        Görsel dönüştürme ve EXIF temizleme işlemlerini doğrudan telefonunuzun işlemcisinde yapar. Ağ gerektirmez.
+                    </p>
+                </div>
+
+                <!-- Option B: Connect to PC Server -->
+                <div onclick="selectMobileOnboardingOption('pc')" id="opt-onboard-pc" class="cursor-pointer p-4 rounded-2xl bg-purple-500/10 border-2 border-purple-500 transition-all">
+                    <div class="flex items-center justify-between mb-1">
+                        <div class="flex items-center gap-2.5 font-bold text-sm text-purple-300">
+                            <i class="fa-solid fa-laptop-code"></i> <span data-i18n="opt_mobile_pc_title">Bilgisayara Bağla (Önerilen - Güçlü GPU)</span>
+                        </div>
+                        <span class="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/30 text-purple-200 font-bold">4K AI</span>
+                    </div>
+                    <p class="text-xs text-gray-400" data-i18n="opt_mobile_pc_desc">
+                        Bilgisayarınızda açık olan G-Toolbox'a bağlanır; 4K Büyütme, Vokal Ayırma ve YouTube İndirici gücünü kullanır.
+                    </p>
+                </div>
+
+                <!-- PC Server Input Box (visible when Option B is selected) -->
+                <div id="onboard-pc-input-section" class="bg-black/40 border border-white/10 rounded-2xl p-4 space-y-2">
+                    <label class="block text-xs font-semibold text-gray-300" data-i18n="label_enter_pc_url">
+                        Bilgisayarınızdaki G-Toolbox Sunucu Adresi:
+                    </label>
+                    <div class="flex gap-2">
+                        <input type="text" id="input-onboard-server-url" placeholder="http://192.168.1.xxx:8000"
+                            class="flex-1 bg-black/60 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500">
+                        <button onclick="testOnboardServerConnection()" class="px-3 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold transition-colors">
+                            <i class="fa-solid fa-plug"></i>
+                        </button>
+                    </div>
+                    <div id="onboard-connection-msg" class="text-[11px] text-gray-400"></div>
+                </div>
+            </div>
+
+            <div class="mt-6 flex justify-end">
+                <button onclick="applyMobileOnboarding()" class="w-full py-3 rounded-xl bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 text-white font-extrabold text-sm shadow-[0_0_20px_rgba(168,85,247,0.4)] hover:opacity-95 transition-all" data-i18n="btn_complete_setup">
+                    Kurulumu Tamamla ve Başla
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- ═══ TOAST CONTAINER ═══════════════════════════════════ -->
     <div class="toast-container" id="toast-container"></div>
 
