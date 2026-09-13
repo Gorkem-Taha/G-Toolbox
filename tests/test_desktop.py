@@ -113,6 +113,24 @@ class TestDesktopApp(unittest.TestCase):
         route_paths = [r.path for r in app.routes]
         self.assertIn("/api/ai-status", route_paths)
         self.assertIn("/api/install-ai-models", route_paths)
+        self.assertIn("/api/delete-ai-models", route_paths)
+
+    def test_delete_ai_models_execution(self):
+        """Verify that delete_ai_models executes and returns JSON response with freed_mb."""
+        import asyncio
+        from httpx import AsyncClient, ASGITransport
+        from main import app
+
+        async def _test():
+            transport = ASGITransport(app=app)
+            async with AsyncClient(transport=transport, base_url="http://test") as client:
+                res = await client.post("/api/delete-ai-models")
+                self.assertEqual(res.status_code, 200)
+                data = res.json()
+                self.assertTrue(data.get("success"))
+                self.assertIn("freed_mb", data)
+                self.assertIn("message", data)
+        asyncio.run(_test())
 
     def test_ready_flag_lifecycle(self):
         """Verify ready flag file creation and cleanup in desktop_app."""

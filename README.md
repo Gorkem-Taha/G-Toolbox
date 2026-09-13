@@ -27,7 +27,8 @@ In a world where every SaaS application uploads your private documents and photo
 ### 🚀 Instant Splash Screen & Native Windows Integration
 * **Zero Startup Anxiety:** Clicking `G-Toolbox.exe` instantly (<30ms) launches an ultra-lightweight, dark-themed **Splash Screen** indicating progress ("Yapay zekâ ve medya motorları başlatılıyor..."). Users never wonder whether the application registered their click.
 * **Custom App & Taskbar Icon:** Completely eliminates generic Python icons. Both the executable file, the native title bar, and the Windows Taskbar display the official G-Toolbox icon via native Win32 `SetCurrentProcessExplicitAppUserModelID` and `WM_SETICON` integration.
-* **Maximized & Fullscreen by Default:** Desktop windows launch maximized to fill your monitor, with a one-click **Fullscreen Toggle** button in the top navigation bar and full **F11** keyboard shortcut support.
+* **Maximized & Fullscreen by Default:** Desktop windows launch maximized to fill your monitor seamlessly, with full **F11** keyboard shortcut support for borderless fullscreen.
+* **One-Click Local AI Deletion & Storage Management:** Users can check local model weights (Real-ESRGAN, LaMa, U2-Net) and delete them directly from the UI header to immediately reclaim ~460 MB of disk space.
 * **Native "Save As" Dialog:** Downloaded YouTube videos and processed AI outputs prompt Windows Explorer / OS file dialogs directly to save anywhere on your disk.
 
 ---

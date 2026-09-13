@@ -4,6 +4,7 @@ Backend: FastAPI + Jinja2 + Pillow + ffmpeg-python + rembg + yt-dlp
 """
 
 import asyncio
+import gc
 import glob
 import logging
 import os
@@ -1230,6 +1231,67 @@ async def start_install_ai_models():
     }
     asyncio.get_event_loop().run_in_executor(None, _download_ai_models_worker)
     return JSONResponse(content={"success": True, "message": "Model indirmesi başlatıldı."})
+
+
+@app.post("/api/delete-ai-models")
+async def delete_ai_models():
+    """Deletes all local AI model weights from disk to free up disk space and flushes RAM/VRAM."""
+    global _UPSCALER_INSTANCE, _UPSCALER_INSTANCES, _LAMA_INSTANCE
+    
+    # 1. Clear memory & VRAM
+    try:
+        _UPSCALER_INSTANCES.clear()
+        _UPSCALER_INSTANCE = None
+    except Exception:
+        pass
+
+    try:
+        _LAMA_INSTANCE = None
+    except Exception:
+        pass
+
+    if torch and torch.cuda.is_available():
+        try:
+            torch.cuda.empty_cache()
+            torch.cuda.ipc_collect()
+        except Exception:
+            pass
+    gc.collect()
+
+    freed_bytes = 0
+    deleted_files = []
+
+    # Paths to remove
+    target_paths = [
+        BASE_DIR / "RealESRGAN_x4plus.pth",
+        BASE_DIR / "RealESRGAN_x4plus_anime_6B.pth",
+        BASE_DIR / "RealESRGAN_x4plus.pth.tmp",
+        BASE_DIR / "RealESRGAN_x4plus_anime_6B.pth.tmp",
+        Path.home() / ".cache" / "torch" / "hub" / "checkpoints" / "big-lama.pt",
+        Path.home() / ".u2net" / "u2net.onnx",
+        Path.home() / ".u2net" / "u2net.onnx.tmp",
+    ]
+
+    for p in target_paths:
+        if p.exists():
+            try:
+                size = p.stat().st_size
+                p.unlink()
+                freed_bytes += size
+                deleted_files.append(p.name)
+            except Exception as e:
+                logger.error(f"Failed to delete {p}: {e}")
+
+    freed_mb = round(freed_bytes / (1024 * 1024), 1)
+    logger.info(f"Deleted local AI models. Freed {freed_mb} MB.")
+
+    return JSONResponse(content={
+        "success": True,
+        "freed_mb": freed_mb,
+        "deleted_files": deleted_files,
+        "message": f"Yapay zeka modelleri silindi. {freed_mb} MB disk alanı açıldı."
+    })
+
 
 
 def _convert_image(src: str, dst: str, fmt: str) -> None:
