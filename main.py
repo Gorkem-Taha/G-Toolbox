@@ -1084,6 +1084,154 @@ async def download_file(task_id: str):
     return response
 
 
+_AI_INSTALL_PROGRESS = {
+    "status": "idle",
+    "progress": 0,
+    "current_model": "",
+    "error": None
+}
+
+
+def check_ai_models_status() -> dict:
+    """Checks the status and presence of local AI model weights."""
+    models = {
+        "realesrgan_general": {
+            "name": "Real-ESRGAN (General 4x)",
+            "installed": False,
+            "size_mb": 67.0,
+            "path": str(BASE_DIR / "RealESRGAN_x4plus.pth"),
+        },
+        "realesrgan_anime": {
+            "name": "Real-ESRGAN (Anime 4x)",
+            "installed": False,
+            "size_mb": 17.9,
+            "path": str(BASE_DIR / "RealESRGAN_x4plus_anime_6B.pth"),
+        },
+        "lama": {
+            "name": "LaMa Magic Eraser",
+            "installed": False,
+            "size_mb": 198.0,
+            "path": "",
+        },
+        "u2net": {
+            "name": "U2-Net Background Remover",
+            "installed": False,
+            "size_mb": 176.0,
+            "path": str(Path.home() / ".u2net" / "u2net.onnx"),
+        },
+    }
+
+    p_gen = BASE_DIR / "RealESRGAN_x4plus.pth"
+    if p_gen.exists() and p_gen.stat().st_size > 60 * 1024 * 1024:
+        models["realesrgan_general"]["installed"] = True
+
+    p_ani = BASE_DIR / "RealESRGAN_x4plus_anime_6B.pth"
+    if p_ani.exists() and p_ani.stat().st_size > 15 * 1024 * 1024:
+        models["realesrgan_anime"]["installed"] = True
+
+    torch_checkpoints = Path.home() / ".cache" / "torch" / "hub" / "checkpoints"
+    p_lama = torch_checkpoints / "big-lama.pt"
+    if p_lama.exists() and p_lama.stat().st_size > 180 * 1024 * 1024:
+        models["lama"]["installed"] = True
+        models["lama"]["path"] = str(p_lama)
+    else:
+        alt_lama = Path.home() / ".cache" / "torch" / "hub" / "smartyagy_simple-lama-inpainting_main"
+        if alt_lama.exists():
+            models["lama"]["installed"] = True
+
+    p_u2 = Path.home() / ".u2net" / "u2net.onnx"
+    if p_u2.exists() and p_u2.stat().st_size > 160 * 1024 * 1024:
+        models["u2net"]["installed"] = True
+
+    all_installed = all(m["installed"] for m in models.values())
+    essential_installed = models["realesrgan_general"]["installed"] and models["u2net"]["installed"]
+
+    return {
+        "success": True,
+        "models": models,
+        "all_installed": all_installed,
+        "essential_installed": essential_installed,
+        "torch_cuda_available": bool(torch.cuda.is_available()) if torch else False,
+    }
+
+
+def _download_ai_models_worker():
+    global _AI_INSTALL_PROGRESS
+    _AI_INSTALL_PROGRESS["status"] = "downloading"
+    _AI_INSTALL_PROGRESS["error"] = None
+
+    try:
+        gen_path = BASE_DIR / "RealESRGAN_x4plus.pth"
+        if not gen_path.exists() or gen_path.stat().st_size < 60 * 1024 * 1024:
+            _AI_INSTALL_PROGRESS["current_model"] = "Real-ESRGAN General (67 MB)"
+            _AI_INSTALL_PROGRESS["progress"] = 15
+            url = "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth"
+            tmp = BASE_DIR / "RealESRGAN_x4plus.pth.tmp"
+            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req, timeout=180) as resp, open(tmp, "wb") as f:
+                shutil.copyfileobj(resp, f)
+            tmp.replace(gen_path)
+
+        _AI_INSTALL_PROGRESS["progress"] = 40
+
+        ani_path = BASE_DIR / "RealESRGAN_x4plus_anime_6B.pth"
+        if not ani_path.exists() or ani_path.stat().st_size < 15 * 1024 * 1024:
+            _AI_INSTALL_PROGRESS["current_model"] = "Real-ESRGAN Anime (18 MB)"
+            url = "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.2.4/RealESRGAN_x4plus_anime_6B.pth"
+            tmp = BASE_DIR / "RealESRGAN_x4plus_anime_6B.pth.tmp"
+            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req, timeout=180) as resp, open(tmp, "wb") as f:
+                shutil.copyfileobj(resp, f)
+            tmp.replace(ani_path)
+
+        _AI_INSTALL_PROGRESS["progress"] = 70
+
+        u2_dir = Path.home() / ".u2net"
+        u2_dir.mkdir(parents=True, exist_ok=True)
+        u2_path = u2_dir / "u2net.onnx"
+        if not u2_path.exists() or u2_path.stat().st_size < 160 * 1024 * 1024:
+            _AI_INSTALL_PROGRESS["current_model"] = "U2-Net Arka Plan Kaldırma (176 MB)"
+            url = "https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2net.onnx"
+            tmp = u2_dir / "u2net.onnx.tmp"
+            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req, timeout=300) as resp, open(tmp, "wb") as f:
+                shutil.copyfileobj(resp, f)
+            tmp.replace(u2_path)
+
+        _AI_INSTALL_PROGRESS["progress"] = 100
+        _AI_INSTALL_PROGRESS["status"] = "done"
+        _AI_INSTALL_PROGRESS["current_model"] = "Tüm Modeller Hazır!"
+    except Exception as e:
+        logger.error(f"AI model download failed: {e}")
+        _AI_INSTALL_PROGRESS["status"] = "error"
+        _AI_INSTALL_PROGRESS["error"] = str(e)
+
+
+@app.get("/api/ai-status")
+async def get_ai_status():
+    """Returns local AI model presence and installation status."""
+    st = check_ai_models_status()
+    st["install_progress"] = _AI_INSTALL_PROGRESS
+    return JSONResponse(content=st)
+
+
+@app.post("/api/install-ai-models")
+async def start_install_ai_models():
+    """Starts background download of all required AI models."""
+    global _AI_INSTALL_PROGRESS
+    if _AI_INSTALL_PROGRESS["status"] == "downloading":
+        return JSONResponse(content={"success": True, "message": "Zaten indiriliyor."})
+
+    _AI_INSTALL_PROGRESS = {
+        "status": "downloading",
+        "progress": 5,
+        "current_model": "Hazırlanıyor...",
+        "error": None
+    }
+    asyncio.get_event_loop().run_in_executor(None, _download_ai_models_worker)
+    return JSONResponse(content={"success": True, "message": "Model indirmesi başlatıldı."})
+
+
 def _convert_image(src: str, dst: str, fmt: str) -> None:
     """Converts image formats using Pillow safely handling all color modes."""
     img = Image.open(src)
