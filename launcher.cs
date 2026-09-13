@@ -266,6 +266,9 @@ namespace GToolboxLauncher
 
                 if (!webMode)
                 {
+                    // Auto-register to Windows Start Menu & Windows Search
+                    RegisterStartMenuShortcut(baseDir);
+
                     // Launch Splash Screen immediately
                     SplashForm splash = new SplashForm(baseDir, pythonProc);
                     Application.Run(splash);
@@ -276,5 +279,60 @@ namespace GToolboxLauncher
                 MessageBox.Show("Başlatma hatası: " + ex.Message, "G-Toolbox", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+
+        private static void RegisterStartMenuShortcut(string baseDir)
+        {
+            try
+            {
+                string programsFolder = Environment.GetFolderPath(Environment.SpecialFolder.Programs);
+                if (string.IsNullOrEmpty(programsFolder) || !Directory.Exists(programsFolder)) return;
+
+                string shortcutPath = Path.Combine(programsFolder, "G-Toolbox.lnk");
+                string exePath = Path.Combine(baseDir, "G-Toolbox.exe");
+                if (!File.Exists(exePath)) exePath = Application.ExecutablePath;
+
+                Type shellType = Type.GetTypeFromProgID("WScript.Shell");
+                if (shellType == null) return;
+
+                object shell = Activator.CreateInstance(shellType);
+                object shortcut = shellType.InvokeMember("CreateShortcut",
+                    System.Reflection.BindingFlags.InvokeMethod, null, shell, new object[] { shortcutPath });
+
+                if (shortcut != null)
+                {
+                    Type scType = shortcut.GetType();
+                    scType.InvokeMember("TargetPath", System.Reflection.BindingFlags.SetProperty, null, shortcut, new object[] { exePath });
+                    scType.InvokeMember("WorkingDirectory", System.Reflection.BindingFlags.SetProperty, null, shortcut, new object[] { baseDir });
+                    scType.InvokeMember("Description", System.Reflection.BindingFlags.SetProperty, null, shortcut, new object[] { "G-Toolbox — All-in-One Media & AI Studio" });
+
+                    string ico = Path.Combine(baseDir, "static", "favicon.ico");
+                    if (File.Exists(ico))
+                    {
+                        scType.InvokeMember("IconLocation", System.Reflection.BindingFlags.SetProperty, null, shortcut, new object[] { ico + ",0" });
+                    }
+
+                    scType.InvokeMember("Save", System.Reflection.BindingFlags.InvokeMethod, null, shortcut, null);
+                }
+
+                // Register in Windows App Paths (enables Win+R 'G-Toolbox' and Windows Search registration)
+                try
+                {
+                    using (Microsoft.Win32.RegistryKey key = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\App Paths\G-Toolbox.exe"))
+                    {
+                        if (key != null)
+                        {
+                            key.SetValue("", exePath);
+                            key.SetValue("Path", baseDir);
+                        }
+                    }
+                }
+                catch { }
+            }
+            catch
+            {
+                // Non-critical background task, ignore
+            }
+        }
     }
 }
+
