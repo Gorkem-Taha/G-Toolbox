@@ -1145,7 +1145,11 @@ def check_ai_models_status() -> dict:
         models["u2net"]["installed"] = True
 
     all_installed = all(m["installed"] for m in models.values())
-    essential_installed = models["realesrgan_general"]["installed"] and models["u2net"]["installed"]
+    essential_installed = (
+        models["realesrgan_general"]["installed"]
+        and models["u2net"]["installed"]
+        and models["lama"]["installed"]
+    )
 
     return {
         "success": True,
@@ -1165,7 +1169,7 @@ def _download_ai_models_worker():
         gen_path = BASE_DIR / "RealESRGAN_x4plus.pth"
         if not gen_path.exists() or gen_path.stat().st_size < 60 * 1024 * 1024:
             _AI_INSTALL_PROGRESS["current_model"] = "Real-ESRGAN General (67 MB)"
-            _AI_INSTALL_PROGRESS["progress"] = 15
+            _AI_INSTALL_PROGRESS["progress"] = 10
             url = "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth"
             tmp = BASE_DIR / "RealESRGAN_x4plus.pth.tmp"
             req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
@@ -1173,7 +1177,7 @@ def _download_ai_models_worker():
                 shutil.copyfileobj(resp, f)
             tmp.replace(gen_path)
 
-        _AI_INSTALL_PROGRESS["progress"] = 40
+        _AI_INSTALL_PROGRESS["progress"] = 30
 
         ani_path = BASE_DIR / "RealESRGAN_x4plus_anime_6B.pth"
         if not ani_path.exists() or ani_path.stat().st_size < 15 * 1024 * 1024:
@@ -1185,7 +1189,22 @@ def _download_ai_models_worker():
                 shutil.copyfileobj(resp, f)
             tmp.replace(ani_path)
 
-        _AI_INSTALL_PROGRESS["progress"] = 70
+        _AI_INSTALL_PROGRESS["progress"] = 50
+
+        # LaMa Inpainting Model (~208 MB)
+        lama_dir = Path.home() / ".cache" / "torch" / "hub" / "checkpoints"
+        lama_dir.mkdir(parents=True, exist_ok=True)
+        lama_path = lama_dir / "big-lama.pt"
+        if not lama_path.exists() or lama_path.stat().st_size < 180 * 1024 * 1024:
+            _AI_INSTALL_PROGRESS["current_model"] = "LaMa Nesne Silici (208 MB)"
+            url = "https://github.com/enesmsahin/simple-lama-inpainting/releases/download/v0.1.0/big-lama.pt"
+            tmp = lama_dir / "big-lama.pt.tmp"
+            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req, timeout=360) as resp, open(tmp, "wb") as f:
+                shutil.copyfileobj(resp, f)
+            tmp.replace(lama_path)
+
+        _AI_INSTALL_PROGRESS["progress"] = 75
 
         u2_dir = Path.home() / ".u2net"
         u2_dir.mkdir(parents=True, exist_ok=True)
