@@ -62,6 +62,11 @@ const translations = {
         menu_noisecleaner: "Noise Cleaner",
         desc_noisecleaner: "Remove background hiss, fan noise, and hum with adaptive FFT noise filtering.",
         btn_purge_vram: "Purge VRAM",
+        btn_ai_models: "AI Models",
+        btn_delete_ai_models: "Delete AI Models",
+        confirm_delete_ai: "Are you sure you want to delete all local AI model weights from disk to free up space?",
+        ai_deleted_msg: "AI models successfully deleted from disk.",
+        ai_models_installed_all: "All Models Installed",
         btn_fullscreen: "Fullscreen",
         btn_go_tool: "Go to Tool",
         sidebar_tools: "Tools",
@@ -364,6 +369,11 @@ const translations = {
         menu_noisecleaner: "Dip Gürültü Temizleyici",
         desc_noisecleaner: "Adaptif FFT filtreleme ile dip gürültü, dip ses ve fan uğultularını temizleyin.",
         btn_purge_vram: "VRAM Boşalt",
+        btn_ai_models: "Yapay Zeka",
+        btn_delete_ai_models: "Yüklü Yapay Zekayı Sil",
+        confirm_delete_ai: "Yüklü yerel yapay zeka modellerini (Real-ESRGAN, LaMa, U2-Net) diskten silip alan açmak istediğinize emin misiniz?",
+        ai_deleted_msg: "Yapay zeka modelleri diskten başarıyla silindi.",
+        ai_models_installed_all: "Tüm Modeller Yüklü",
         btn_fullscreen: "Tam Ekran",
         btn_go_tool: "Araca Git",
         sidebar_tools: "Araçlar",
@@ -3630,6 +3640,12 @@ document.addEventListener('DOMContentLoaded', () => {
 // ═════════════════════════════════════════════════════════════════
 // AI SETUP & INTEGRITY CHECK (Windows & Web)
 // ═════════════════════════════════════════════════════════════════
+window.openAiSetupModal = function() {
+    const modal = document.getElementById('ai-setup-modal');
+    if (modal) modal.classList.remove('hidden');
+    window.checkAiIntegrity(true);
+};
+
 window.checkAiIntegrity = async function(isManual = false) {
     if (currentMode !== 'pc') return;
 
@@ -3658,6 +3674,31 @@ window.checkAiIntegrity = async function(isManual = false) {
                 : `<span class="text-amber-400 font-bold">⚠️ ${i18n('models_missing')} (176MB)</span>`;
         }
 
+        // Toggle Delete Button visibility if any model is installed on disk
+        const btnDelete = document.getElementById('btn-delete-ai-models');
+        const btnInstall = document.getElementById('btn-start-ai-install');
+        const anyInstalled = data.models && Object.values(data.models).some(m => m.installed);
+
+        if (btnDelete) {
+            if (anyInstalled) {
+                btnDelete.classList.remove('hidden');
+            } else {
+                btnDelete.classList.add('hidden');
+            }
+        }
+
+        if (btnInstall) {
+            if (data.all_installed) {
+                btnInstall.innerHTML = `<i class="fa-solid fa-check text-green-400"></i> <span>${i18n('ai_models_installed_all')}</span>`;
+                btnInstall.disabled = true;
+                btnInstall.className = "px-5 py-2.5 rounded-xl bg-green-500/20 text-green-300 border border-green-500/30 text-xs font-bold flex items-center gap-2 cursor-default";
+            } else {
+                btnInstall.innerHTML = `<i class="fa-solid fa-download"></i> <span data-i18n="btn_install_ai_models">${i18n('btn_install_ai_models')}</span>`;
+                btnInstall.disabled = false;
+                btnInstall.className = "px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-amber-500 text-white text-xs font-extrabold shadow-[0_0_20px_rgba(168,85,247,0.4)] hover:opacity-90 transition-all flex items-center gap-2";
+            }
+        }
+
         const dismissed = localStorage.getItem('gtoolbox_ai_setup_dismissed');
         if ((!data.essential_installed && !dismissed) || isManual) {
             const modal = document.getElementById('ai-setup-modal');
@@ -3673,6 +3714,36 @@ window.closeAiSetupModal = function(rememberDismiss = false) {
     if (modal) modal.classList.add('hidden');
     if (rememberDismiss) {
         localStorage.setItem('gtoolbox_ai_setup_dismissed', 'true');
+    }
+};
+
+window.deleteInstalledAiModels = async function() {
+    const confirmMsg = i18n('confirm_delete_ai') || "Yüklü yerel yapay zeka modellerini diskten silip alan açmak istediğinize emin misiniz?";
+    if (!confirm(confirmMsg)) return;
+
+    const btn = document.getElementById('btn-delete-ai-models');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-red-400"></i> <span>Siliniyor...</span>';
+    }
+
+    try {
+        const res = await fetch(`${getApiBaseUrl()}/api/delete-ai-models`, { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+            showToast("success", `🗑️ ${i18n('ai_deleted_msg')} (${data.freed_mb} MB)`);
+            localStorage.removeItem('gtoolbox_ai_setup_dismissed');
+            await window.checkAiIntegrity(true);
+        } else {
+            showToast("error", "Silme işlemi sırasında bir hata oluştu.");
+        }
+    } catch (e) {
+        showToast("error", "Bağlantı hatası: Modeller silinemedi.");
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = `<i class="fa-solid fa-trash-can text-red-400"></i> <span>${i18n('btn_delete_ai_models')}</span>`;
+        }
     }
 };
 
