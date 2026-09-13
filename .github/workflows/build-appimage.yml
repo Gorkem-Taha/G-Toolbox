@@ -1,0 +1,60 @@
+name: Build Linux AppImage
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - '**.py'
+      - 'scripts/**'
+      - 'templates/**'
+      - 'static/**'
+      - '.github/workflows/build-appimage.yml'
+  workflow_dispatch:
+  release:
+    types: [ published ]
+
+jobs:
+  build-appimage:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+
+      - name: Install System Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg libwebkit2gtk-4.0-37 libwebkit2gtk-4.1-0 fuse file curl
+
+      - name: Install Python Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pywebview[gtk] uvicorn fastapi
+
+      - name: Make Build Script Executable
+        run: chmod +x scripts/build_appimage.sh
+
+      - name: Build G-Toolbox AppImage
+        env:
+          GITHUB_ACTIONS: "true"
+        run: ./scripts/build_appimage.sh
+
+      - name: Upload AppImage Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: G-Toolbox-Linux-x86_64-AppImage
+          path: dist/G-Toolbox-x86_64.AppImage
+          if-no-files-found: error
+
+      - name: Attach to Release (if release event)
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/G-Toolbox-x86_64.AppImage

@@ -114,7 +114,28 @@ class TestDesktopApp(unittest.TestCase):
         self.assertIn("/api/ai-status", route_paths)
         self.assertIn("/api/install-ai-models", route_paths)
 
+    def test_ready_flag_lifecycle(self):
+        """Verify ready flag file creation and cleanup in desktop_app."""
+        desktop_app.notify_ready()
+        ready_file = PROJECT_ROOT / ".gtoolbox_ready"
+        self.assertTrue(ready_file.exists())
+        desktop_app.cleanup_ready_flag()
+        self.assertFalse(ready_file.exists())
+
+    def test_appimage_assets_exist(self):
+        """Verify that Linux AppImage packaging assets exist."""
+        script = PROJECT_ROOT / "scripts" / "build_appimage.sh"
+        workflow = PROJECT_ROOT / ".github" / "workflows" / "build-appimage.yml"
+        desktop_entry = PROJECT_ROOT / "g-toolbox.desktop"
+        icon_png = PROJECT_ROOT / "static" / "icon.png"
+
+        self.assertTrue(script.exists())
+        self.assertTrue(workflow.exists())
+        self.assertTrue(desktop_entry.exists())
+        self.assertTrue(icon_png.exists())
+
 
 if __name__ == "__main__":
     unittest.main()
+
 

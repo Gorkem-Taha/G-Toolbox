@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=G-Toolbox
+Comment=All-in-One Media & AI Studio
+Exec=AppRun %U
+Icon=g-toolbox
+Type=Application
+Categories=AudioVideo;Audio;Video;Graphics;Utility;
+Terminal=false
+StartupWMClass=G-Toolbox
