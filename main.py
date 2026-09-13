@@ -775,15 +775,58 @@ def _ytdlp_progress_hook(task_id: str):
     return hook
 
 
+def _build_ytdlp_opts(task_id: Optional[str] = None, out_template: Optional[str] = None, format_spec: Optional[str] = None, is_mp3: bool = False) -> dict:
+    """Builds hardened yt-dlp options preventing HTTP 403 Forbidden using multi-client routing."""
+    opts = {
+        "socket_timeout": 30,
+        "retries": 10,
+        "fragment_retries": 10,
+        "retry_sleep_functions": {"http": lambda n: 2},
+        "quiet": False if task_id else True,
+        "no_warnings": False,
+        "nocheckcertificate": True,
+        "prefer_insecure": False,
+        "legacy_server_connect": True,
+        "extractor_args": {
+            "youtube": {
+                "player_client": ["android", "ios", "mweb", "web"],
+                "player_skip": ["configs", "webpage"],
+            }
+        },
+        "http_headers": {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.9,tr;q=0.8",
+            "Sec-Fetch-Mode": "navigate",
+        },
+    }
+    if FFMPEG_DIR:
+        opts["ffmpeg_location"] = FFMPEG_DIR
+    if task_id:
+        opts["progress_hooks"] = [_ytdlp_progress_hook(task_id)]
+    if out_template:
+        opts["outtmpl"] = out_template
+
+    if is_mp3:
+        opts["format"] = "bestaudio/best"
+        opts["postprocessors"] = [{
+            "key": "FFmpegExtractAudio",
+            "preferredcodec": "mp3",
+            "preferredquality": "192",
+        }]
+    elif format_spec:
+        opts["format"] = format_spec
+        opts["merge_output_format"] = "mp4"
+
+    return opts
+
+
 @app.post("/fetch-video-info")
 async def fetch_video_info(req: VideoURLRequest):
-    """Fetches metadata and available resolutions for the provided video URL."""
+    """Fetches metadata and available resolutions for the provided video URL with 403 anti-block."""
     try:
-        ydl_opts = {
-            "quiet": True,
-            "no_warnings": True,
-            "skip_download": True,
-        }
+        ydl_opts = _build_ytdlp_opts()
+        ydl_opts["skip_download"] = True
 
         def _extract():
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -814,15 +857,16 @@ async def fetch_video_info(req: VideoURLRequest):
         })
 
     except Exception as exc:
+        logger.error(f"fetch_video_info error: {exc}")
         return JSONResponse(
             status_code=500,
-            content={"success": False, "message": f"Video info could not be retrieved: {str(exc)}"},
+            content={"success": False, "message": f"Video bilgisi alınamadı: {str(exc)}"},
         )
 
 
 @app.post("/start-download")
 async def start_download(req: VideoDownloadRequest):
-    """Initializes background download task and returns a tracking ID immediately."""
+    """Initializes background download task with 403 protection and returns a tracking ID immediately."""
     task_id = uuid.uuid4().hex[:12]
     uid = task_id[:8]
     out_template = str(DOWNLOAD_DIR / f"{uid}.%(ext)s")
@@ -836,57 +880,24 @@ async def start_download(req: VideoDownloadRequest):
         "error": None,
     }
 
-    _net = {
-        "socket_timeout": 30,
-        "retries": 10,
-        "fragment_retries": 10,
-        "retry_sleep_functions": {"http": lambda n: 2},
-        "quiet": False,
-        "no_warnings": False,
-        "progress_hooks": [_ytdlp_progress_hook(task_id)],
-    }
-
-    # ffmpeg konumunu bildir
-    if FFMPEG_DIR:
-        _net["ffmpeg_location"] = FFMPEG_DIR
-
     if req.format_id == "mp3":
         if not FFMPEG_DIR:
             _download_tasks[task_id]["status"] = "error"
-            _download_tasks[task_id]["error"] = "ffmpeg is required for MP3 conversion but not found."
-            return JSONResponse(content={"success": False, "message": "ffmpeg not found, MP3 conversion cannot be performed."})
-        ydl_opts = {
-            **_net,
-            "format": "bestaudio/best",
-            "outtmpl": out_template,
-            "postprocessors": [{
-                "key": "FFmpegExtractAudio",
-                "preferredcodec": "mp3",
-                "preferredquality": "192",
-            }],
-        }
+            _download_tasks[task_id]["error"] = "MP3 dönüşümü için ffmpeg bulunamadı."
+            return JSONResponse(content={"success": False, "message": "ffmpeg bulunamadı, MP3 dönüştürme yapılamıyor."})
+        ydl_opts = _build_ytdlp_opts(task_id=task_id, out_template=out_template, is_mp3=True)
     elif req.format_id.isdigit():
-        # Belirli çözünürlük seçildi (örn. "720", "1080")
         height = req.format_id
-        ydl_opts = {
-            **_net,
-            "format": (
-                f"best[height={height}][vcodec!=none][acodec!=none]/"
-                f"bestvideo[height={height}]+bestaudio/"
-                f"best[height<={height}][vcodec!=none][acodec!=none]/"
-                f"bestvideo[height<={height}]+bestaudio/best"
-            ),
-            "outtmpl": out_template,
-            "merge_output_format": "mp4",
-        }
+        format_spec = (
+            f"best[height={height}][vcodec!=none][acodec!=none]/"
+            f"bestvideo[height={height}]+bestaudio/"
+            f"best[height<={height}][vcodec!=none][acodec!=none]/"
+            f"bestvideo[height<={height}]+bestaudio/best"
+        )
+        ydl_opts = _build_ytdlp_opts(task_id=task_id, out_template=out_template, format_spec=format_spec)
     else:
-        # "best" veya bilinmeyen format — en iyi kalite
-        ydl_opts = {
-            **_net,
-            "format": "best[vcodec!=none][acodec!=none]/bestvideo+bestaudio/best",
-            "outtmpl": out_template,
-            "merge_output_format": "mp4",
-        }
+        format_spec = "best[vcodec!=none][acodec!=none]/bestvideo+bestaudio/best"
+        ydl_opts = _build_ytdlp_opts(task_id=task_id, out_template=out_template, format_spec=format_spec)
 
     # Güvenli dosya adı oluştur
     safe_title = re.sub(r'[^\w\s-]', '', req.title).strip()
@@ -905,7 +916,7 @@ async def start_download(req: VideoDownloadRequest):
             files = glob.glob(pattern)
             if not files:
                 task["status"] = "error"
-                task["error"] = "Downloaded file not found."
+                task["error"] = "İndirilen dosya diskte bulunamadı."
                 return
 
             out_file = Path(files[0])
@@ -918,18 +929,17 @@ async def start_download(req: VideoDownloadRequest):
             task["filepath"] = str(out_file)
 
         except Exception as exc:
+            logger.error(f"Download task {task_id} failed: {exc}")
             task["status"] = "error"
             task["error"] = str(exc)
-            # Temizlik
             cleanup_files_and_memory(*glob.glob(str(DOWNLOAD_DIR / f"{uid}.*")))
 
-    # Background thread'de başlat — endpoint hemen döner
     asyncio.get_event_loop().run_in_executor(None, _do_download)
 
     return JSONResponse(content={
         "success": True,
         "task_id": task_id,
-        "message": "Download started.",
+        "message": "İndirme başlatıldı.",
     })
 
 
@@ -940,7 +950,7 @@ async def download_status(task_id: str):
     if not task:
         return JSONResponse(
             status_code=404,
-            content={"success": False, "message": "Task not found."},
+            content={"success": False, "message": "Görev bulunamadı."},
         )
 
     speed_str = ""
@@ -961,6 +971,94 @@ async def download_status(task_id: str):
     })
 
 
+class SaveTaskRequest(BaseModel):
+    task_id: str
+    suggested_name: Optional[str] = None
+
+
+def _open_native_save_dialog(initial_filename: str, file_ext: str = "") -> Optional[str]:
+    """Opens a native Windows Save As dialog on top of all windows."""
+    try:
+        import tkinter as tk
+        from tkinter import filedialog
+        root = tk.Tk()
+        root.withdraw()
+        root.attributes("-topmost", True)
+
+        types = []
+        if file_ext:
+            clean_ext = file_ext.lstrip(".")
+            types.append((f"{clean_ext.upper()} Dosyaları (*.{clean_ext})", f"*.{clean_ext}"))
+        types.append(("Tüm Dosyalar (*.*)", "*.*"))
+
+        chosen_path = filedialog.asksaveasfilename(
+            parent=root,
+            initialfile=initial_filename,
+            defaultextension=f".{file_ext.lstrip('.')}" if file_ext else None,
+            filetypes=types,
+            title="G-Toolbox — Dosyayı Farklı Kaydet"
+        )
+        root.destroy()
+        return chosen_path if chosen_path else None
+    except Exception as e:
+        logger.error(f"Native save dialog error: {e}")
+        return None
+
+
+@app.post("/api/save-task-file")
+async def save_task_file(req: SaveTaskRequest):
+    """Saves an existing completed task file via native Windows Save As dialog."""
+    task = _download_tasks.get(req.task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Görev bulunamadı veya süresi doldu.")
+
+    filepath = task.get("filepath")
+    if not filepath or not os.path.exists(filepath):
+        raise HTTPException(status_code=404, detail="İşlenmiş dosya diskte bulunamadı.")
+
+    filename = req.suggested_name or task.get("filename") or Path(filepath).name
+    ext = Path(filepath).suffix
+
+    chosen = await asyncio.to_thread(_open_native_save_dialog, filename, ext)
+    if not chosen:
+        return JSONResponse(content={"success": False, "canceled": True, "message": "Kaydetme iptal edildi."})
+
+    try:
+        shutil.copy2(filepath, chosen)
+        return JSONResponse(content={
+            "success": True,
+            "canceled": False,
+            "saved_path": str(chosen),
+            "filename": Path(chosen).name
+        })
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Dosya kopyalanamadı: {str(e)}")
+
+
+@app.post("/api/save-blob-file")
+async def save_blob_file(
+    file: UploadFile = File(...),
+    suggested_filename: str = Form("dosya")
+):
+    """Saves uploaded blob directly to user-chosen destination via native Windows Save As dialog."""
+    ext = Path(suggested_filename).suffix or Path(file.filename or "").suffix
+    chosen = await asyncio.to_thread(_open_native_save_dialog, suggested_filename, ext)
+    if not chosen:
+        return JSONResponse(content={"success": False, "canceled": True, "message": "Kaydetme iptal edildi."})
+
+    try:
+        with open(chosen, "wb") as f_out:
+            shutil.copyfileobj(file.file, f_out)
+        return JSONResponse(content={
+            "success": True,
+            "canceled": False,
+            "saved_path": str(chosen),
+            "filename": Path(chosen).name
+        })
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Dosya yazılamadı: {str(e)}")
+
+
 @app.get("/download-file/{task_id}")
 async def download_file(task_id: str):
     """Returns the fully processed file for direct client download."""
@@ -978,15 +1076,11 @@ async def download_file(task_id: str):
     ext = Path(filepath).suffix.lstrip(".")
     media_type = _guess_media_type(ext)
 
-    _download_tasks.pop(task_id, None)
-
     response = FileResponse(
         path=filepath,
         filename=task["filename"],
         media_type=media_type,
     )
-    response.background = BackgroundTasks()
-    response.background.add_task(cleanup_files_and_memory, filepath)
     return response
 
 
