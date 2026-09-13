@@ -151,47 +151,47 @@ Because **G-Toolbox runs 100% locally with zero cloud dependencies**, your proce
 
 ---
 
-## 📦 İndirme ve Kurulum Rehberi (Installation & Quick Start Guide)
+## 📦 Download & Installation Guide (Quick Start)
 
-G-Toolbox, masaüstü (Windows, Linux) ve mobil (Android) platformlarda sıfır bulut bağımlılığıyla çalışacak şekilde paketlenmiştir. İhtiyacınıza uygun kurulum yöntemini seçin:
+G-Toolbox is packaged to run seamlessly across Desktop (Windows, Linux) and Mobile (Android) environments with **zero cloud dependencies**. Choose the distribution package suited for your operating system:
 
-### 📥 Resmi Dağıtım Paketleri (v4.3.0 Releases)
+### 📥 Official Release Packages (v4.3.0 Releases)
 
-Tüm resmi ikili dosyaları doğrudan [**GitHub Releases (v4.3.0)**](https://github.com/Gorkem-Taha/G-Toolbox/releases/tag/v4.3.0) sayfasından veya yerel depodaki `Releases/` klasöründen edinebilirsiniz:
+Download official standalone binaries directly from [**GitHub Releases (v4.3.0)**](https://github.com/Gorkem-Taha/G-Toolbox/releases/tag/v4.3.0) or locate them in the local repository's `Releases/` directory:
 
-| Platform / Paket | Dosya Adı | Boyut | Açıklama & Mimari |
+| Platform / Package | File Name | Size | Target & Architecture |
 | :--- | :--- | :--- | :--- |
-| **🪟 Windows (Tam Paket)** | [**`G-Toolbox-v4.3.0-Windows.zip`**](https://github.com/Gorkem-Taha/G-Toolbox/releases/download/v4.3.0/G-Toolbox-v4.3.0-Windows.zip) | ~77 MB | Python sanal ortam otomasyonu (`installation.bat`) ve yerel C# başlatıcı içerir. |
-| **🪟 Windows (Başlatıcı)** | [**`G-Toolbox.exe`**](https://github.com/Gorkem-Taha/G-Toolbox/releases/download/v4.3.0/G-Toolbox.exe) | ~19 KB | Hızlı splash screen (<30ms), Windows Arama ve Görev Çubuğu entegrasyonu. |
-| **🐧 Linux (Taşınabilir)** | [**`G-Toolbox-x86_64.AppImage`**](https://github.com/Gorkem-Taha/G-Toolbox/releases/download/v4.3.0/G-Toolbox-x86_64.AppImage) | ~1.15 MB | Kurulum gerektirmeyen tekil çalıştırılabilir Linux paketi (Ubuntu, Debian, Fedora, Arch). |
-| **📱 Android (Mobil)** | [**`G-Toolbox.apk`**](https://github.com/Gorkem-Taha/G-Toolbox/releases/download/v4.3.0/G-Toolbox.apk) | ~5.27 MB | Çift modlu (PC GPU Akışı + Çevrimdışı Bağımsız) yerel Android uygulaması. |
+| **🪟 Windows (Full Bundle)** | [**`G-Toolbox-v4.3.0-Windows.zip`**](https://github.com/Gorkem-Taha/G-Toolbox/releases/download/v4.3.0/G-Toolbox-v4.3.0-Windows.zip) | ~77 MB | Complete bundle with automated virtual environment installer (`installation.bat`) and native C# launcher. |
+| **🪟 Windows (Native Launcher)** | [**`G-Toolbox.exe`**](https://github.com/Gorkem-Taha/G-Toolbox/releases/download/v4.3.0/G-Toolbox.exe) | ~19 KB | Ultra-fast splash screen (<30ms), Windows Search indexing, and Taskbar integration. |
+| **🐧 Linux (Portable)** | [**`G-Toolbox-x86_64.AppImage`**](https://github.com/Gorkem-Taha/G-Toolbox/releases/download/v4.3.0/G-Toolbox-x86_64.AppImage) | ~1.15 MB | Zero-installation, standalone portable executable for all modern distributions (Ubuntu, Debian, Fedora, Arch). |
+| **📱 Android (Mobile App)** | [**`G-Toolbox.apk`**](https://github.com/Gorkem-Taha/G-Toolbox/releases/download/v4.3.0/G-Toolbox.apk) | ~5.27 MB | Native WebView wrapper supporting Dual-Mode (PC GPU Remote Streaming + Standalone Offline Mode). |
 
 ---
 
-### 🐧 Linux (AppImage) Detaylı Kurulum ve Çalıştırma Rehberi
+### 🐧 Linux (AppImage) Comprehensive Installation & Setup Guide
 
-Linux kullanıcıları için G-Toolbox, tek bir bağımsız dosya olan `AppImage` formatında paketlenmiştir. Sistem kütüphanelerinizi kirletmeden tüm modern Linux dağıtımlarında çalışır.
+G-Toolbox provides first-class Linux support packaged as a single portable `AppImage`. It runs sandboxed without conflicting with your system Python or package manager libraries.
 
-#### 1. İndirme ve Çalıştırma Yetkisi Verme
-Dosyayı doğrudan [GitHub Releases](https://github.com/Gorkem-Taha/G-Toolbox/releases/download/v4.3.0/G-Toolbox-x86_64.AppImage) üzerinden veya yerel `Releases/` dizininden temin edip terminalde çalıştırma izni verin:
+#### 1. Download & Grant Execution Permission
+Download the binary directly from GitHub Releases or locate it in `Releases/`:
 ```bash
-# GitHub Releases üzerinden doğrudan indirmek için:
+# Download directly via wget (or copy from Releases/)
 wget https://github.com/Gorkem-Taha/G-Toolbox/releases/download/v4.3.0/G-Toolbox-x86_64.AppImage
 
-# Çalıştırma yetkisi verin
+# Make the AppImage executable
 chmod +x G-Toolbox-x86_64.AppImage
 ```
 
-#### 2. Uygulamayı Başlatma
+#### 2. Launch the Application
 ```bash
 ./G-Toolbox-x86_64.AppImage
 ```
 
-#### 3. FUSE (Filesystem in Userspace) Çözümü (Ubuntu 22.04+, Debian 12, Fedora 36+)
-Modern Linux dağıtımlarında (özellikle Ubuntu 22.04 LTS ve sonrası) `libfuse2` varsayılan kurulu gelmeyebilir. Eğer `./G-Toolbox-x86_64.AppImage` komutunu verdiğinizde:
-`dlopen(): error loading libfuse.so.2` veya `AppImages require FUSE to run` hatasıyla karşılaşırsanız aşağıdaki adımlardan birini uygulayın:
+#### 3. FUSE (Filesystem in Userspace) Troubleshooting (Ubuntu 22.04+, Debian 12, Fedora 36+)
+Modern Linux distributions (especially Ubuntu 22.04 LTS and newer) no longer include `libfuse2` by default. If launching `./G-Toolbox-x86_64.AppImage` outputs:
+`dlopen(): error loading libfuse.so.2` or `AppImages require FUSE to run...`, apply either of the following solutions:
 
-* **Yöntem A (Önerilen - FUSE Kütüphanesini Kurma):**
+* **Method A (Recommended - Install FUSE 2 Library):**
   - **Ubuntu / Debian / Linux Mint / Pop!_OS:**
     ```bash
     sudo apt update && sudo apt install -y libfuse2
@@ -205,26 +205,26 @@ Modern Linux dağıtımlarında (özellikle Ubuntu 22.04 LTS ve sonrası) `libfu
     sudo pacman -S fuse2
     ```
 
-* **Yöntem B (Kütüphane Kurmadan Doğrudan Çalıştırma):**
-  Sisteminize root yetkisiyle paket kurmak istemiyorsanız, dahili ayıklama parametresiyle doğrudan çalıştırabilirsiniz:
+* **Method B (Run without Root / without Installing FUSE):**
+  Use the built-in extraction runtime flag to run immediately without installing system packages:
   ```bash
   ./G-Toolbox-x86_64.AppImage --appimage-extract-and-run
   ```
 
-#### 4. Masaüstü & Uygulama Menüsü Entegrasyonu (XDG Menü)
-G-Toolbox'ı GNOME, KDE Plasma veya XFCE uygulama menüsüne eklemek için:
+#### 4. Desktop & Application Menu Integration (XDG Menu)
+To add G-Toolbox to your GNOME, KDE Plasma, or XFCE application launcher menu:
 ```bash
-# Çalıştırılabilir dosyayı kullanıcı ikili dizinine taşıyın
+# Move executable to user binary path
 mkdir -p ~/.local/bin ~/.local/share/applications
 cp G-Toolbox-x86_64.AppImage ~/.local/bin/g-toolbox
 chmod +x ~/.local/bin/g-toolbox
 
-# Masaüstü kısayol dosyasını kopyalayın
+# Copy XDG desktop launcher specification
 cp g-toolbox.desktop ~/.local/share/applications/
 ```
 
-#### 5. Kaynak Koddan Kendi AppImage Paketinizi Derleme
-Dahili `build_appimage.sh` otomasyon betiği ile yerel sisteminizde sıfırdan AppImage üretebilirsiniz:
+#### 5. Build Your Own AppImage from Source
+You can compile your own AppImage locally on any Linux distribution using the automated build script:
 ```bash
 chmod +x scripts/build_appimage.sh
 ./scripts/build_appimage.sh
@@ -232,22 +232,22 @@ chmod +x scripts/build_appimage.sh
 
 ---
 
-### 📱 Android (.apk) Detaylı Kurulum ve Kullanım Rehberi
+### 📱 Android (.apk) Comprehensive Installation & Dual-Mode Guide
 
-G-Toolbox Android sürümü, hem telefonunuzu güçlü masaüstü AI sunucunuza bağlayan bir uzaktan kumanda hem de tek başına çalışan bağımsız bir çevrimdışı medya atölyesidir.
+The G-Toolbox Android application functions both as a mobile remote controller harnessing your PC's desktop GPU and as a standalone offline media studio.
 
-#### 1. APK Dosyasını Yükleme
-1. [**`G-Toolbox.apk`**](https://github.com/Gorkem-Taha/G-Toolbox/releases/download/v4.3.0/G-Toolbox.apk) dosyasını doğrudan telefonunuzun tarayıcısıyla indirin veya bilgisayarınızdan USB kablosu, Bluetooth ya da yerel ağ ile telefonunuza aktarın.
-2. İndirilen `G-Toolbox.apk` dosyasına dokunun.
-3. Android güvenlik uyarısı verirse:
-   - **"Ayarlar" -> "Bilinmeyen uygulamaları yükle" (Install Unknown Apps)** bölümüne gidin.
-   - Dosyayı açtığınız tarayıcıya (ör. Chrome) veya Dosya Yöneticisine **"Bu kaynaktan izin ver"** anahtarını açın.
-4. **"Yükle"** butonuna dokunarak kurulumu tamamlayın.
-5. Uygulamayı ilk kez açtığınızda galeri ve medya erişimi için istenen izinleri onaylayın.
+#### 1. Sideloading & Installing the APK
+1. Download [**`G-Toolbox.apk`**](https://github.com/Gorkem-Taha/G-Toolbox/releases/download/v4.3.0/G-Toolbox.apk) directly via your mobile browser, or transfer it from your PC via USB cable, Bluetooth, or local network.
+2. Tap the downloaded `G-Toolbox.apk` file.
+3. If Android prompts a security warning:
+   - Tap **"Settings" -> "Install Unknown Apps"**.
+   - Enable **"Allow from this source"** for your browser (e.g. Chrome) or File Manager.
+4. Tap **"Install"** to complete setup.
+5. On initial launch, grant the required storage, camera, and gallery permissions when prompted.
 
-#### 2. Çift Çalışma Modu (Dual-Mode Architecture)
+#### 2. Dual-Mode Operating Architecture
 
-Uygulama açılışında karşınıza çıkan **Akıllı Çalışma Modu** seçenekleri:
+On initial startup, the **Smart Mode Selection Wizard** allows you to choose between two operational paradigms:
 
 ```
                   ┌────────────────────────────────────────────────┐
@@ -256,77 +256,77 @@ Uygulama açılışında karşınıza çıkan **Akıllı Çalışma Modu** seçe
                                           │
                   ┌───────────────────────┴────────────────────────┐
                   ▼                                                ▼
-     [Mod 1: PC Sunucu / GPU Akışı]                   [Mod 2: Yerel / Bağımsız Mod]
-   • Telefon yerel Wi-Fi üzerinden PC'ye bağlanır   • Tamamen çevrimdışı ve bağımsız
-   • PC'deki RTX/GTX GPU gücünü kullanır            • Telefonun kendi donanımını (WASM/Canvas) kullanır
-   • 4x AI Upscale, Inpainting & 4K video indirme   • Hızlı görsel dönüştürme ve EXIF temizleme
-   • Telefonda sıfır ısınma ve sıfır pil tüketimi   • PC kapalıyken bile kesintisiz çalışır
+     [Mode 1: PC Server / Remote GPU]                 [Mode 2: Standalone On-Device]
+   • Phone connects over local Wi-Fi to PC          • 100% offline and standalone
+   • Harnesses PC's NVIDIA RTX/GTX GPU power        • Uses phone's native hardware (WASM/Canvas)
+   • 4x AI Upscale, Inpainting & 4K video downloads • Fast image conversions & EXIF stripping
+   • Zero phone heating or battery drain            • Runs seamlessly when PC is turned off
 ```
 
-##### ⚡ Mod 1: PC Sunucu & GPU Hızlandırmalı Mod (Önerilen)
-Masaüstü bilgisayarınızdaki güçlü NVIDIA GPU donanımını telefonunuzdan kullanın:
-1. Bilgisayarınızda G-Toolbox'ı başlatın (`G-Toolbox.exe` veya `python main.py`). Uygulama yerel ağda dinlemeye başlar.
-2. Telefonunuzun bilgisayarınızla **aynı Wi-Fi ağına** bağlı olduğundan emin olun.
-3. Bilgisayar ekranında veya terminalde görüntülenen yerel IP adresini not edin (örneğin: `http://192.168.1.35:8000`).
-4. Android uygulamasında **"PC Server Mode"** seçin ve bilgisayarınızın IP adresini girerek **"Bağlan"** butonuna dokunun.
-5. Telefonunuzdan seçtiğiniz fotoğraflar arka planda PC'nizin ekran kartına gönderilir; Real-ESRGAN süper çözünürlük veya LaMa nesne silme motorunda işlenip sonuç doğrudan telefonunuza indirilir. Telefonunuz asla ısınmaz ve bataryanız korunur.
+##### ⚡ Mode 1: PC Server / GPU-Accelerated Remote Streaming (Recommended)
+Harness your desktop computer's high-performance NVIDIA GPU directly from your phone:
+1. Start G-Toolbox on your computer (`G-Toolbox.exe` or `python main.py`). The service starts listening on your local network.
+2. Ensure your phone and computer are connected to the **same Wi-Fi network**.
+3. Note the local LAN IP address displayed in your PC terminal or UI (for example: `http://192.168.1.35:8000`).
+4. In the Android app, select **"PC Server Mode"**, enter your PC's IP address, and tap **"Connect"**.
+5. When you process or capture images, heavy AI computation (Real-ESRGAN 4x upscaling, LaMa object removal) executes on your computer's GPU and streams the high-resolution output back to your mobile device within seconds. Your phone remains cool with zero battery drain.
 
-##### 🔋 Mod 2: Yerel / Bağımsız Mod (Standalone On-Device)
-Bilgisayarınız kapalıyken veya seyahatteyken:
-1. Uygulamada **"Local Mode"** seçeneğine dokunun.
-2. Telefonun yerel işlemcisi ve HTML5 Canvas/WebAssembly motoru devreye girer.
-3. Görsel formatı dönüştürme (PNG, JPEG, WebP), görsel boyutlandırma ve güvenlik odaklı EXIF meta veri temizleme işlemlerini hiçbir sunucuya veya internete ihtiyaç duymadan tamamen cihazınızda gerçekleştirin.
-
----
-
-### 🪟 Windows Detaylı Kurulum ve Çalıştırma Rehberi
-
-#### 1. Hızlı Kurulum Adımları
-1. [**`G-Toolbox-v4.3.0-Windows.zip`**](https://github.com/Gorkem-Taha/G-Toolbox/releases/download/v4.3.0/G-Toolbox-v4.3.0-Windows.zip) paketini indirin ve bir klasöre çıkartın.
-2. Klasör içerisindeki **`installation.bat`** dosyasını çalıştırın. Bu script:
-   - Python 3.10+ varlığını denetler.
-   - İzole bir `.venv` sanal ortamı kurar.
-   - Gerekli tüm yapay zeka (`torch`, `torchvision`, `basicsr`, `rembg`, `fastapi` vb.) bağımlılıklarını eksiksiz yükler.
-3. Kurulum bittikten sonra **`G-Toolbox.exe`** dosyasına çift tıklayarak uygulamayı başlatın.
-
-#### 2. Native Desktop Başlatıcı Özellikleri
-* **Anında Splash Screen (<30ms):** Arka planda FastAPI servisi ve yapay zeka modelleri hazırlanırken anında şık, koyu temalı bir yükleme ekranı gösterilir.
-* **Windows Arama Entegrasyonu:** İlk çalıştırmada sistem otomatik olarak Başlat menüsü kısayolunu (`%APPDATA%\Microsoft\Windows\Start Menu\Programs\G-Toolbox.lnk`) ve kayıt defteri yollarını oluşturur. Başlat'ı açıp `G-Toolbox` yazdığınızda doğrudan bulunup açılır.
-* **Resmi İkon ve Görev Çubuğu:** Win32 API (`SetCurrentProcessExplicitAppUserModelID`) entegrasyonu sayesinde görev çubuğunda ve pencerede resmi G-Toolbox logosu görünür.
-* **Tek Tıkla Model Temizleme:** Arayüz üst menüsünden tek tıkla ~460 MB'lık yapay zeka modellerini temizleyip disk alanı açabilirsiniz (`/api/delete-ai-models`).
+##### 🔋 Mode 2: Standalone On-Device Mode (100% Offline)
+When away from your desktop or traveling without an internet connection:
+1. Select **"Local Mode"** in the mobile app.
+2. The application utilizes your mobile processor, HTML5 Canvas, and WebAssembly engines directly on-device.
+3. Perform offline image format conversions (PNG, JPEG, WebP), image compression, and forensic EXIF metadata stripping without contacting any external server.
 
 ---
 
-### 💻 Geliştiriciler İçin Kaynak Koddan Manuel Kurulum (Developer Setup)
+### 🪟 Windows Installation & Desktop Setup Guide
 
-Projeyi doğrudan kaynak kod üzerinden çalıştırmak ve geliştirmek için:
+#### 1. Automated Setup (Recommended)
+1. Download [**`G-Toolbox-v4.3.0-Windows.zip`**](https://github.com/Gorkem-Taha/G-Toolbox/releases/download/v4.3.0/G-Toolbox-v4.3.0-Windows.zip) and extract it to your preferred folder.
+2. Run **`installation.bat`**. This automated script:
+   - Detects Python 3.10+ on your system.
+   - Provisions an isolated `.venv` virtual environment.
+   - Installs all deep learning and media dependencies (`torch`, `torchvision`, `basicsr`, `rembg`, `fastapi`, etc.).
+3. Once installation completes, double-click **`G-Toolbox.exe`** to launch.
+
+#### 2. Native Desktop Launcher Features
+* **Instant Splash Screen (<30ms):** Launching `G-Toolbox.exe` immediately presents a sleek, dark-slate loading screen while the background FastAPI engine and neural networks initialize. Eliminates startup delay anxiety.
+* **Automatic Windows Search Indexing:** On first run, the launcher automatically registers shortcuts in `%APPDATA%\Microsoft\Windows\Start Menu\Programs\G-Toolbox.lnk` and Registry `App Paths`. Pressing the `Windows` key and typing `G-Toolbox` finds and launches the app immediately.
+* **Official Branding & Taskbar Icon:** Low-level Win32 `SetCurrentProcessExplicitAppUserModelID` integration ensures the official G-Toolbox icon appears in the Windows Taskbar and window title bar.
+* **One-Click Storage Purge:** Reclaim ~460 MB of disk space anytime by wiping cached AI model weights directly from the "AI" / "Yapay Zeka" header menu (`/api/delete-ai-models`).
+
+---
+
+### 💻 Manual Developer Setup (Run from Source)
+
+To run or develop G-Toolbox directly from the source code:
 
 ```bash
-# 1. Depoyu klonlayın
+# 1. Clone the repository
 git clone https://github.com/Gorkem-Taha/G-Toolbox.git
 cd G-Toolbox
 
-# 2. Python sanal ortamı oluşturun ve aktif edin
+# 2. Create and activate virtual environment
 python -m venv venv
 
-# Windows üzerinde:
+# On Windows:
 .\venv\Scripts\activate
 
-# Linux / macOS üzerinde:
+# On Linux / macOS:
 source venv/bin/activate
 
-# 3. Paketleri yükleyin
+# 3. Install required packages
 pip install --upgrade pip
 pip install -r requirements.txt
 
-# 4. Sunucuyu başlatın
+# 4. Start the backend server
 python main.py
 ```
-Sunucu başladığında varsayılan tarayıcınızda otomatik olarak `http://localhost:8000` sayfası açılacaktır.
+Once started, your default browser will automatically open `http://localhost:8000`.
 
 ---
 
-## 🛠️ Comprehensive Technology Stack & Architecture (Kullanılan Teknolojiler)
+## 🛠️ Comprehensive Technology Stack & Architecture
 
 G-Toolbox combines modern asynchronous web architecture, cutting-edge local computer vision models, neural audio processing pipelines, and native cross-platform binaries to deliver a zero-cloud, privacy-first workstation.
 
