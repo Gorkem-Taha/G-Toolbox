@@ -12,6 +12,11 @@ import threading
 import urllib.request
 from pathlib import Path
 
+if sys.stdout is None:
+    sys.stdout = open(os.devnull, "w", encoding="utf-8")
+if sys.stderr is None:
+    sys.stderr = open(os.devnull, "w", encoding="utf-8")
+
 # Ensure project root is available on sys.path
 if getattr(sys, "frozen", False):
     APP_DIR = Path(sys.executable).resolve().parent

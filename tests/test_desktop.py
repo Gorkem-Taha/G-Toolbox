@@ -82,6 +82,25 @@ class TestDesktopApp(unittest.TestCase):
         self.assertEqual(missing_en, set(), f"Missing EN keys: {missing_en}")
         self.assertEqual(missing_tr, set(), f"Missing TR keys: {missing_tr}")
 
+    def test_ytdlp_multi_client_opts(self):
+        """Verify that _build_ytdlp_opts sets up anti-403 multi-client routing."""
+        from main import _build_ytdlp_opts
+        opts = _build_ytdlp_opts()
+        self.assertIn("extractor_args", opts)
+        self.assertIn("youtube", opts["extractor_args"])
+        self.assertIn("player_client", opts["extractor_args"]["youtube"])
+        clients = opts["extractor_args"]["youtube"]["player_client"]
+        self.assertIn("android", clients)
+        self.assertIn("ios", clients)
+        self.assertTrue(opts.get("nocheckcertificate"))
+
+    def test_save_endpoints_exist(self):
+        """Verify that /api/save-task-file and /api/save-blob-file routes are registered."""
+        from main import app
+        route_paths = [r.path for r in app.routes]
+        self.assertIn("/api/save-task-file", route_paths)
+        self.assertIn("/api/save-blob-file", route_paths)
+
 
 if __name__ == "__main__":
     unittest.main()

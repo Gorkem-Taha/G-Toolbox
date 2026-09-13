@@ -4,8 +4,23 @@
 let currentMode = localStorage.getItem('gtoolbox_mode') || 'pc';
 let customServerUrl = localStorage.getItem('gtoolbox_server_url') || '';
 
+// If operating in PC / Local Desktop mode, ensure customServerUrl is cleared
+// so all requests strictly route to the local host/port without port mismatch
+if (currentMode === 'pc') {
+    customServerUrl = '';
+    localStorage.removeItem('gtoolbox_server_url');
+}
+
 function getApiBaseUrl() {
-    if (currentMode === 'pc' && customServerUrl) {
+    // In PC mode or when running via browser/webview directly, ALWAYS use relative path ("")
+    // Relative paths ensure 100% reliability regardless of port or LAN IP
+    if (currentMode === 'pc' || window.location.protocol.startsWith('http')) {
+        if (currentMode === 'mobile' && customServerUrl) {
+            return customServerUrl.replace(/\/+$/, '');
+        }
+        return '';
+    }
+    if (customServerUrl) {
         return customServerUrl.replace(/\/+$/, '');
     }
     return '';
@@ -1742,16 +1757,43 @@ document.addEventListener("DOMContentLoaded", () => {
             const downloadResult = await pollDownloadStatus(taskId);
 
             if (downloadResult.status === "done") {
-                btnDownloadVideo.innerHTML = `<div class="spinner visible" style="width:18px;height:18px;border-width:2px;display:inline-block"></div><span>Dosya hazırlanıyor…</span>`;
+                btnDownloadVideo.innerHTML = `<div class="spinner visible" style="width:18px;height:18px;border-width:2px;display:inline-block"></div><span>Farklı Kaydet açılıyor…</span>`;
 
-                const a = document.createElement("a");
-                a.href = `${getApiBaseUrl()}/download-file/${taskId}`;
-                a.download = downloadResult.filename || "video.mp4";
-                document.body.appendChild(a);
-                a.click();
-                a.remove();
+                let savedViaNative = false;
+                if (currentMode === 'pc' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                    try {
+                        const saveRes = await fetch(`${getApiBaseUrl()}/api/save-task-file`, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                task_id: taskId,
+                                suggested_name: downloadResult.filename || "video.mp4"
+                            })
+                        });
+                        if (saveRes.ok) {
+                            const saveJson = await saveRes.json();
+                            if (saveJson.success && saveJson.saved_path) {
+                                savedViaNative = true;
+                                showToast("success", `🎉 Video başarıyla kaydedildi:\n${saveJson.saved_path}`);
+                            } else if (saveJson.canceled) {
+                                savedViaNative = true;
+                                showToast("info", "Video kaydetme işlemi kullanıcı tarafından iptal edildi.");
+                            }
+                        }
+                    } catch (e) {
+                        console.warn("Native save dialog fallback:", e);
+                    }
+                }
 
-                showToast("success", `🎉 İndirme Başarılı! — ${downloadResult.filename}`);
+                if (!savedViaNative) {
+                    const a = document.createElement("a");
+                    a.href = `${getApiBaseUrl()}/download-file/${taskId}`;
+                    a.download = downloadResult.filename || "video.mp4";
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    showToast("success", `🎉 İndirme Başarılı! — ${downloadResult.filename}`);
+                }
             } else {
                 showToast("error", `⚠️ ${downloadResult.error || "İndirme başarısız."}`);
             }
@@ -2082,7 +2124,60 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    function downloadBlob(blob, filename) {
+    async function downloadBlob(blob, filename) {
+        // 1. Yerel PC modunda (Masaüstü uygulaması veya yerel sunucu)
+        // Kullanıcıya Windows'un gerçek "Farklı Kaydet" penceresini açtır
+        if (currentMode === 'pc' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            try {
+                const fd = new FormData();
+                fd.append("file", blob, filename);
+                fd.append("suggested_filename", filename);
+
+                const res = await fetch(`${getApiBaseUrl()}/api/save-blob-file`, {
+                    method: "POST",
+                    body: fd
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.success && data.saved_path) {
+                        showToast("success", `💾 Dosya kaydedildi: ${data.saved_path}`);
+                        return;
+                    } else if (data.canceled) {
+                        showToast("info", "Kaydetme işlemi iptal edildi.");
+                        return;
+                    }
+                }
+            } catch (err) {
+                console.warn("Native save dialog fallback:", err);
+            }
+        }
+
+        // 2. Modern Tarayıcı "Farklı Kaydet" Penceresi (File System Access API)
+        if (window.showSaveFilePicker) {
+            try {
+                const ext = filename.split('.').pop() || '';
+                const mimeType = blob.type || 'application/octet-stream';
+                const handle = await window.showSaveFilePicker({
+                    suggestedName: filename,
+                    types: [{
+                        description: `${ext.toUpperCase()} Dosyası`,
+                        accept: { [mimeType]: [`.${ext}`] }
+                    }]
+                });
+                const writable = await handle.createWritable();
+                await writable.write(blob);
+                await writable.close();
+                showToast("success", `💾 Dosya kaydedildi: ${handle.name}`);
+                return;
+            } catch (err) {
+                if (err.name === 'AbortError') {
+                    showToast("info", "Kaydetme iptal edildi.");
+                    return;
+                }
+            }
+        }
+
+        // 3. Klasik Tarayıcı İndirme Bağlantısı Fallback
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
@@ -2090,7 +2185,7 @@ document.addEventListener("DOMContentLoaded", () => {
         document.body.appendChild(a);
         a.click();
         a.remove();
-        URL.revokeObjectURL(url);
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
     }
 
     function readBlobError(blob) {
@@ -3415,8 +3510,13 @@ window.copyLanUrl = function() {
 window.saveOperatingModeSettings = function() {
     const inputEl = document.getElementById('input-server-url');
     if (inputEl) {
-        customServerUrl = inputEl.value.trim().replace(/\/+$/, '');
-        localStorage.setItem('gtoolbox_server_url', customServerUrl);
+        if (currentMode === 'mobile') {
+            customServerUrl = inputEl.value.trim().replace(/\/+$/, '');
+            localStorage.setItem('gtoolbox_server_url', customServerUrl);
+        } else {
+            customServerUrl = '';
+            localStorage.removeItem('gtoolbox_server_url');
+        }
     }
     localStorage.setItem('gtoolbox_mode', currentMode);
 
