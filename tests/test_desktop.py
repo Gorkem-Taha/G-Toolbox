@@ -51,8 +51,38 @@ class TestDesktopApp(unittest.TestCase):
                 self.assertIn("lan_ip", data)
                 self.assertIn("mobile_url", data)
 
-        asyncio.run(_test())
+    def test_executable_exists(self):
+        """Verify that G-Toolbox.exe launcher exists in project root."""
+        exe_path = PROJECT_ROOT / "G-Toolbox.exe"
+        self.assertTrue(exe_path.exists())
+        self.assertGreater(exe_path.stat().st_size, 1000)
+
+    def test_i18n_integrity(self):
+        """Verify that all data-i18n tags in index.html exist in translations dictionary in app.js."""
+        import re
+        html = (PROJECT_ROOT / "templates" / "index.html").read_text(encoding="utf-8")
+        js = (PROJECT_ROOT / "static" / "js" / "app.js").read_text(encoding="utf-8")
+
+        html_keys = set(re.findall(r'data-i18n=["\']([^"\']+)["\']', html))
+        self.assertGreater(len(html_keys), 50)
+
+        # Ensure both en and tr contain the keys
+        en_match = re.search(r'en:\s*\{(.*?)\},\s*tr:', js, re.DOTALL)
+        tr_match = re.search(r'tr:\s*\{(.*?)\}\s*\n\s*\};', js, re.DOTALL)
+
+        self.assertIsNotNone(en_match)
+        self.assertIsNotNone(tr_match)
+
+        en_keys = set(re.findall(r'["\']?([a-zA-Z0-9_\-]+)["\']?\s*:', en_match.group(1)))
+        tr_keys = set(re.findall(r'["\']?([a-zA-Z0-9_\-]+)["\']?\s*:', tr_match.group(1)))
+
+        missing_en = html_keys - en_keys
+        missing_tr = html_keys - tr_keys
+
+        self.assertEqual(missing_en, set(), f"Missing EN keys: {missing_en}")
+        self.assertEqual(missing_tr, set(), f"Missing TR keys: {missing_tr}")
 
 
 if __name__ == "__main__":
     unittest.main()
+
