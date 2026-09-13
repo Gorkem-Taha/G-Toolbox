@@ -22,67 +22,6 @@ In a world where every SaaS application uploads your private documents and photo
 
 ---
 
-## 🖥️ Modern Desktop Experience (Windows & Linux)
-
-### 🚀 Instant Splash Screen & Native Windows Integration
-* **Zero Startup Anxiety:** Clicking `G-Toolbox.exe` instantly (<30ms) launches an ultra-lightweight, dark-themed **Splash Screen** indicating progress ("Yapay zekâ ve medya motorları başlatılıyor..."). Users never wonder whether the application registered their click.
-* **Custom App & Taskbar Icon:** Completely eliminates generic Python icons. Both the executable file, the native title bar, and the Windows Taskbar display the official G-Toolbox icon via native Win32 `SetCurrentProcessExplicitAppUserModelID` and `WM_SETICON` integration.
-* **Maximized & Fullscreen by Default:** Desktop windows launch maximized to fill your monitor seamlessly, with full **F11** keyboard shortcut support for borderless fullscreen.
-* **One-Click Local AI Deletion & Storage Management:** Users can check local model weights (Real-ESRGAN, LaMa, U2-Net) and delete them directly from the UI header to immediately reclaim ~460 MB of disk space.
-* **Native "Save As" Dialog:** Downloaded YouTube videos and processed AI outputs prompt Windows Explorer / OS file dialogs directly to save anywhere on your disk.
-
----
-
-## 🐧 Linux AppImage (Single-Click Portable)
-
-G-Toolbox provides first-class Linux support without manual dependency wrangling:
-
-* **Portable Executable:** Run anywhere with zero installation:
-  ```bash
-  chmod +x G-Toolbox-x86_64.AppImage
-  ./G-Toolbox-x86_64.AppImage
-  ```
-* **One-Click Build Script:** Build your own AppImage locally on any Linux distribution (Ubuntu, Debian, Fedora, Arch):
-  ```bash
-  chmod +x scripts/build_appimage.sh
-  ./scripts/build_appimage.sh
-  ```
-* **Automated Cloud CI/CD:** GitHub Actions (`.github/workflows/build-appimage.yml`) automatically compiles and releases fresh `G-Toolbox-x86_64.AppImage` binaries on every commit and release.
-* **XDG Desktop Integration:** Includes `g-toolbox.desktop` and high-res icon assets for GNOME, KDE, and XFCE application menus.
-
----
-
-## 📱 Mobile Dual-Mode & Android APK
-
-G-Toolbox features a universal **Dual-Mode System** for mobile phones and tablets:
-
-```
-                  ┌────────────────────────────────────────────────┐
-                  │          G-Toolbox Operating Modes             │
-                  └───────────────────────┬────────────────────────┘
-                                          │
-                  ┌───────────────────────┴────────────────────────┐
-                  ▼                                                ▼
-     [Mode 1: PC Server / Remote]                     [Mode 2: Local On-Device]
-   • Phone connects over Wi-Fi/LAN                  • Completely offline / standalone
-   • Uses PC's GTX/RTX GPU power                    • Client-side (HTML5 Canvas/WASM)
-   • 4x AI Upscale & 4K video downloads             • Image format conversion & compression
-   • Zero phone heating or battery drain            • Runs when PC is powered off
-```
-
-1. **PC Server Mode (GPU-Accelerated):**
-   * Pair your Android device to your computer via Wi-Fi (`http://YOUR_PC_IP:8000`).
-   * Heavy AI inference and video downloads run on your computer's GPU and stream the final result back to your phone.
-   * Features automatic LAN IP detection (`/api/network-info`) and full CORS support.
-2. **Local Device Mode (On-Device / Offline):**
-   * Use your mobile processor directly in the browser or APK. Perfect for quick image conversions, compression, and privacy cleaning when away from your PC.
-3. **Android APK Wrapper (`android/`):**
-   * Native Android WebView wrapper with camera, media gallery permissions, and file chooser support.
-   * **Automated Cloud Builds:** Automated GitHub Actions workflow (`.github/workflows/build-apk.yml`) builds fresh `.apk` packages on every commit.
-4. **Interactive Setup Wizard:** On first launch, the mobile onboarding modal guides users through choosing their preferred operating mode with automatic PC detection.
-
----
-
 ## 📸 Screenshots & UI
 
 ### 🏠 The Workspace (Home)
@@ -168,20 +107,65 @@ Complete client-side and backend PDF suite powered by `pypdf`:
 Removes static hiss, fan whir, air conditioner hum, and room noise from microphone recordings or video audio using Adaptive Fast Fourier Transform filtering (`afftdn`) and Voice Focus bandpass.
 
 ---
+## 🖥️ Modern Desktop Experience (Windows & Linux)
 
-## 🧪 Automated Testing
+### 🚀 Instant Splash Screen & Native Windows Integration
+* **Zero Startup Anxiety:** Clicking `G-Toolbox.exe` instantly (<30ms) launches an ultra-lightweight, dark-themed **Splash Screen** indicating progress ("Yapay zekâ ve medya motorları başlatılıyor..."). Users never wonder whether the application registered their click.
+* **Custom App & Taskbar Icon:** Completely eliminates generic Python icons. Both the executable file, the native title bar, and the Windows Taskbar display the official G-Toolbox icon via native Win32 `SetCurrentProcessExplicitAppUserModelID` and `WM_SETICON` integration.
+* **Maximized & Fullscreen by Default:** Desktop windows launch maximized to fill your monitor seamlessly, with full **F11** keyboard shortcut support for borderless fullscreen.
+* **One-Click Local AI Deletion & Storage Management:** Users can check local model weights (Real-ESRGAN, LaMa, U2-Net) and delete them directly from the UI header to immediately reclaim ~460 MB of disk space.
+* **Native "Save As" Dialog:** Downloaded YouTube videos and processed AI outputs prompt Windows Explorer / OS file dialogs directly to save anywhere on your disk.
 
-G-Toolbox includes a rigorous, self-contained test suite ensuring zero regressions:
+---
 
-```bash
-# Run All Tests
-python -m unittest discover tests
+## 🐧 Linux AppImage (Single-Click Portable)
 
-# Or run individual test suites:
-python tests/test_desktop.py       # Desktop Native App, Splash & AppImage Assets
-python tests/test_new_features.py  # Vocal, Whisper, Metadata, Animator routes
-python tests/test_upscale.py       # AI Image & Core Upscaling
+G-Toolbox provides first-class Linux support without manual dependency wrangling:
+
+* **Portable Executable:** Run anywhere with zero installation:
+  ```bash
+  chmod +x G-Toolbox-x86_64.AppImage
+  ./G-Toolbox-x86_64.AppImage
+  ```
+* **One-Click Build Script:** Build your own AppImage locally on any Linux distribution (Ubuntu, Debian, Fedora, Arch):
+  ```bash
+  chmod +x scripts/build_appimage.sh
+  ./scripts/build_appimage.sh
+  ```
+* **Automated Cloud CI/CD:** GitHub Actions (`.github/workflows/build-appimage.yml`) automatically compiles and releases fresh `G-Toolbox-x86_64.AppImage` binaries on every commit and release.
+* **XDG Desktop Integration:** Includes `g-toolbox.desktop` and high-res icon assets for GNOME, KDE, and XFCE application menus.
+
+---
+
+## 📱 Mobile Dual-Mode & Android APK
+
+G-Toolbox features a universal **Dual-Mode System** for mobile phones and tablets:
+
 ```
+                  ┌────────────────────────────────────────────────┐
+                  │          G-Toolbox Operating Modes             │
+                  └───────────────────────┬────────────────────────┘
+                                          │
+                  ┌───────────────────────┴────────────────────────┐
+                  ▼                                                ▼
+     [Mode 1: PC Server / Remote]                     [Mode 2: Local On-Device]
+   • Phone connects over Wi-Fi/LAN                  • Completely offline / standalone
+   • Uses PC's GTX/RTX GPU power                    • Client-side (HTML5 Canvas/WASM)
+   • 4x AI Upscale & 4K video downloads             • Image format conversion & compression
+   • Zero phone heating or battery drain            • Runs when PC is powered off
+```
+
+1. **PC Server Mode (GPU-Accelerated):**
+   * Pair your Android device to your computer via Wi-Fi (`http://YOUR_PC_IP:8000`).
+   * Heavy AI inference and video downloads run on your computer's GPU and stream the final result back to your phone.
+   * Features automatic LAN IP detection (`/api/network-info`) and full CORS support.
+2. **Local Device Mode (On-Device / Offline):**
+   * Use your mobile processor directly in the browser or APK. Perfect for quick image conversions, compression, and privacy cleaning when away from your PC.
+3. **Android APK Wrapper (`android/`):**
+   * Native Android WebView wrapper with camera, media gallery permissions, and file chooser support.
+   * **Automated Cloud Builds:** Automated GitHub Actions workflow (`.github/workflows/build-apk.yml`) builds fresh `.apk` packages on every commit.
+4. **Interactive Setup Wizard:** On first launch, the mobile onboarding modal guides users through choosing their preferred operating mode with automatic PC detection.
+
 
 All 20 tests pass out-of-the-box (RGBA transparency preservation, grayscale conversion, resolution clamping, multi-model singleton, disk hygiene, metadata stripping, timestamp formatting, AppImage assets, and network discovery).
 
