@@ -62,6 +62,7 @@ const translations = {
         menu_noisecleaner: "Noise Cleaner",
         desc_noisecleaner: "Remove background hiss, fan noise, and hum with adaptive FFT noise filtering.",
         btn_purge_vram: "Purge VRAM",
+        btn_fullscreen: "Fullscreen",
         btn_go_tool: "Go to Tool",
         sidebar_tools: "Tools",
         sidebar_footer: "All files are processed locally",
@@ -363,6 +364,7 @@ const translations = {
         menu_noisecleaner: "Dip Gürültü Temizleyici",
         desc_noisecleaner: "Adaptif FFT filtreleme ile dip gürültü, dip ses ve fan uğultularını temizleyin.",
         btn_purge_vram: "VRAM Boşalt",
+        btn_fullscreen: "Tam Ekran",
         btn_go_tool: "Araca Git",
         sidebar_tools: "Araçlar",
         sidebar_footer: "Tüm dosyalar yerel olarak işlenir",
@@ -3805,4 +3807,43 @@ window.applyMobileOnboarding = function() {
     const modal = document.getElementById('mobile-onboarding-modal');
     if (modal) modal.classList.add('hidden');
 };
+
+// ═══ FULLSCREEN CONTROLLER ═══
+window.toggleFullscreen = function() {
+    try {
+        if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+            if (document.documentElement.requestFullscreen) {
+                document.documentElement.requestFullscreen().catch(() => {});
+            } else if (document.documentElement.webkitRequestFullscreen) {
+                document.documentElement.webkitRequestFullscreen();
+            }
+        } else {
+            if (document.exitFullscreen) {
+                document.exitFullscreen().catch(() => {});
+            } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+            }
+        }
+    } catch (e) {
+        console.warn("Fullscreen toggle error:", e);
+    }
+};
+
+document.addEventListener("fullscreenchange", () => {
+    const icon = document.getElementById("fullscreen-icon");
+    if (!icon) return;
+    if (document.fullscreenElement) {
+        icon.className = "fa-solid fa-compress text-[11px] text-blue-400";
+    } else {
+        icon.className = "fa-solid fa-expand text-[11px] text-blue-400";
+    }
+});
+
+// Support F11 keyboard shortcut for seamless fullscreen toggle across platforms
+document.addEventListener("keydown", (e) => {
+    if (e.key === "F11") {
+        e.preventDefault();
+        window.toggleFullscreen();
+    }
+});
 

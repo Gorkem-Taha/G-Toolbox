@@ -187,3 +187,5 @@ cython_debug/
 *.onnx
 *.safetensors
 uploads/
+build_appimage/
+.gtoolbox_ready

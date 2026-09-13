@@ -12,6 +12,15 @@ import threading
 import urllib.request
 from pathlib import Path
 
+# Ensure taskbar grouping uses unique AppUserModelID on Windows (prevents python generic icon)
+if sys.platform == "win32":
+    try:
+        import ctypes
+        app_id = "gorkem.gtoolbox.studio.v4"
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(app_id)
+    except Exception:
+        pass
+
 if sys.stdout is None:
     sys.stdout = open(os.devnull, "w", encoding="utf-8")
 if sys.stderr is None:
@@ -66,7 +75,7 @@ class ServerThread(threading.Thread):
         self.server.should_exit = True
 
 
-def wait_for_server(url: str, timeout: float = 10.0) -> bool:
+def wait_for_server(url: str, timeout: float = 12.0) -> bool:
     """Polls the server until it responds with HTTP 200 or timeout expires."""
     start_time = time.time()
     while time.time() - start_time < timeout:
@@ -83,37 +92,109 @@ def wait_for_server(url: str, timeout: float = 10.0) -> bool:
     return False
 
 
+def set_win32_window_icon(window_title: str, ico_path: Path):
+    """Applies native G-Toolbox icon to the Win32 window and taskbar."""
+    if sys.platform != "win32" or not ico_path.exists():
+        return
+
+    def _worker():
+        try:
+            import ctypes
+            WM_SETICON = 0x0080
+            ICON_SMALL = 0
+            ICON_BIG = 1
+            IMAGE_ICON = 1
+            LR_LOADFROMFILE = 0x0010
+            LR_DEFAULTSIZE = 0x0040
+
+            h_icon = ctypes.windll.user32.LoadImageW(
+                None,
+                str(ico_path.resolve()),
+                IMAGE_ICON,
+                0, 0,
+                LR_LOADFROMFILE | LR_DEFAULTSIZE
+            )
+            if not h_icon:
+                return
+
+            # Wait for window to be created and set icon
+            for _ in range(40):
+                hwnd = ctypes.windll.user32.FindWindowW(None, window_title)
+                if hwnd:
+                    ctypes.windll.user32.SendMessageW(hwnd, WM_SETICON, ICON_SMALL, h_icon)
+                    ctypes.windll.user32.SendMessageW(hwnd, WM_SETICON, ICON_BIG, h_icon)
+                    break
+                time.sleep(0.15)
+        except Exception:
+            pass
+
+    t = threading.Thread(target=_worker, daemon=True)
+    t.start()
+
+
+def notify_ready():
+    """Signals the splash screen launcher that the backend is ready."""
+    try:
+        ready_flag = APP_DIR / ".gtoolbox_ready"
+        ready_flag.write_text("ready", encoding="utf-8")
+    except Exception:
+        pass
+
+
+def cleanup_ready_flag():
+    """Removes the ready flag file if it exists."""
+    try:
+        ready_flag = APP_DIR / ".gtoolbox_ready"
+        if ready_flag.exists():
+            ready_flag.unlink()
+    except Exception:
+        pass
+
+
 def main():
     bind_host = "0.0.0.0"
     port = find_available_port(start_port=8000)
     server_url = f"http://127.0.0.1:{port}"
+
+    cleanup_ready_flag()
 
     print(f"[*] Starting G-Toolbox backend on port {port} (LAN & Localhost)...")
     server_thread = ServerThread(app, host=bind_host, port=port)
     server_thread.start()
 
     print("[*] Waiting for backend to initialize...")
-    if not wait_for_server(server_url, timeout=12.0):
+    if not wait_for_server(server_url, timeout=15.0):
         print("[-] Warning: Backend initialization took longer than expected. Proceeding...")
 
     window_title = "G-Toolbox — All-in-One Media & AI Studio"
+    favicon_path = APP_DIR / "static" / "favicon.ico"
 
-    print("[*] Launching Native Desktop Window...")
+    # Start icon applier thread for native taskbar and titlebar icon
+    set_win32_window_icon(window_title, favicon_path)
+
+    # Signal splash launcher that window is about to open
+    notify_ready()
+
+    print("[*] Launching Native Desktop Window (Maximized / Fullscreen)...")
     window = webview.create_window(
         title=window_title,
         url=server_url,
-        width=1320,
-        height=880,
+        width=1400,
+        height=900,
         min_size=(960, 640),
+        maximized=True,       # Open window maximized (filling the screen)
+        fullscreen=False,     # Can be toggled via UI or F11
         text_select=True,
         zoomable=True
     )
 
     try:
-        # Edge Chromium (WebView2) on Windows
-        webview.start(gui="edgechromium", debug=False)
+        # Edge Chromium (WebView2) on Windows, WebKitGTK on Linux
+        gui_type = "edgechromium" if sys.platform == "win32" else "gtk"
+        webview.start(gui=gui_type, debug=False)
     finally:
         print("[*] Desktop window closed. Shutting down server...")
+        cleanup_ready_flag()
         server_thread.stop()
 
 
