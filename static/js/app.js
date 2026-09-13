@@ -105,6 +105,120 @@ const translations = {
         update_success_title: "Update Complete!",
         update_success_desc: "Please close the black screen (terminal) and restart the application for the changes to take effect.",
 
+        // Tools 7-14 UI Keys
+        separation_mode: "Separation Mode",
+        separator_drop_title: "Drop Audio or Video File Here",
+        separator_drop_sub: "or click to browse (MP3, WAV, MP4, etc.)",
+        separator_2stems: "🎤 2 Stem (Vocals + Backing Track)",
+        separator_4stems: "🥁 4 Stem (Vocals, Drums, Bass, Other)",
+        btn_separate_stems: "Separate Vocals & Music",
+
+        transcriber_drop_title: "Drop Media to Transcribe",
+        transcriber_drop_sub: "Select audio or video file",
+        transcriber_output_format: "Output Format",
+        transcriber_format_txt: "📄 Plain Text (.txt)",
+        transcriber_format_srt: "🎬 Subtitles with Timestamps (.srt)",
+        transcriber_format_json: "🔍 Structured JSON (.json)",
+        transcriber_lang_label: "Language Selection",
+        transcriber_lang_auto: "🌐 Auto Detect (Auto)",
+        transcriber_btn_apply: "Generate Transcript / Subtitles",
+        transcriber_preview: "Preview:",
+        btn_copy: "Copy",
+
+        metadata_drop_title: "Drop Photo to Strip Privacy Metadata",
+        metadata_drop_sub: "Supports JPG, PNG, WebP, and TIFF",
+        metadata_btn_inspect: "Scan Tags",
+        metadata_btn_strip: "Reset EXIF & Download",
+        metadata_detected_title: "Detected Metadata:",
+
+        anim_drop_title: "Drop Video to Convert into Animation",
+        anim_drop_sub: "Supports MP4, MOV, MKV, WebM",
+        anim_label_start: "Start (sec / 00:00:00)",
+        anim_label_duration: "Duration (seconds)",
+        anim_label_fps: "FPS (Frame Rate)",
+        anim_label_width: "Width (px)",
+        anim_btn_gif: "🎞️ High Quality GIF",
+        anim_btn_webp: "🚀 Optimized WebP (Smaller)",
+        anim_btn_apply: "Generate Animation & Download",
+
+        sub_title_video: "1. Select Video File",
+        sub_video_types: "MP4, MKV, MOV, WebM",
+        sub_title_sub: "2. Subtitle File (.srt, .vtt)",
+        sub_sub_types: "SRT, VTT, or ASS",
+        sub_fontsize_label: "Font Size",
+        sub_fontcolor_label: "Font Color",
+        sub_opt_small: "Small (18px)",
+        sub_opt_standard: "Standard / Normal (24px)",
+        sub_opt_large: "Large (32px)",
+        sub_opt_xlarge: "Extra Large (40px)",
+        sub_color_white: "⚪ White (Classic)",
+        sub_color_yellow: "🟡 Yellow (Cinematic)",
+        sub_color_cyan: "🔵 Cyan",
+        sub_color_green: "🟢 Light Green",
+        sub_apply_btn: "Burn Subtitles & Download",
+
+        pdf_tab_merge: "Merge",
+        pdf_tab_split: "Split",
+        pdf_tab_text: "Extract Text",
+        pdf_merge_drop_title: "Drop PDFs to Merge",
+        pdf_merge_drop_sub: "Select multiple PDFs (Order is preserved)",
+        pdf_merge_btn: "Merge All PDFs into Single File",
+        pdf_split_drop_title: "Drop PDF File to Split",
+        pdf_split_drop_sub: "Select a single PDF file",
+        pdf_split_label: "Pages / Ranges to Extract:",
+        pdf_split_placeholder: "e.g. 1-3, 5, 8-10 or just 2-4",
+        pdf_split_hint: "Ranges can be comma separated. E.g.: '1-5' (first 5 pages) or '1,3,7'.",
+        pdf_split_btn: "Extract Selected Pages as New PDF",
+        pdf_text_drop_title: "Drop PDF to Extract Text",
+        pdf_text_drop_sub: "All page text is converted into digital TXT format",
+        pdf_text_btn: "Extract Text from PDF",
+        pdf_text_preview: "Extracted Text Preview:",
+        btn_download_txt: ".txt Download",
+
+        fx_drop_title: "Drop Audio or Video to Apply Effects",
+        fx_drop_sub: "Supports MP3, WAV, FLAC, M4A, MP4",
+        fx_presets_label: "Quick Presets",
+        fx_tempo_label: "Tempo / Speed:",
+        fx_pitch_label: "Pitch:",
+        fx_reverb_title: "Echo & Reverb Effect",
+        fx_reverb_desc: "Adds spatial depth and cinematic acoustic ambience",
+        fx_apply_btn: "Generate Audio with Effects & Download",
+        fx_slow: "Slow",
+        fx_fast: "Fast",
+        fx_deep: "Deep",
+        fx_high: "High",
+
+        noise_drop_title: "Drop Media to Clean Noise",
+        noise_drop_sub: "Cleans mic hiss, fan noise, and background hum",
+        noise_strength_label: "Noise Reduction Strength:",
+        noise_voice_focus_title: "Voice Focus & Clarity",
+        noise_voice_focus_desc: "Cuts deep rumble and emphasizes speech frequencies",
+        noise_apply_btn: "Clean Noise & Download",
+        noise_light: "Light",
+        noise_balanced: "Balanced",
+        noise_heavy: "Heavy Filter",
+
+        // Device Mode Modal
+        device_modal_title: "Operating Mode & Mobile Link",
+        device_modal_subtitle: "Mobile device and desktop connection configuration",
+        badge_recommended: "Recommended",
+        badge_offline: "Offline",
+        mode_pc_title: "PC Server",
+        mode_pc_desc: "Processes AI Upscaling, 4K video, and FFmpeg on your PC's GPU.",
+        mode_local_title: "Local Device",
+        mode_local_desc: "Uses mobile browser CPU. Basic media tools work even when PC is off.",
+        label_pc_url: "PC Server URL (LAN / Wi-Fi or Tunnel):",
+        btn_test_conn: "Test",
+        title_mobile_qr: "To Open on Mobile Phone:",
+        desc_mobile_qr: "Type this address in your phone browser on the same Wi-Fi:",
+        title_local_active: "Phone CPU Active",
+        desc_local_active: "Images are processed directly in your mobile browser (HTML5 Canvas). No server or internet needed.",
+        cap_img_convert: "Image Format Conversion",
+        cap_img_compress: "Image Compression",
+        cap_exif_clean: "EXIF Cleaning",
+        cap_heavy_ai: "Heavy AI (Requires PC)",
+        btn_save_apply: "Save & Apply",
+
         // Dynamic messages
         processing: "Processing...",
         completed: "Completed!",
@@ -150,7 +264,24 @@ const translations = {
         wrong_password: "Incorrect password or corrupted file!",
         vault_action_failed: "Action failed.",
         best_quality: "Best Quality",
-        only_audio: "Audio Only (MP3)"
+        only_audio: "Audio Only (MP3)",
+
+        select_pdf_error: "Please select a PDF file.",
+        select_sub_error: "Please select a subtitle file (.srt, .vtt).",
+        select_video_error: "Please select a video file.",
+        select_audio_video_error: "Please select an audio or video file.",
+        select_two_pdf_error: "Please select at least 2 PDFs to merge.",
+        select_split_pdf_error: "Please select a PDF file to split.",
+        select_split_pages_error: "Please enter page numbers or ranges (e.g. 1-3).",
+        select_inspect_img_error: "Please select an image to inspect.",
+        copied_to_clipboard: "Copied to clipboard!",
+        vram_purge_success: "VRAM and models successfully purged!",
+        vram_purge_failed: "VRAM purge request failed.",
+        download_started_short: "Download started...",
+        preset_slowed_loaded: "Slowed + Reverb preset loaded",
+        preset_nightcore_loaded: "Nightcore preset loaded",
+        preset_fast_loaded: "1.25x Fast preset loaded",
+        preset_reset_loaded: "Standard (1.0x) preset loaded"
     },
     tr: {
         app_title: "G-Toolbox | Premium Araç Seti",
@@ -245,6 +376,120 @@ const translations = {
         update_success_title: "Güncelleme Tamamlandı!",
         update_success_desc: "Değişikliklerin aktif olması için lütfen siyah ekranı (terminali) kapatıp uygulamayı yeniden başlatın.",
 
+        // Tools 7-14 UI Keys
+        separation_mode: "Ayrıştırma Modu",
+        separator_drop_title: "Ses veya Video Dosyasını Buraya Bırakın",
+        separator_drop_sub: "veya seçmek için tıklayın (MP3, WAV, MP4 vb.)",
+        separator_2stems: "🎤 2 Stem (Vokal + Altyapı)",
+        separator_4stems: "🥁 4 Stem (Vokal, Davul, Bas, Diğer)",
+        btn_separate_stems: "Vokalleri ve Müziği Ayrıştır",
+
+        transcriber_drop_title: "Transkript Edilecek Medyayı Bırakın",
+        transcriber_drop_sub: "Video veya ses dosyasını seçin",
+        transcriber_output_format: "Çıktı Formatı",
+        transcriber_format_txt: "📄 Düz Metin (.txt)",
+        transcriber_format_srt: "🎬 Zaman Damgalı Altyazı (.srt)",
+        transcriber_format_json: "🔍 Yapılandırılmış JSON (.json)",
+        transcriber_lang_label: "Dil Seçimi",
+        transcriber_lang_auto: "🌐 Otomatik Algıla (Auto)",
+        transcriber_btn_apply: "Transkript / Altyazıyı Çıkar",
+        transcriber_preview: "Önizleme:",
+        btn_copy: "Kopyala",
+
+        metadata_drop_title: "Gizliliği Temizlenecek Fotoğrafı Bırakın",
+        metadata_drop_sub: "JPG, PNG, WebP ve TIFF desteklenir",
+        metadata_btn_inspect: "Etiketleri Tara",
+        metadata_btn_strip: "EXIF'i Sıfırla & İndir",
+        metadata_detected_title: "Tespit Edilen Metaveriler:",
+
+        anim_drop_title: "Animasyona Dönüştürülecek Videoyu Bırakın",
+        anim_drop_sub: "MP4, MOV, MKV, WebM desteklenir",
+        anim_label_start: "Başlangıç (sn / 00:00:00)",
+        anim_label_duration: "Süre (saniye)",
+        anim_label_fps: "FPS (Kare Hızı)",
+        anim_label_width: "Genişlik (px)",
+        anim_btn_gif: "🎞️ Yüksek Kalite GIF",
+        anim_btn_webp: "🚀 Optimize WebP (Daha Küçük)",
+        anim_btn_apply: "Animasyonu Üret ve İndir",
+
+        sub_title_video: "1. Video Dosyası Seçin",
+        sub_video_types: "MP4, MKV, MOV, WebM",
+        sub_title_sub: "2. Altyazı Dosyası (.srt, .vtt)",
+        sub_sub_types: "SRT, VTT veya ASS",
+        sub_fontsize_label: "Yazı Boyutu (Font Size)",
+        sub_fontcolor_label: "Yazı Rengi",
+        sub_opt_small: "Küçük (18px)",
+        sub_opt_standard: "Standart / Normal (24px)",
+        sub_opt_large: "Büyük (32px)",
+        sub_opt_xlarge: "Çok Büyük (40px)",
+        sub_color_white: "⚪ Beyaz (Klasik)",
+        sub_color_yellow: "🟡 Sarı (Sinematik)",
+        sub_color_cyan: "🔵 Camgöbeği (Cyan)",
+        sub_color_green: "🟢 Açık Yeşil",
+        sub_apply_btn: "Altyazıyı Videoya Kalıcı Göm ve İndir",
+
+        pdf_tab_merge: "Birleştir",
+        pdf_tab_split: "Sayfa Böl",
+        pdf_tab_text: "Metin Çıkar",
+        pdf_merge_drop_title: "Birleştirilecek PDF'leri Bırakın",
+        pdf_merge_drop_sub: "Birden fazla PDF seçebilirsiniz (Sıralama otomatik korunur)",
+        pdf_merge_btn: "Tüm PDF'leri Tek Dosyada Birleştir",
+        pdf_split_drop_title: "Bölünecek PDF Dosyasını Bırakın",
+        pdf_split_drop_sub: "Tek bir PDF dosyası seçin",
+        pdf_split_label: "Çıkarılacak Sayfalar / Aralıklar:",
+        pdf_split_placeholder: "Örn: 1-3, 5, 8-10 veya sadece 2-4",
+        pdf_split_hint: "Aralıklar virgülle ayrılabilir. Örnek: '1-5' (ilk 5 sayfa) veya '1,3,7'.",
+        pdf_split_btn: "Seçili Sayfaları Yeni PDF Olarak Çıkar",
+        pdf_text_drop_title: "Metni Çıkarılacak PDF'i Bırakın",
+        pdf_text_drop_sub: "Tüm sayfalardaki metinler dijital TXT formatına dönüştürülür",
+        pdf_text_btn: "PDF'teki Metinleri Çıkar",
+        pdf_text_preview: "Çıkarılan Metin Önizleme:",
+        btn_download_txt: ".txt İndir",
+
+        fx_drop_title: "Efekt Uygulanacak Ses veya Videoyu Bırakın",
+        fx_drop_sub: "MP3, WAV, FLAC, M4A, MP4 desteklenir",
+        fx_presets_label: "Hızlı Hazır Ayarlar (Presets)",
+        fx_tempo_label: "Tempo / Hız:",
+        fx_pitch_label: "Perde / Pitch:",
+        fx_reverb_title: "Yankı & Reverb Efekti",
+        fx_reverb_desc: "Uzaysal derinlik ve sinematik akustik ambiyans katar",
+        fx_apply_btn: "Efektli Sesi Üret ve İndir",
+        fx_slow: "Yavaş",
+        fx_fast: "Hızlı",
+        fx_deep: "Kalın",
+        fx_high: "İnce",
+
+        noise_drop_title: "Dip Gürültüsü Temizlenecek Medyayı Bırakın",
+        noise_drop_sub: "Mikrofon hışırtısı, fan sesi, klima uğultusu temizlenir",
+        noise_strength_label: "Gürültü Bastırma Gücü (Noise Reduction):",
+        noise_voice_focus_title: "İnsan Sesi Netleştirme (Voice Focus)",
+        noise_voice_focus_desc: "Derin bas uğultularını keser, konuşma frekanslarını öne çıkarır",
+        noise_apply_btn: "Gürültüyü Temizle ve İndir",
+        noise_light: "Hafif",
+        noise_balanced: "Dengeli",
+        noise_heavy: "Yoğun Filtre",
+
+        // Device Mode Modal
+        device_modal_title: "Çalışma Modu & Mobil Bağlantı",
+        device_modal_subtitle: "Mobil cihaz ve masaüstü bağlantı yapılandırması",
+        badge_recommended: "Önerilen",
+        badge_offline: "Çevrimdışı",
+        mode_pc_title: "PC Sunucusu",
+        mode_pc_desc: "Tüm AI Upscale, 4K Video ve FFmpeg işlemlerini bilgisayarınızın GPU'su yürütür.",
+        mode_local_title: "Yerel Cihaz",
+        mode_local_desc: "Telefonunuzun işlemcisini kullanır. PC kapalıyken bile temel medya araçları çalışır.",
+        label_pc_url: "PC Sunucu Adresi (LAN / Wi-Fi veya Tünel):",
+        btn_test_conn: "Test Et",
+        title_mobile_qr: "Telefonda Açmak İçin:",
+        desc_mobile_qr: "Aynı Wi-Fi ağındaki telefonunuzun tarayıcısına bu adresi yazın:",
+        title_local_active: "Telefon İşlemcisi Devrede",
+        desc_local_active: "Bu modda görseller doğrudan telefonunuzun tarayıcısında (HTML5 Canvas) işlenir. Sunucu veya internet bağlantısına gerek yoktur.",
+        cap_img_convert: "Görsel Format Dönüştürme",
+        cap_img_compress: "Görsel Sıkıştırma",
+        cap_exif_clean: "EXIF Temizleme",
+        cap_heavy_ai: "Ağır AI (PC Gerekir)",
+        btn_save_apply: "Kaydet ve Uygula",
+
         // Dynamic messages
         processing: "İşleniyor...",
         completed: "Tamamlandı!",
@@ -290,41 +535,95 @@ const translations = {
         wrong_password: "Şifre yanlış veya dosya bozuk!",
         vault_action_failed: "İşlem başarısız oldu.",
         best_quality: "En İyi Kalite",
-        only_audio: "Sadece Ses (MP3)"
+        only_audio: "Sadece Ses (MP3)",
+
+        select_pdf_error: "Lütfen bir PDF dosyası seçin.",
+        select_sub_error: "Lütfen bir altyazı (.srt, .vtt) dosyası seçin.",
+        select_video_error: "Lütfen bir video dosyası seçin.",
+        select_audio_video_error: "Lütfen bir ses veya video dosyası seçin.",
+        select_two_pdf_error: "Lütfen birleştirmek için en az 2 PDF seçin.",
+        select_split_pdf_error: "Lütfen bölünecek bir PDF dosyası seçin.",
+        select_split_pages_error: "Lütfen çıkarılacak sayfa veya aralıkları girin (Örn: 1-3).",
+        select_inspect_img_error: "Lütfen incelenecek bir görsel seçin.",
+        copied_to_clipboard: "Metin panoya kopyalandı!",
+        vram_purge_success: "VRAM ve modeller başarıyla boşaltıldı!",
+        vram_purge_failed: "VRAM boşaltma isteği başarısız oldu.",
+        download_started_short: "İndirme başlatılıyor...",
+        preset_slowed_loaded: "Slowed + Reverb ayarları yüklendi",
+        preset_nightcore_loaded: "Nightcore ayarları yüklendi",
+        preset_fast_loaded: "1.25x Hızlı ayarları yüklendi",
+        preset_reset_loaded: "Standart (1.0x) ayarları yüklendi"
     }
 };
 
-let currentLang = localStorage.getItem('gtoolbox_lang') || 'en';
+const PAGE_META = {};
+
+let savedLang = localStorage.getItem('gtoolbox_lang');
+let currentLang = savedLang || (navigator.language && navigator.language.toLowerCase().startsWith('tr') ? 'tr' : 'en');
+
+function i18n(key) {
+    if (translations[currentLang] && translations[currentLang][key]) {
+        return translations[currentLang][key];
+    }
+    if (translations.en && translations.en[key]) {
+        return translations.en[key];
+    }
+    return key;
+}
 
 window.changeLanguage = function (lang) {
-    currentLang = lang;
-    localStorage.setItem('gtoolbox_lang', lang);
+    currentLang = (lang === 'tr' || lang === 'en') ? lang : 'tr';
+    localStorage.setItem('gtoolbox_lang', currentLang);
+    document.documentElement.lang = currentLang;
 
     // Update all elements with data-i18n
     document.querySelectorAll('[data-i18n]').forEach(el => {
         const key = el.getAttribute('data-i18n');
-        if (translations[lang][key]) {
-            if (el.tagName.toLowerCase() === 'input' && (el.type === 'text' || el.type === 'password' || el.type === 'search')) {
-                el.placeholder = translations[lang][key];
-            } else if (el.tagName.toLowerCase() === 'meta') {
-                el.setAttribute('content', translations[lang][key]);
+        const val = translations[currentLang] && translations[currentLang][key];
+        if (val !== undefined && val !== null) {
+            const tag = el.tagName.toLowerCase();
+            if (tag === 'input' && (el.type === 'text' || el.type === 'password' || el.type === 'search' || el.type === 'number')) {
+                el.placeholder = val;
+            } else if (tag === 'meta') {
+                el.setAttribute('content', val);
+            } else if (tag === 'option') {
+                el.textContent = val;
             } else {
-                el.innerHTML = translations[lang][key];
+                el.innerHTML = val;
             }
         }
     });
 
-    // Language Selector UI Update
-    document.getElementById('lang-en').style.opacity = lang === 'en' ? '1' : '0.5';
-    document.getElementById('lang-tr').style.opacity = lang === 'tr' ? '1' : '0.5';
+    // Update all Language Selector buttons (Home + App View + Mobile)
+    document.querySelectorAll('.lang-btn-en, #lang-en').forEach(btn => {
+        if (currentLang === 'en') {
+            btn.classList.add('text-purple-400', 'font-extrabold');
+            btn.classList.remove('opacity-50', 'text-gray-400', 'text-gray-300');
+            btn.style.opacity = '1';
+        } else {
+            btn.classList.remove('text-purple-400', 'font-extrabold');
+            btn.classList.add('opacity-50', 'text-gray-400');
+            btn.style.opacity = '0.5';
+        }
+    });
 
-    // Update dynamic sections if they are currently visible
-    updatePAGE_META();
+    document.querySelectorAll('.lang-btn-tr, #lang-tr').forEach(btn => {
+        if (currentLang === 'tr') {
+            btn.classList.add('text-purple-400', 'font-extrabold');
+            btn.classList.remove('opacity-50', 'text-gray-400', 'text-gray-300');
+            btn.style.opacity = '1';
+        } else {
+            btn.classList.remove('text-purple-400', 'font-extrabold');
+            btn.classList.add('opacity-50', 'text-gray-400');
+            btn.style.opacity = '0.5';
+        }
+    });
+
+    // Update dynamic sections if function is registered
+    if (typeof window.updatePAGE_META === 'function') {
+        window.updatePAGE_META();
+    }
 };
-
-function i18n(key) {
-    return translations[currentLang][key] || key;
-}
 
 document.addEventListener("DOMContentLoaded", () => {
     const spinner = document.getElementById("spinner");
@@ -392,8 +691,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const sidebarItems = document.querySelectorAll(".sidebar-item[data-tool]");
     const toolPages = document.querySelectorAll(".tool-page");
 
-    const PAGE_META = {};
-    function updatePAGE_META() {
+    window.updatePAGE_META = function() {
         Object.assign(PAGE_META, {
             converter: { title: i18n('menu_converter'), subtitle: i18n('desc_converter') },
             bgremover: { title: i18n('menu_bgremover'), subtitle: i18n('desc_bgremover') },
@@ -420,8 +718,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 pageSubtitle.textContent = PAGE_META[tool].subtitle;
             }
         }
-    }
-    updatePAGE_META();
+    };
+    window.updatePAGE_META();
+    window.changeLanguage(currentLang);
 
     sidebarItems.forEach((item) => {
         item.addEventListener("click", () => {
@@ -1937,7 +2236,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         btnSepApply.addEventListener("click", async () => {
             if (!separatorFile) {
-                showToast("error", "Lütfen bir ses veya video dosyası seçin.");
+                showToast("error", i18n("select_audio_video_error"));
                 return;
             }
 
@@ -2019,14 +2318,14 @@ document.addEventListener("DOMContentLoaded", () => {
             btnCopyTrans.addEventListener("click", () => {
                 if (transPreview.value) {
                     navigator.clipboard.writeText(transPreview.value);
-                    showToast("info", "📋 Transkript metni panoya kopyalandı!");
+                    showToast("info", "📋 " + i18n("copied_to_clipboard"));
                 }
             });
         }
 
         btnTransApply.addEventListener("click", async () => {
             if (!transcriberFile) {
-                showToast("error", "Lütfen bir ses veya video dosyası seçin.");
+                showToast("error", i18n("select_audio_video_error"));
                 return;
             }
 
@@ -2118,7 +2417,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         btnMetaInspect.addEventListener("click", async () => {
             if (!metaFile) {
-                showToast("error", "Lütfen incelenecek bir görsel seçin.");
+                showToast("error", i18n("select_inspect_img_error"));
                 return;
             }
             const fd = new FormData();
@@ -2150,7 +2449,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         btnMetaStrip.addEventListener("click", async () => {
             if (!metaFile) {
-                showToast("error", "Lütfen bir görsel seçin.");
+                showToast("error", i18n("select_image_error"));
                 return;
             }
 
@@ -2244,7 +2543,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         btnAnimApply.addEventListener("click", async () => {
             if (!animFile) {
-                showToast("error", "Lütfen bir video dosyası seçin.");
+                showToast("error", i18n("select_video_error"));
                 return;
             }
 
@@ -2387,11 +2686,11 @@ document.addEventListener("DOMContentLoaded", () => {
     if (btnSubApply) {
         btnSubApply.addEventListener("click", async () => {
             if (!subVideoFile) {
-                showToast("error", "Lütfen bir video dosyası seçin.");
+                showToast("error", i18n("select_video_error"));
                 return;
             }
             if (!subSrtFile) {
-                showToast("error", "Lütfen bir altyazı (.srt, .vtt) dosyası seçin.");
+                showToast("error", i18n("select_sub_error"));
                 return;
             }
 
@@ -2503,7 +2802,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (btnPdfMergeApply) {
         btnPdfMergeApply.addEventListener("click", async () => {
             if (pdfMergeFiles.length < 2) {
-                showToast("error", "Lütfen birleştirmek için en az 2 PDF seçin.");
+                showToast("error", i18n("select_two_pdf_error"));
                 return;
             }
             const taskId = generateTaskId();
@@ -2586,7 +2885,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (btnPdfSplitApply) {
         btnPdfSplitApply.addEventListener("click", async () => {
             if (!pdfSplitFile) {
-                showToast("error", "Lütfen bölünecek bir PDF dosyası seçin.");
+                showToast("error", i18n("select_split_pdf_error"));
                 return;
             }
             const pages = inputPdfPages ? inputPdfPages.value.trim() : "";
@@ -2681,7 +2980,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (btnPdfTextApply) {
         btnPdfTextApply.addEventListener("click", async () => {
             if (!pdfTextFile) {
-                showToast("error", "Lütfen bir PDF dosyası seçin.");
+                showToast("error", i18n("select_pdf_error"));
                 return;
             }
             const taskId = generateTaskId();
@@ -2719,7 +3018,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (btnCopyPdfText && contentPdfText) {
         btnCopyPdfText.addEventListener("click", () => {
             navigator.clipboard.writeText(contentPdfText.value).then(() => {
-                showToast("info", "📋 Metin panoya kopyalandı!");
+                showToast("info", "📋 " + i18n("copied_to_clipboard"));
             });
         });
     }
@@ -2768,7 +3067,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (sliderFxPitch) sliderFxPitch.value = "0.85";
         if (checkFxReverb) checkFxReverb.checked = true;
         updateFxLabels();
-        showToast("info", "🐌 Slowed + Reverb ayarları yüklendi");
+        showToast("info", "🐌 " + i18n("preset_slowed_loaded"));
     });
 
     btnPresetNightcore?.addEventListener("click", () => {
@@ -2776,7 +3075,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (sliderFxPitch) sliderFxPitch.value = "1.25";
         if (checkFxReverb) checkFxReverb.checked = false;
         updateFxLabels();
-        showToast("info", "🐿️ Nightcore ayarları yüklendi");
+        showToast("info", "🐿️ " + i18n("preset_nightcore_loaded"));
     });
 
     btnPresetFast?.addEventListener("click", () => {
@@ -2784,7 +3083,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (sliderFxPitch) sliderFxPitch.value = "1.00";
         if (checkFxReverb) checkFxReverb.checked = false;
         updateFxLabels();
-        showToast("info", "⚡ 1.25x Hızlı ayarları yüklendi");
+        showToast("info", "⚡ " + i18n("preset_fast_loaded"));
     });
 
     btnPresetReset?.addEventListener("click", () => {
@@ -2835,7 +3134,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (btnAudioFxApply) {
         btnAudioFxApply.addEventListener("click", async () => {
             if (!audioFxFile) {
-                showToast("error", "Lütfen bir ses veya video dosyası seçin.");
+                showToast("error", i18n("select_audio_video_error"));
                 return;
             }
             const taskId = generateTaskId();
@@ -2939,7 +3238,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (btnNoiseApply) {
         btnNoiseApply.addEventListener("click", async () => {
             if (!noiseCleanerFile) {
-                showToast("error", "Lütfen bir ses veya video dosyası seçin.");
+                showToast("error", i18n("select_audio_video_error"));
                 return;
             }
             const taskId = generateTaskId();
@@ -3000,7 +3299,7 @@ window.purgeVram = async function() {
         }
     } catch (e) {
         if (typeof showToast === 'function') {
-            showToast("error", "⚠️ VRAM boşaltma isteği başarısız oldu.");
+            showToast("error", "⚠️ " + i18n("vram_purge_failed"));
         }
     } finally {
         if (btn) btn.disabled = false;
@@ -3106,7 +3405,7 @@ window.copyLanUrl = function() {
     if (!displayEl) return;
     navigator.clipboard.writeText(displayEl.textContent.trim()).then(() => {
         if (typeof showToast === 'function') {
-            showToast("info", "📋 Mobil bağlantı adresi kopyalandı!");
+            showToast("info", "📋 " + i18n("copied_to_clipboard"));
         } else {
             alert("Bağlantı kopyalandı!");
         }

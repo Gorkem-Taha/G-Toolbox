@@ -54,11 +54,11 @@
         </button>
         <div class="w-px h-4 bg-white/20"></div>
         <button id="lang-en"
-            class="flex items-center gap-1.5 hover:text-purple-400 transition-colors text-xs font-bold text-gray-300 px-1"
+            class="lang-btn-en flex items-center gap-1.5 hover:text-purple-400 transition-colors text-xs font-bold text-gray-300 px-1"
             onclick="changeLanguage('en')">🇬🇧 EN</button>
         <div class="w-px h-4 bg-white/20"></div>
         <button id="lang-tr"
-            class="flex items-center gap-1.5 hover:text-purple-400 transition-colors text-xs font-bold text-gray-300 px-1"
+            class="lang-btn-tr flex items-center gap-1.5 hover:text-purple-400 transition-colors text-xs font-bold text-gray-300 px-1"
             onclick="changeLanguage('tr')">🇹🇷 TR</button>
     </div>
 
@@ -448,6 +448,14 @@
                         tool from the left menu to start</p>
                 </div>
                 <div class="flex items-center gap-3">
+                    <!-- Language Selector (App View) -->
+                    <div class="flex items-center gap-1 px-2 py-1 rounded-xl bg-black/40 border border-white/10 text-xs shadow-sm">
+                        <button class="lang-btn-en px-1.5 py-0.5 rounded transition-colors text-xs font-bold text-gray-400 hover:text-purple-300"
+                            onclick="changeLanguage('en')">🇬🇧 EN</button>
+                        <div class="w-px h-3 bg-white/20"></div>
+                        <button class="lang-btn-tr px-1.5 py-0.5 rounded transition-colors text-xs font-bold text-gray-400 hover:text-purple-300"
+                            onclick="changeLanguage('tr')">🇹🇷 TR</button>
+                    </div>
                     <button id="btn-purge-vram" onclick="purgeVram()"
                         class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 hover:bg-red-500/20 hover:border-red-500/40 transition-all text-xs font-semibold shadow-sm"
                         title="VRAM & Bellek Boşalt">
@@ -1012,29 +1020,29 @@
                         <div class="w-16 h-16 rounded-2xl bg-rose-500/10 flex items-center justify-center mb-4 text-rose-400">
                             <i class="fa-solid fa-music text-3xl"></i>
                         </div>
-                        <h3 class="text-xl font-bold text-white mb-2">Ses veya Video Dosyasını Buraya Bırakın</h3>
-                        <p class="text-sm text-gray-500">veya seçmek için tıklayın (MP3, WAV, MP4 vb.)</p>
+                        <h3 class="text-xl font-bold text-white mb-2" data-i18n="separator_drop_title">Ses veya Video Dosyasını Buraya Bırakın</h3>
+                        <p class="text-sm text-gray-500" data-i18n="separator_drop_sub">veya seçmek için tıklayın (MP3, WAV, MP4 vb.)</p>
                         <div class="file-info hidden mt-6 w-full max-w-md bg-white/5 p-4 rounded-xl flex items-center justify-between" id="info-separator">
                             <div>
                                 <p class="file-info-name font-bold text-white text-sm" id="info-separator-name">—</p>
                                 <p class="file-info-size text-xs text-gray-400" id="info-separator-size">—</p>
                             </div>
-                            <button class="text-xs text-red-400 hover:text-red-300 font-bold px-3 py-1 rounded-lg bg-red-500/10" id="btn-separator-clear">Temizle</button>
+                            <button class="text-xs text-red-400 hover:text-red-300 font-bold px-3 py-1 rounded-lg bg-red-500/10" id="btn-separator-clear" data-i18n="btn_clear">Temizle</button>
                         </div>
                     </div>
 
                     <div class="w-full glass p-6 rounded-3xl flex flex-col gap-4">
-                        <label class="text-xs font-semibold uppercase tracking-wider text-gray-400">Ayrıştırma Modu</label>
+                        <label class="text-xs font-semibold uppercase tracking-wider text-gray-400" data-i18n="separation_mode">Ayrıştırma Modu</label>
                         <div class="grid grid-cols-2 gap-4">
                             <button type="button" class="separator-stem-btn py-3 px-4 rounded-xl border border-rose-500 bg-rose-500/20 text-white font-bold text-sm" data-stems="vocals">
-                                🎤 2 Stem (Vokal + Altyapı)
+                                <span data-i18n="separator_2stems">🎤 2 Stem (Vokal + Altyapı)</span>
                             </button>
                             <button type="button" class="separator-stem-btn py-3 px-4 rounded-xl border border-white/10 bg-white/5 text-gray-300 font-semibold text-sm hover:border-white/20" data-stems="all">
-                                🥁 4 Stem (Vokal, Davul, Bas, Diğer)
+                                <span data-i18n="separator_4stems">🥁 4 Stem (Vokal, Davul, Bas, Diğer)</span>
                             </button>
                         </div>
                         <button id="btn-separator-apply" class="w-full py-4 rounded-xl font-bold text-white bg-gradient-to-r from-rose-600 to-pink-600 hover:shadow-[0_0_20px_rgba(244,63,94,0.4)] transition-all flex items-center justify-center gap-2">
-                            <i class="fa-solid fa-wand-magic-sparkles"></i> <span>Vokalleri ve Müziği Ayrıştır</span>
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> <span data-i18n="btn_separate_stems">Vokalleri ve Müziği Ayrıştır</span>
                         </button>
                     </div>
                 </div>
@@ -1049,31 +1057,31 @@
                         <div class="w-16 h-16 rounded-2xl bg-cyan-500/10 flex items-center justify-center mb-4 text-cyan-400">
                             <i class="fa-solid fa-closed-captioning text-3xl"></i>
                         </div>
-                        <h3 class="text-xl font-bold text-white mb-2">Transkript Edilecek Medyayı Bırakın</h3>
-                        <p class="text-sm text-gray-500">Video veya ses dosyasını seçin</p>
+                        <h3 class="text-xl font-bold text-white mb-2" data-i18n="transcriber_drop_title">Transkript Edilecek Medyayı Bırakın</h3>
+                        <p class="text-sm text-gray-500" data-i18n="transcriber_drop_sub">Video veya ses dosyasını seçin</p>
                         <div class="file-info hidden mt-6 w-full max-w-md bg-white/5 p-4 rounded-xl flex items-center justify-between" id="info-transcriber">
                             <div>
                                 <p class="file-info-name font-bold text-white text-sm" id="info-transcriber-name">—</p>
                                 <p class="file-info-size text-xs text-gray-400" id="info-transcriber-size">—</p>
                             </div>
-                            <button class="text-xs text-red-400 hover:text-red-300 font-bold px-3 py-1 rounded-lg bg-red-500/10" id="btn-transcriber-clear">Temizle</button>
+                            <button class="text-xs text-red-400 hover:text-red-300 font-bold px-3 py-1 rounded-lg bg-red-500/10" id="btn-transcriber-clear" data-i18n="btn_clear">Temizle</button>
                         </div>
                     </div>
 
                     <div class="w-full glass p-6 rounded-3xl flex flex-col gap-4">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label class="text-xs font-semibold uppercase tracking-wider text-gray-400 block mb-2">Çıktı Formatı</label>
+                                <label class="text-xs font-semibold uppercase tracking-wider text-gray-400 block mb-2" data-i18n="transcriber_output_format">Çıktı Formatı</label>
                                 <select id="transcriber-format" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-cyan-500">
-                                    <option value="txt">📄 Düz Metin (.txt)</option>
-                                    <option value="srt">🎬 Zaman Damgalı Altyazı (.srt)</option>
-                                    <option value="json">🔍 Yapılandırılmış JSON (.json)</option>
+                                    <option value="txt" data-i18n="transcriber_format_txt">📄 Düz Metin (.txt)</option>
+                                    <option value="srt" data-i18n="transcriber_format_srt">🎬 Zaman Damgalı Altyazı (.srt)</option>
+                                    <option value="json" data-i18n="transcriber_format_json">🔍 Yapılandırılmış JSON (.json)</option>
                                 </select>
                             </div>
                             <div>
-                                <label class="text-xs font-semibold uppercase tracking-wider text-gray-400 block mb-2">Dil Seçimi</label>
+                                <label class="text-xs font-semibold uppercase tracking-wider text-gray-400 block mb-2" data-i18n="transcriber_lang_label">Dil Seçimi</label>
                                 <select id="transcriber-lang" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-cyan-500">
-                                    <option value="auto">🌐 Otomatik Algıla (Auto)</option>
+                                    <option value="auto" data-i18n="transcriber_lang_auto">🌐 Otomatik Algıla (Auto)</option>
                                     <option value="tr">🇹🇷 Türkçe</option>
                                     <option value="en">🇬🇧 English</option>
                                     <option value="de">🇩🇪 Deutsch</option>
@@ -1082,14 +1090,14 @@
                             </div>
                         </div>
                         <button id="btn-transcriber-apply" class="w-full py-4 rounded-xl font-bold text-white bg-gradient-to-r from-cyan-600 to-blue-600 hover:shadow-[0_0_20px_rgba(6,182,212,0.4)] transition-all flex items-center justify-center gap-2">
-                            <i class="fa-solid fa-microphone-lines"></i> <span>Transkript / Altyazıyı Çıkar</span>
+                            <i class="fa-solid fa-microphone-lines"></i> <span data-i18n="transcriber_btn_apply">Transkript / Altyazıyı Çıkar</span>
                         </button>
 
                         <div id="transcription-result-box" class="hidden mt-4 p-4 rounded-2xl bg-black/40 border border-white/10 text-left">
                             <div class="flex items-center justify-between mb-2">
-                                <span class="text-xs font-bold text-cyan-400">Önizleme:</span>
+                                <span class="text-xs font-bold text-cyan-400" data-i18n="transcriber_preview">Önizleme:</span>
                                 <button id="btn-copy-transcript" class="text-xs text-gray-400 hover:text-white flex items-center gap-1">
-                                    <i class="fa-regular fa-copy"></i> Kopyala
+                                    <i class="fa-regular fa-copy"></i> <span data-i18n="btn_copy">Kopyala</span>
                                 </button>
                             </div>
                             <textarea id="transcription-text-preview" rows="6" readonly class="w-full bg-transparent text-gray-200 text-xs font-mono resize-none focus:outline-none"></textarea>
@@ -1107,29 +1115,29 @@
                         <div class="w-16 h-16 rounded-2xl bg-teal-500/10 flex items-center justify-center mb-4 text-teal-400">
                             <i class="fa-solid fa-shield-halved text-3xl"></i>
                         </div>
-                        <h3 class="text-xl font-bold text-white mb-2">Gizliliği Temizlenecek Fotoğrafı Bırakın</h3>
-                        <p class="text-sm text-gray-500">JPG, PNG, WebP ve TIFF desteklenir</p>
+                        <h3 class="text-xl font-bold text-white mb-2" data-i18n="metadata_drop_title">Gizliliği Temizlenecek Fotoğrafı Bırakın</h3>
+                        <p class="text-sm text-gray-500" data-i18n="metadata_drop_sub">JPG, PNG, WebP ve TIFF desteklenir</p>
                         <div class="file-info hidden mt-6 w-full max-w-md bg-white/5 p-4 rounded-xl flex items-center justify-between" id="info-metadata">
                             <div>
                                 <p class="file-info-name font-bold text-white text-sm" id="info-metadata-name">—</p>
                                 <p class="file-info-size text-xs text-gray-400" id="info-metadata-size">—</p>
                             </div>
-                            <button class="text-xs text-red-400 hover:text-red-300 font-bold px-3 py-1 rounded-lg bg-red-500/10" id="btn-metadata-clear">Temizle</button>
+                            <button class="text-xs text-red-400 hover:text-red-300 font-bold px-3 py-1 rounded-lg bg-red-500/10" id="btn-metadata-clear" data-i18n="btn_clear">Temizle</button>
                         </div>
                     </div>
 
                     <div class="w-full glass p-6 rounded-3xl flex flex-col gap-4">
                         <div class="flex gap-4">
                             <button id="btn-metadata-inspect" class="flex-1 py-3.5 rounded-xl font-bold text-teal-300 bg-teal-500/10 border border-teal-500/20 hover:bg-teal-500/20 transition-all flex items-center justify-center gap-2">
-                                <i class="fa-solid fa-magnifying-glass"></i> <span>Etiketleri Tara</span>
+                                <i class="fa-solid fa-magnifying-glass"></i> <span data-i18n="metadata_btn_inspect">Etiketleri Tara</span>
                             </button>
                             <button id="btn-metadata-strip" class="flex-1 py-3.5 rounded-xl font-bold text-white bg-gradient-to-r from-teal-600 to-emerald-600 hover:shadow-[0_0_20px_rgba(20,184,166,0.4)] transition-all flex items-center justify-center gap-2">
-                                <i class="fa-solid fa-broom"></i> <span>EXIF'i Sıfırla & İndir</span>
+                                <i class="fa-solid fa-broom"></i> <span data-i18n="metadata_btn_strip">EXIF'i Sıfırla & İndir</span>
                             </button>
                         </div>
 
                         <div id="metadata-report-box" class="hidden p-4 rounded-2xl bg-black/40 border border-white/10 text-left">
-                            <h4 class="text-xs font-bold text-teal-400 mb-2" id="metadata-report-title">Tespit Edilen Metaveriler:</h4>
+                            <h4 class="text-xs font-bold text-teal-400 mb-2" id="metadata-report-title" data-i18n="metadata_detected_title">Tespit Edilen Metaveriler:</h4>
                             <div id="metadata-tags-list" class="max-h-48 overflow-y-auto space-y-1 text-xs text-gray-300 font-mono"></div>
                         </div>
                     </div>
@@ -1145,48 +1153,48 @@
                         <div class="w-16 h-16 rounded-2xl bg-orange-500/10 flex items-center justify-center mb-4 text-orange-400">
                             <i class="fa-solid fa-film text-3xl"></i>
                         </div>
-                        <h3 class="text-xl font-bold text-white mb-2">Animasyona Dönüştürülecek Videoyu Bırakın</h3>
-                        <p class="text-sm text-gray-500">MP4, MOV, MKV, WebM desteklenir</p>
+                        <h3 class="text-xl font-bold text-white mb-2" data-i18n="anim_drop_title">Animasyona Dönüştürülecek Videoyu Bırakın</h3>
+                        <p class="text-sm text-gray-500" data-i18n="anim_drop_sub">MP4, MOV, MKV, WebM desteklenir</p>
                         <div class="file-info hidden mt-6 w-full max-w-md bg-white/5 p-4 rounded-xl flex items-center justify-between" id="info-animator">
                             <div>
                                 <p class="file-info-name font-bold text-white text-sm" id="info-animator-name">—</p>
                                 <p class="file-info-size text-xs text-gray-400" id="info-animator-size">—</p>
                             </div>
-                            <button class="text-xs text-red-400 hover:text-red-300 font-bold px-3 py-1 rounded-lg bg-red-500/10" id="btn-animator-clear">Temizle</button>
+                            <button class="text-xs text-red-400 hover:text-red-300 font-bold px-3 py-1 rounded-lg bg-red-500/10" id="btn-animator-clear" data-i18n="btn_clear">Temizle</button>
                         </div>
                     </div>
 
                     <div class="w-full glass p-6 rounded-3xl flex flex-col gap-4">
                         <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
                             <div>
-                                <label class="text-xs text-gray-400 block mb-1">Başlangıç (sn / 00:00:00)</label>
+                                <label class="text-xs text-gray-400 block mb-1" data-i18n="anim_label_start">Başlangıç (sn / 00:00:00)</label>
                                 <input type="text" id="anim-start" value="00:00:00" class="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2 text-white text-sm">
                             </div>
                             <div>
-                                <label class="text-xs text-gray-400 block mb-1">Süre (saniye)</label>
+                                <label class="text-xs text-gray-400 block mb-1" data-i18n="anim_label_duration">Süre (saniye)</label>
                                 <input type="number" id="anim-duration" value="5" min="1" max="60" class="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2 text-white text-sm">
                             </div>
                             <div>
-                                <label class="text-xs text-gray-400 block mb-1">FPS (Kare Hızı)</label>
+                                <label class="text-xs text-gray-400 block mb-1" data-i18n="anim_label_fps">FPS (Kare Hızı)</label>
                                 <input type="number" id="anim-fps" value="15" min="5" max="30" class="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2 text-white text-sm">
                             </div>
                             <div>
-                                <label class="text-xs text-gray-400 block mb-1">Genişlik (px)</label>
+                                <label class="text-xs text-gray-400 block mb-1" data-i18n="anim_label_width">Genişlik (px)</label>
                                 <input type="number" id="anim-width" value="480" step="20" class="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2 text-white text-sm">
                             </div>
                         </div>
 
                         <div class="grid grid-cols-2 gap-4 mt-2">
                             <button type="button" class="anim-format-btn py-3 px-4 rounded-xl border border-orange-500 bg-orange-500/20 text-white font-bold text-sm" data-format="gif">
-                                🎞️ Yüksek Kalite GIF
+                                <span data-i18n="anim_btn_gif">🎞️ Yüksek Kalite GIF</span>
                             </button>
                             <button type="button" class="anim-format-btn py-3 px-4 rounded-xl border border-white/10 bg-white/5 text-gray-300 font-semibold text-sm hover:border-white/20" data-format="webp">
-                                🚀 Optimize WebP (Daha Küçük)
+                                <span data-i18n="anim_btn_webp">🚀 Optimize WebP (Daha Küçük)</span>
                             </button>
                         </div>
 
                         <button id="btn-animator-apply" class="w-full py-4 rounded-xl font-bold text-white bg-gradient-to-r from-orange-600 to-amber-600 hover:shadow-[0_0_20px_rgba(249,115,22,0.4)] transition-all flex items-center justify-center gap-2">
-                            <i class="fa-solid fa-play"></i> <span>Animasyonu Üret ve İndir</span>
+                            <i class="fa-solid fa-play"></i> <span data-i18n="anim_btn_apply">Animasyonu Üret ve İndir</span>
                         </button>
                     </div>
                 </div>
@@ -1203,8 +1211,8 @@
                             <div class="w-14 h-14 rounded-2xl bg-indigo-500/10 flex items-center justify-center mb-3 text-indigo-400">
                                 <i class="fa-solid fa-video text-2xl"></i>
                             </div>
-                            <h4 class="text-base font-bold text-white mb-1">1. Video Dosyası Seçin</h4>
-                            <p class="text-xs text-gray-500">MP4, MKV, MOV, WebM</p>
+                            <h4 class="text-base font-bold text-white mb-1" data-i18n="sub_title_video">1. Video Dosyası Seçin</h4>
+                            <p class="text-xs text-gray-500" data-i18n="sub_video_types">MP4, MKV, MOV, WebM</p>
                             <div class="file-info hidden mt-4 w-full bg-white/5 p-3 rounded-xl flex items-center justify-between" id="info-subtitles-video">
                                 <div class="truncate mr-2">
                                     <p class="file-info-name font-bold text-white text-xs truncate" id="info-subtitles-video-name">—</p>
@@ -1221,8 +1229,8 @@
                             <div class="w-14 h-14 rounded-2xl bg-indigo-500/10 flex items-center justify-center mb-3 text-indigo-400">
                                 <i class="fa-solid fa-closed-captioning text-2xl"></i>
                             </div>
-                            <h4 class="text-base font-bold text-white mb-1">2. Altyazı Dosyası (.srt, .vtt)</h4>
-                            <p class="text-xs text-gray-500">SRT, VTT veya ASS</p>
+                            <h4 class="text-base font-bold text-white mb-1" data-i18n="sub_title_sub">2. Altyazı Dosyası (.srt, .vtt)</h4>
+                            <p class="text-xs text-gray-500" data-i18n="sub_sub_types">SRT, VTT veya ASS</p>
                             <div class="file-info hidden mt-4 w-full bg-white/5 p-3 rounded-xl flex items-center justify-between" id="info-subtitles-sub">
                                 <div class="truncate mr-2">
                                     <p class="file-info-name font-bold text-white text-xs truncate" id="info-subtitles-sub-name">—</p>
@@ -1236,27 +1244,27 @@
                     <div class="w-full glass p-6 rounded-3xl flex flex-col gap-4">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label class="text-xs font-semibold uppercase tracking-wider text-gray-400 block mb-2">Yazı Boyutu (Font Size)</label>
+                                <label class="text-xs font-semibold uppercase tracking-wider text-gray-400 block mb-2" data-i18n="sub_fontsize_label">Yazı Boyutu (Font Size)</label>
                                 <select id="sub-fontsize" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-indigo-500">
-                                    <option value="18">Küçük (18px)</option>
-                                    <option value="24" selected>Standart / Normal (24px)</option>
-                                    <option value="32">Büyük (32px)</option>
-                                    <option value="40">Çok Büyük (40px)</option>
+                                    <option value="18" data-i18n="sub_opt_small">Küçük (18px)</option>
+                                    <option value="24" selected data-i18n="sub_opt_standard">Standart / Normal (24px)</option>
+                                    <option value="32" data-i18n="sub_opt_large">Büyük (32px)</option>
+                                    <option value="40" data-i18n="sub_opt_xlarge">Çok Büyük (40px)</option>
                                 </select>
                             </div>
                             <div>
-                                <label class="text-xs font-semibold uppercase tracking-wider text-gray-400 block mb-2">Yazı Rengi</label>
+                                <label class="text-xs font-semibold uppercase tracking-wider text-gray-400 block mb-2" data-i18n="sub_fontcolor_label">Yazı Rengi</label>
                                 <select id="sub-fontcolor" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-indigo-500">
-                                    <option value="&H00FFFFFF" selected>⚪ Beyaz (Klasik)</option>
-                                    <option value="&H0000FFFF">🟡 Sarı (Sinematik)</option>
-                                    <option value="&H00FFFF00">🔵 Camgöbeği (Cyan)</option>
-                                    <option value="&H0000FF00">🟢 Açık Yeşil</option>
+                                    <option value="&H00FFFFFF" selected data-i18n="sub_color_white">⚪ Beyaz (Klasik)</option>
+                                    <option value="&H0000FFFF" data-i18n="sub_color_yellow">🟡 Sarı (Sinematik)</option>
+                                    <option value="&H00FFFF00" data-i18n="sub_color_cyan">🔵 Camgöbeği (Cyan)</option>
+                                    <option value="&H0000FF00" data-i18n="sub_color_green">🟢 Açık Yeşil</option>
                                 </select>
                             </div>
                         </div>
 
                         <button id="btn-subtitles-apply" class="w-full py-4 rounded-xl font-bold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:shadow-[0_0_20px_rgba(99,102,241,0.4)] transition-all flex items-center justify-center gap-2">
-                            <i class="fa-solid fa-fire"></i> <span>Altyazıyı Videoya Kalıcı Göm ve İndir</span>
+                            <i class="fa-solid fa-fire"></i> <span data-i18n="sub_apply_btn">Altyazıyı Videoya Kalıcı Göm ve İndir</span>
                         </button>
                     </div>
                 </div>
@@ -1268,13 +1276,13 @@
                     <!-- PDF Sub-Mode Tabs -->
                     <div class="flex items-center gap-2 p-1.5 rounded-2xl bg-black/40 border border-white/10 w-full max-w-md justify-between">
                         <button id="tab-pdf-merge" class="pdf-mode-tab flex-1 py-2.5 px-3 rounded-xl font-bold text-xs transition-all bg-red-600 text-white shadow-md flex items-center justify-center gap-1.5" data-mode="merge">
-                            <i class="fa-solid fa-object-group"></i> Birleştir
+                            <i class="fa-solid fa-object-group"></i> <span data-i18n="pdf_tab_merge">Birleştir</span>
                         </button>
                         <button id="tab-pdf-split" class="pdf-mode-tab flex-1 py-2.5 px-3 rounded-xl font-medium text-xs transition-all text-gray-400 hover:text-white flex items-center justify-center gap-1.5" data-mode="split">
-                            <i class="fa-solid fa-scissors"></i> Sayfa Böl
+                            <i class="fa-solid fa-scissors"></i> <span data-i18n="pdf_tab_split">Sayfa Böl</span>
                         </button>
                         <button id="tab-pdf-text" class="pdf-mode-tab flex-1 py-2.5 px-3 rounded-xl font-medium text-xs transition-all text-gray-400 hover:text-white flex items-center justify-center gap-1.5" data-mode="text">
-                            <i class="fa-solid fa-file-lines"></i> Metin Çıkar
+                            <i class="fa-solid fa-file-lines"></i> <span data-i18n="pdf_tab_text">Metin Çıkar</span>
                         </button>
                     </div>
 
@@ -1286,12 +1294,12 @@
                             <div class="w-16 h-16 rounded-2xl bg-red-500/10 flex items-center justify-center mb-4 text-red-400">
                                 <i class="fa-solid fa-copy text-3xl"></i>
                             </div>
-                            <h3 class="text-xl font-bold text-white mb-2">Birleştirilecek PDF'leri Bırakın</h3>
-                            <p class="text-sm text-gray-500">Birden fazla PDF seçebilirsiniz (Sıralama otomatik korunur)</p>
+                            <h3 class="text-xl font-bold text-white mb-2" data-i18n="pdf_merge_drop_title">Birleştirilecek PDF'leri Bırakın</h3>
+                            <p class="text-sm text-gray-500" data-i18n="pdf_merge_drop_sub">Birden fazla PDF seçebilirsiniz (Sıralama otomatik korunur)</p>
                             <div id="pdf-merge-list" class="mt-4 w-full max-w-lg hidden flex flex-col gap-2"></div>
                         </div>
                         <button id="btn-pdf-merge-apply" class="w-full py-4 rounded-xl font-bold text-white bg-gradient-to-r from-red-600 to-rose-600 hover:shadow-[0_0_20px_rgba(239,68,68,0.4)] transition-all flex items-center justify-center gap-2">
-                            <i class="fa-solid fa-object-group"></i> <span>Tüm PDF'leri Tek Dosyada Birleştir</span>
+                            <i class="fa-solid fa-object-group"></i> <span data-i18n="pdf_merge_btn">Tüm PDF'leri Tek Dosyada Birleştir</span>
                         </button>
                     </div>
 
@@ -1303,24 +1311,24 @@
                             <div class="w-16 h-16 rounded-2xl bg-red-500/10 flex items-center justify-center mb-4 text-red-400">
                                 <i class="fa-solid fa-scissors text-3xl"></i>
                             </div>
-                            <h3 class="text-xl font-bold text-white mb-2">Bölünecek PDF Dosyasını Bırakın</h3>
-                            <p class="text-sm text-gray-500">Tek bir PDF dosyası seçin</p>
+                            <h3 class="text-xl font-bold text-white mb-2" data-i18n="pdf_split_drop_title">Bölünecek PDF Dosyasını Bırakın</h3>
+                            <p class="text-sm text-gray-500" data-i18n="pdf_split_drop_sub">Tek bir PDF dosyası seçin</p>
                             <div class="file-info hidden mt-6 w-full max-w-md bg-white/5 p-4 rounded-xl flex items-center justify-between" id="info-pdf-split">
                                 <div>
                                     <p class="file-info-name font-bold text-white text-sm" id="info-pdf-split-name">—</p>
                                     <p class="file-info-size text-xs text-gray-400" id="info-pdf-split-size">—</p>
                                 </div>
-                                <button class="text-xs text-red-400 hover:text-red-300 font-bold px-3 py-1 rounded-lg bg-red-500/10" id="btn-pdf-split-clear">Temizle</button>
+                                <button class="text-xs text-red-400 hover:text-red-300 font-bold px-3 py-1 rounded-lg bg-red-500/10" id="btn-pdf-split-clear" data-i18n="btn_clear">Temizle</button>
                             </div>
                         </div>
 
                         <div class="glass p-6 rounded-3xl flex flex-col gap-3">
-                            <label class="text-xs font-semibold uppercase tracking-wider text-gray-400 block">Çıkarılacak Sayfalar / Aralıklar:</label>
-                            <input type="text" id="pdf-split-pages" placeholder="Örn: 1-3, 5, 8-10 veya sadece 2-4"
+                            <label class="text-xs font-semibold uppercase tracking-wider text-gray-400 block" data-i18n="pdf_split_label">Çıkarılacak Sayfalar / Aralıklar:</label>
+                            <input type="text" id="pdf-split-pages" placeholder="Örn: 1-3, 5, 8-10 veya sadece 2-4" data-i18n="pdf_split_placeholder"
                                 class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-red-500">
-                            <p class="text-[11px] text-gray-500">Aralıklar virgülle ayrılabilir. Örnek: "1-5" (ilk 5 sayfa) veya "1,3,7".</p>
+                            <p class="text-[11px] text-gray-500" data-i18n="pdf_split_hint">Aralıklar virgülle ayrılabilir. Örnek: "1-5" (ilk 5 sayfa) veya "1,3,7".</p>
                             <button id="btn-pdf-split-apply" class="w-full py-4 rounded-xl font-bold text-white bg-gradient-to-r from-red-600 to-rose-600 hover:shadow-[0_0_20px_rgba(239,68,68,0.4)] transition-all flex items-center justify-center gap-2">
-                                <i class="fa-solid fa-scissors"></i> <span>Seçili Sayfaları Yeni PDF Olarak Çıkar</span>
+                                <i class="fa-solid fa-scissors"></i> <span data-i18n="pdf_split_btn">Seçili Sayfaları Yeni PDF Olarak Çıkar</span>
                             </button>
                         </div>
                     </div>
@@ -1333,30 +1341,30 @@
                             <div class="w-16 h-16 rounded-2xl bg-red-500/10 flex items-center justify-center mb-4 text-red-400">
                                 <i class="fa-solid fa-file-lines text-3xl"></i>
                             </div>
-                            <h3 class="text-xl font-bold text-white mb-2">Metni Çıkarılacak PDF'i Bırakın</h3>
-                            <p class="text-sm text-gray-500">Tüm sayfalardaki metinler dijital TXT formatına dönüştürülür</p>
+                            <h3 class="text-xl font-bold text-white mb-2" data-i18n="pdf_text_drop_title">Metni Çıkarılacak PDF'i Bırakın</h3>
+                            <p class="text-sm text-gray-500" data-i18n="pdf_text_drop_sub">Tüm sayfalardaki metinler dijital TXT formatına dönüştürülür</p>
                             <div class="file-info hidden mt-6 w-full max-w-md bg-white/5 p-4 rounded-xl flex items-center justify-between" id="info-pdf-text">
                                 <div>
                                     <p class="file-info-name font-bold text-white text-sm" id="info-pdf-text-name">—</p>
                                     <p class="file-info-size text-xs text-gray-400" id="info-pdf-text-size">—</p>
                                 </div>
-                                <button class="text-xs text-red-400 hover:text-red-300 font-bold px-3 py-1 rounded-lg bg-red-500/10" id="btn-pdf-text-clear">Temizle</button>
+                                <button class="text-xs text-red-400 hover:text-red-300 font-bold px-3 py-1 rounded-lg bg-red-500/10" id="btn-pdf-text-clear" data-i18n="btn_clear">Temizle</button>
                             </div>
                         </div>
 
                         <button id="btn-pdf-text-apply" class="w-full py-4 rounded-xl font-bold text-white bg-gradient-to-r from-red-600 to-rose-600 hover:shadow-[0_0_20px_rgba(239,68,68,0.4)] transition-all flex items-center justify-center gap-2">
-                            <i class="fa-solid fa-align-left"></i> <span>PDF'teki Metinleri Çıkar</span>
+                            <i class="fa-solid fa-align-left"></i> <span data-i18n="pdf_text_btn">PDF'teki Metinleri Çıkar</span>
                         </button>
 
                         <div id="pdf-text-result-box" class="hidden mt-2 p-4 rounded-2xl bg-black/40 border border-white/10 text-left flex flex-col gap-3">
                             <div class="flex items-center justify-between">
-                                <span class="text-xs font-bold text-red-400">Çıkarılan Metin Önizleme:</span>
+                                <span class="text-xs font-bold text-red-400" data-i18n="pdf_text_preview">Çıkarılan Metin Önizleme:</span>
                                 <div class="flex gap-2">
                                     <button id="btn-copy-pdf-text" class="text-xs text-gray-300 hover:text-white px-2.5 py-1 rounded bg-white/10 flex items-center gap-1">
-                                        <i class="fa-regular fa-copy"></i> Kopyala
+                                        <i class="fa-regular fa-copy"></i> <span data-i18n="btn_copy">Kopyala</span>
                                     </button>
                                     <button id="btn-download-pdf-text" class="text-xs text-red-300 hover:text-white px-2.5 py-1 rounded bg-red-500/20 flex items-center gap-1 font-bold">
-                                        <i class="fa-solid fa-download"></i> .txt İndir
+                                        <i class="fa-solid fa-download"></i> <span data-i18n="btn_download_txt">.txt İndir</span>
                                     </button>
                                 </div>
                             </div>
@@ -1375,21 +1383,21 @@
                         <div class="w-16 h-16 rounded-2xl bg-emerald-500/10 flex items-center justify-center mb-4 text-emerald-400">
                             <i class="fa-solid fa-sliders text-3xl"></i>
                         </div>
-                        <h3 class="text-xl font-bold text-white mb-2">Efekt Uygulanacak Ses veya Videoyu Bırakın</h3>
-                        <p class="text-sm text-gray-500">MP3, WAV, FLAC, M4A, MP4 desteklenir</p>
+                        <h3 class="text-xl font-bold text-white mb-2" data-i18n="fx_drop_title">Efekt Uygulanacak Ses veya Videoyu Bırakın</h3>
+                        <p class="text-sm text-gray-500" data-i18n="fx_drop_sub">MP3, WAV, FLAC, M4A, MP4 desteklenir</p>
                         <div class="file-info hidden mt-6 w-full max-w-md bg-white/5 p-4 rounded-xl flex items-center justify-between" id="info-audiofx">
                             <div>
                                 <p class="file-info-name font-bold text-white text-sm" id="info-audiofx-name">—</p>
                                 <p class="file-info-size text-xs text-gray-400" id="info-audiofx-size">—</p>
                             </div>
-                            <button class="text-xs text-red-400 hover:text-red-300 font-bold px-3 py-1 rounded-lg bg-red-500/10" id="btn-audiofx-clear">Temizle</button>
+                            <button class="text-xs text-red-400 hover:text-red-300 font-bold px-3 py-1 rounded-lg bg-red-500/10" id="btn-audiofx-clear" data-i18n="btn_clear">Temizle</button>
                         </div>
                     </div>
 
                     <div class="w-full glass p-6 rounded-3xl flex flex-col gap-6">
                         <!-- Presets Bar -->
                         <div>
-                            <label class="text-xs font-semibold uppercase tracking-wider text-gray-400 block mb-2.5">Hızlı Hazır Ayarlar (Presets)</label>
+                            <label class="text-xs font-semibold uppercase tracking-wider text-gray-400 block mb-2.5" data-i18n="fx_presets_label">Hızlı Hazır Ayarlar (Presets)</label>
                             <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5">
                                 <button type="button" id="btn-preset-slowed" class="py-2.5 px-3 rounded-xl border border-white/10 bg-white/5 hover:bg-emerald-500/20 hover:border-emerald-500 text-xs font-bold text-gray-200 transition-all">
                                     🐌 Slowed + Reverb
@@ -1410,27 +1418,27 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div class="bg-black/20 p-4 rounded-2xl border border-white/5">
                                 <div class="flex justify-between items-center mb-2">
-                                    <label class="text-xs font-semibold text-gray-300">Tempo / Hız:</label>
+                                    <label class="text-xs font-semibold text-gray-300" data-i18n="fx_tempo_label">Tempo / Hız:</label>
                                     <span id="label-fx-tempo" class="text-xs font-bold text-emerald-400">1.00x</span>
                                 </div>
                                 <input type="range" id="slider-fx-tempo" min="0.5" max="2.0" step="0.05" value="1.0" class="w-full accent-emerald-500 cursor-pointer">
                                 <div class="flex justify-between text-[10px] text-gray-500 mt-1">
-                                    <span>0.5x (Yavaş)</span>
+                                    <span>0.5x (<span data-i18n="fx_slow">Yavaş</span>)</span>
                                     <span>1.0x</span>
-                                    <span>2.0x (Hızlı)</span>
+                                    <span>2.0x (<span data-i18n="fx_fast">Hızlı</span>)</span>
                                 </div>
                             </div>
 
                             <div class="bg-black/20 p-4 rounded-2xl border border-white/5">
                                 <div class="flex justify-between items-center mb-2">
-                                    <label class="text-xs font-semibold text-gray-300">Perde / Pitch:</label>
+                                    <label class="text-xs font-semibold text-gray-300" data-i18n="fx_pitch_label">Perde / Pitch:</label>
                                     <span id="label-fx-pitch" class="text-xs font-bold text-emerald-400">1.00x</span>
                                 </div>
                                 <input type="range" id="slider-fx-pitch" min="0.7" max="1.5" step="0.05" value="1.0" class="w-full accent-emerald-500 cursor-pointer">
                                 <div class="flex justify-between text-[10px] text-gray-500 mt-1">
-                                    <span>0.7x (Kalın)</span>
+                                    <span>0.7x (<span data-i18n="fx_deep">Kalın</span>)</span>
                                     <span>1.0x</span>
-                                    <span>1.5x (İnce)</span>
+                                    <span>1.5x (<span data-i18n="fx_high">İnce</span>)</span>
                                 </div>
                             </div>
                         </div>
@@ -1442,8 +1450,8 @@
                                     <i class="fa-solid fa-water text-lg"></i>
                                 </div>
                                 <div>
-                                    <h4 class="text-sm font-bold text-white">Yankı & Reverb Efekti</h4>
-                                    <p class="text-xs text-gray-400">Uzaysal derinlik ve sinematik akustik ambiyans katar</p>
+                                    <h4 class="text-sm font-bold text-white" data-i18n="fx_reverb_title">Yankı & Reverb Efekti</h4>
+                                    <p class="text-xs text-gray-400" data-i18n="fx_reverb_desc">Uzaysal derinlik ve sinematik akustik ambiyans katar</p>
                                 </div>
                             </div>
                             <label class="relative inline-flex items-center cursor-pointer">
@@ -1453,7 +1461,7 @@
                         </div>
 
                         <button id="btn-audiofx-apply" class="w-full py-4 rounded-xl font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:shadow-[0_0_20px_rgba(16,185,129,0.4)] transition-all flex items-center justify-center gap-2">
-                            <i class="fa-solid fa-music"></i> <span>Efektli Sesi Üret ve İndir</span>
+                            <i class="fa-solid fa-music"></i> <span data-i18n="fx_apply_btn">Efektli Sesi Üret ve İndir</span>
                         </button>
                     </div>
                 </div>
@@ -1468,28 +1476,28 @@
                         <div class="w-16 h-16 rounded-2xl bg-sky-500/10 flex items-center justify-center mb-4 text-sky-400">
                             <i class="fa-solid fa-wave-square text-3xl"></i>
                         </div>
-                        <h3 class="text-xl font-bold text-white mb-2">Dip Gürültüsü Temizlenecek Medyayı Bırakın</h3>
-                        <p class="text-sm text-gray-500">Mikrofon hışırtısı, fan sesi, klima uğultusu temizlenir</p>
+                        <h3 class="text-xl font-bold text-white mb-2" data-i18n="noise_drop_title">Dip Gürültüsü Temizlenecek Medyayı Bırakın</h3>
+                        <p class="text-sm text-gray-500" data-i18n="noise_drop_sub">Mikrofon hışırtısı, fan sesi, klima uğultusu temizlenir</p>
                         <div class="file-info hidden mt-6 w-full max-w-md bg-white/5 p-4 rounded-xl flex items-center justify-between" id="info-noisecleaner">
                             <div>
                                 <p class="file-info-name font-bold text-white text-sm" id="info-noisecleaner-name">—</p>
                                 <p class="file-info-size text-xs text-gray-400" id="info-noisecleaner-size">—</p>
                             </div>
-                            <button class="text-xs text-red-400 hover:text-red-300 font-bold px-3 py-1 rounded-lg bg-red-500/10" id="btn-noisecleaner-clear">Temizle</button>
+                            <button class="text-xs text-red-400 hover:text-red-300 font-bold px-3 py-1 rounded-lg bg-red-500/10" id="btn-noisecleaner-clear" data-i18n="btn_clear">Temizle</button>
                         </div>
                     </div>
 
                     <div class="w-full glass p-6 rounded-3xl flex flex-col gap-5">
                         <div class="bg-black/20 p-4 rounded-2xl border border-white/5">
                             <div class="flex justify-between items-center mb-2">
-                                <label class="text-xs font-semibold text-gray-300">Gürültü Bastırma Gücü (Noise Reduction):</label>
+                                <label class="text-xs font-semibold text-gray-300" data-i18n="noise_strength_label">Gürültü Bastırma Gücü (Noise Reduction):</label>
                                 <span id="label-noise-strength" class="text-xs font-bold text-sky-400">12 dB (Önerilen)</span>
                             </div>
                             <input type="range" id="slider-noise-nr" min="6" max="30" step="2" value="12" class="w-full accent-sky-500 cursor-pointer">
                             <div class="flex justify-between text-[10px] text-gray-500 mt-1">
-                                <span>6 dB (Hafif)</span>
-                                <span>12 dB (Dengeli)</span>
-                                <span>24+ dB (Yoğun Filtre)</span>
+                                <span>6 dB (<span data-i18n="noise_light">Hafif</span>)</span>
+                                <span>12 dB (<span data-i18n="noise_balanced">Dengeli</span>)</span>
+                                <span>24+ dB (<span data-i18n="noise_heavy">Yoğun Filtre</span>)</span>
                             </div>
                         </div>
 
@@ -1499,8 +1507,8 @@
                                     <i class="fa-solid fa-microphone-lines text-lg"></i>
                                 </div>
                                 <div>
-                                    <h4 class="text-sm font-bold text-white">İnsan Sesi Netleştirme (Voice Focus)</h4>
-                                    <p class="text-xs text-gray-400">Derin bas uğultularını keser, konuşma frekanslarını öne çıkarır</p>
+                                    <h4 class="text-sm font-bold text-white" data-i18n="noise_voice_focus_title">İnsan Sesi Netleştirme (Voice Focus)</h4>
+                                    <p class="text-xs text-gray-400" data-i18n="noise_voice_focus_desc">Derin bas uğultularını keser, konuşma frekanslarını öne çıkarır</p>
                                 </div>
                             </div>
                             <label class="relative inline-flex items-center cursor-pointer">
@@ -1510,7 +1518,7 @@
                         </div>
 
                         <button id="btn-noisecleaner-apply" class="w-full py-4 rounded-xl font-bold text-white bg-gradient-to-r from-sky-600 to-blue-600 hover:shadow-[0_0_20px_rgba(14,165,233,0.4)] transition-all flex items-center justify-center gap-2">
-                            <i class="fa-solid fa-wand-magic-sparkles"></i> <span>Gürültüyü Temizle ve İndir</span>
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> <span data-i18n="noise_apply_btn">Gürültüyü Temizle ve İndir</span>
                         </button>
                     </div>
                 </div>
@@ -1543,8 +1551,8 @@
                         <i class="fa-solid fa-mobile-screen-button text-xl"></i>
                     </div>
                     <div>
-                        <h2 class="text-xl font-bold text-white">Çalışma Modu & Mobil Bağlantı</h2>
-                        <p class="text-xs text-gray-400">Mobil cihaz ve masaüstü bağlantı yapılandırması</p>
+                        <h2 class="text-xl font-bold text-white" data-i18n="device_modal_title">Çalışma Modu & Mobil Bağlantı</h2>
+                        <p class="text-xs text-gray-400" data-i18n="device_modal_subtitle">Mobil cihaz ve masaüstü bağlantı yapılandırması</p>
                     </div>
                 </div>
                 <button onclick="closeDeviceModeModal()" class="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white flex items-center justify-center transition-colors">
@@ -1558,13 +1566,13 @@
                 <div id="card-mode-pc" onclick="selectOperatingMode('pc')"
                     class="p-4 rounded-2xl border-2 border-purple-500 bg-purple-500/10 cursor-pointer transition-all flex flex-col justify-between">
                     <div class="flex items-center justify-between mb-2">
-                        <span class="text-xs font-bold uppercase tracking-wider text-purple-400">Önerilen</span>
+                        <span class="text-xs font-bold uppercase tracking-wider text-purple-400" data-i18n="badge_recommended">Önerilen</span>
                         <i class="fa-solid fa-circle-check text-purple-400" id="icon-check-pc"></i>
                     </div>
                     <div class="font-bold text-white text-base mb-1 flex items-center gap-2">
-                        <i class="fa-solid fa-desktop text-purple-400"></i> PC Sunucusu
+                        <i class="fa-solid fa-desktop text-purple-400"></i> <span data-i18n="mode_pc_title">PC Sunucusu</span>
                     </div>
-                    <p class="text-[11px] text-gray-400 leading-snug">
+                    <p class="text-[11px] text-gray-400 leading-snug" data-i18n="mode_pc_desc">
                         Tüm AI Upscale, 4K Video ve FFmpeg işlemlerini bilgisayarınızın GPU'su yürütür.
                     </p>
                 </div>
@@ -1573,13 +1581,13 @@
                 <div id="card-mode-local" onclick="selectOperatingMode('local')"
                     class="p-4 rounded-2xl border border-white/10 bg-white/5 cursor-pointer transition-all flex flex-col justify-between hover:border-white/20">
                     <div class="flex items-center justify-between mb-2">
-                        <span class="text-xs font-bold uppercase tracking-wider text-gray-400">Çevrimdışı</span>
+                        <span class="text-xs font-bold uppercase tracking-wider text-gray-400" data-i18n="badge_offline">Çevrimdışı</span>
                         <i class="fa-regular fa-circle text-gray-500" id="icon-check-local"></i>
                     </div>
                     <div class="font-bold text-white text-base mb-1 flex items-center gap-2">
-                        <i class="fa-solid fa-mobile text-pink-400"></i> Yerel Cihaz
+                        <i class="fa-solid fa-mobile text-pink-400"></i> <span data-i18n="mode_local_title">Yerel Cihaz</span>
                     </div>
-                    <p class="text-[11px] text-gray-400 leading-snug">
+                    <p class="text-[11px] text-gray-400 leading-snug" data-i18n="mode_local_desc">
                         Telefonunuzun işlemcisini kullanır. PC kapalıyken bile temel medya araçları çalışır.
                     </p>
                 </div>
@@ -1588,12 +1596,12 @@
             <!-- PC Server Connection Details (when Mode 1 active) -->
             <div id="section-pc-config" class="space-y-4">
                 <div class="bg-black/30 border border-white/10 rounded-2xl p-4">
-                    <label class="block text-xs font-semibold text-gray-300 mb-2">PC Sunucu Adresi (LAN / Wi-Fi veya Tünel):</label>
+                    <label class="block text-xs font-semibold text-gray-300 mb-2" data-i18n="label_pc_url">PC Sunucu Adresi (LAN / Wi-Fi veya Tünel):</label>
                     <div class="flex gap-2">
                         <input type="text" id="input-server-url" placeholder="http://192.168.1.105:8000"
                             class="flex-1 bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500 transition-colors">
                         <button onclick="testServerConnection()" class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5">
-                            <i class="fa-solid fa-plug"></i> Test Et
+                            <i class="fa-solid fa-plug"></i> <span data-i18n="btn_test_conn">Test Et</span>
                         </button>
                     </div>
                     <div id="connection-status-msg" class="mt-2 text-xs text-gray-400 flex items-center gap-2">
@@ -1603,9 +1611,9 @@
 
                 <div class="bg-purple-900/20 border border-purple-500/20 rounded-2xl p-4 text-xs text-purple-200 flex flex-col gap-2">
                     <div class="font-bold text-sm text-purple-300 flex items-center gap-2">
-                        <i class="fa-solid fa-qrcode"></i> Telefonda Açmak İçin:
+                        <i class="fa-solid fa-qrcode"></i> <span data-i18n="title_mobile_qr">Telefonda Açmak İçin:</span>
                     </div>
-                    <p class="text-gray-300">Aynı Wi-Fi ağındaki telefonunuzun tarayıcısına bu adresi yazın:</p>
+                    <p class="text-gray-300" data-i18n="desc_mobile_qr">Aynı Wi-Fi ağındaki telefonunuzun tarayıcısına bu adresi yazın:</p>
                     <div class="flex items-center justify-between bg-black/40 px-3 py-2 rounded-xl border border-purple-500/30">
                         <code id="display-lan-url" class="font-mono text-amber-300 text-xs">Yükleniyor...</code>
                         <button onclick="copyLanUrl()" class="text-purple-400 hover:text-purple-200 transition-colors">
@@ -1618,21 +1626,21 @@
             <!-- Local Mode Details (when Mode 2 active) -->
             <div id="section-local-config" class="hidden bg-black/30 border border-white/10 rounded-2xl p-4 space-y-3">
                 <div class="flex items-center gap-2 text-sm font-bold text-pink-400">
-                    <i class="fa-solid fa-microchip"></i> Telefon İşlemcisi Devrede
+                    <i class="fa-solid fa-microchip"></i> <span data-i18n="title_local_active">Telefon İşlemcisi Devrede</span>
                 </div>
-                <p class="text-xs text-gray-300 leading-relaxed">
+                <p class="text-xs text-gray-300 leading-relaxed" data-i18n="desc_local_active">
                     Bu modda görseller doğrudan telefonunuzun tarayıcısında (HTML5 Canvas) işlenir. Sunucu veya internet bağlantısına gerek yoktur.
                 </p>
                 <div class="grid grid-cols-2 gap-2 text-[11px] text-gray-400">
-                    <div class="p-2 rounded-lg bg-white/5">✅ Görsel Format Dönüştürme</div>
-                    <div class="p-2 rounded-lg bg-white/5">✅ Görsel Sıkıştırma</div>
-                    <div class="p-2 rounded-lg bg-white/5">✅ EXIF Temizleme</div>
-                    <div class="p-2 rounded-lg bg-white/5">⚠️ Ağır AI (PC Gerekir)</div>
+                    <div class="p-2 rounded-lg bg-white/5">✅ <span data-i18n="cap_img_convert">Görsel Format Dönüştürme</span></div>
+                    <div class="p-2 rounded-lg bg-white/5">✅ <span data-i18n="cap_img_compress">Görsel Sıkıştırma</span></div>
+                    <div class="p-2 rounded-lg bg-white/5">✅ <span data-i18n="cap_exif_clean">EXIF Temizleme</span></div>
+                    <div class="p-2 rounded-lg bg-white/5">⚠️ <span data-i18n="cap_heavy_ai">Ağır AI (PC Gerekir)</span></div>
                 </div>
             </div>
 
             <div class="mt-6 flex justify-end">
-                <button onclick="saveOperatingModeSettings()" class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-amber-500 text-white font-bold text-sm hover:shadow-[0_0_20px_rgba(168,85,247,0.4)] transition-all">
+                <button onclick="saveOperatingModeSettings()" class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-amber-500 text-white font-bold text-sm hover:shadow-[0_0_20px_rgba(168,85,247,0.4)] transition-all" data-i18n="btn_save_apply">
                     Kaydet ve Uygula
                 </button>
             </div>
