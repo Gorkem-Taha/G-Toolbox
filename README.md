@@ -107,6 +107,49 @@ Complete client-side and backend PDF suite powered by `pypdf`:
 Removes static hiss, fan whir, air conditioner hum, and room noise from microphone recordings or video audio using Adaptive Fast Fourier Transform filtering (`afftdn`) and Voice Focus bandpass.
 
 ---
+
+## 💻 System Hardware Requirements (Local AI Engines)
+
+Because **G-Toolbox runs 100% locally with zero cloud dependencies**, your processing speed and performance depend directly on your computer's hardware. The application dynamically routes workloads to **NVIDIA CUDA (GPU)** when available, with full fallback to **CPU (OpenMP / INT8)**.
+
+### 🧠 Local AI Models & Resource Footprint
+
+| AI Engine / Tool | Underlying Architecture | Model Weight Size | Min. Mode (CPU Fallback) | Recommended Mode (NVIDIA GPU) |
+| :--- | :--- | :--- | :--- | :--- |
+| **🌌 AI Image Upscaler** | Real-ESRGAN (`RRDBNet` / `x4plus` & `anime_6B`) | 67 MB / 18 MB | 8 GB RAM (CPU FP32, ~15–45s / img) | 4 GB+ VRAM GDDR6 (~1–3s / img) |
+| **🪄 Magic Eraser** | LaMa Inpainting (`big-lama` FFC-ResNet) | ~200 MB | 8 GB System RAM | 3 GB – 4 GB+ VRAM |
+| **✂️ Deep Background Remover** | U^2-Net / ONNX Runtime (`rembg`) | ~176 MB | 4 GB System RAM (~3–5s) | 2 GB+ VRAM (CUDA/DirectML) (~0.8s) |
+| **🎙️ AI Vocal & Stems Separator** | Meta Demucs v4 (`htdemucs` 4-stem / 2-stem) | ~300 MB | 12–16 GB RAM (Multi-core CPU, ~2–4 min) | 6 GB – 8 GB+ VRAM (CUDA, ~15–30s) |
+| **📝 Local Transcriber & Subtitles**| Faster-Whisper (`CTranslate2` base/small/med) | 150 MB – 1.5 GB | 8 GB RAM (INT8 Quantized) | 2 GB – 4 GB+ VRAM (FP16 Engine) |
+| **🔄 Media Converter & Video Tools** | FFmpeg Native Core + Libx264/Libx265 | Bundled | 4-Core CPU / 4 GB RAM | NVENC / Hardware Acceleration |
+
+---
+
+### 🟢 Minimum Hardware Requirements (CPU Mode)
+> Suitable for general file conversions, AES-256 encryption, background removal, and lightweight image editing. Heavier AI tasks (Demucs stem separation, 4K upscaling) will run on CPU threads at reduced speed.
+
+* **Operating System:** Windows 10 / 11 (64-bit) or Linux (Ubuntu 20.04+, Debian 11+, Fedora 36+, Arch)
+* **Processor (CPU):** Intel Core i3 / i5 (8th Gen+) or AMD Ryzen 3 / 5 (minimum 4 Cores / 8 Threads)
+* **System Memory (RAM):** 8 GB DDR4 (12 GB+ recommended if multitasking)
+* **Graphics (GPU):** Integrated Graphics (Intel UHD / Iris Xe / AMD Radeon Vega) or basic dedicated GPU
+* **Disk Storage:** 10 GB free space (SSD recommended for model weights & PyTorch cache)
+* **Network:** Required once during initial setup to download local AI models; 100% offline thereafter.
+
+### 🚀 Recommended / Maximum Performance (Dedicated GPU Acceleration)
+> Unlocks instant sub-second AI inference, 4K/8K real-time upscaling, rapid batch audio transcription, and seamless Demucs stem separation.
+
+* **Operating System:** Windows 10 / 11 (64-bit) or Modern Linux with NVIDIA Driver 535+
+* **Processor (CPU):** Intel Core i7 / i9 (10th Gen+) or AMD Ryzen 7 / 9 (3000 / 5000 / 7000+ Series, 6–8+ physical cores)
+* **System Memory (RAM):** 16 GB – 32 GB DDR4 / DDR5
+* **Dedicated GPU (VRAM):** **NVIDIA GeForce RTX 2060, RTX 3060, RTX 4060 or higher** with **6 GB to 12 GB+ GDDR6 VRAM**
+  * *CUDA 12.1+ and Tensor Core acceleration are automatically detected and utilized.*
+  * *GTX 1650/1660 Turing & Pascal cards are automatically supported via built-in FP16/FP32 NaN fallback.*
+* **Disk Storage:** 20 GB+ free space on an **NVMe M.2 SSD** (for high-throughput model deserialization and temporary 4K video I/O)
+
+> 💡 **VRAM Management Tip:** G-Toolbox features an on-demand **Smart VRAM Purger** (`/api/purge-vram`) accessible directly from the UI header to flush cached AI weights and immediately release VRAM for other GPU tasks.
+
+---
+
 ## 🖥️ Modern Desktop Experience (Windows & Linux)
 
 ### 🚀 Instant Splash Screen & Native Windows Integration
@@ -165,80 +208,6 @@ G-Toolbox features a universal **Dual-Mode System** for mobile phones and tablet
    * Native Android WebView wrapper with camera, media gallery permissions, and file chooser support.
    * **Automated Cloud Builds:** Automated GitHub Actions workflow (`.github/workflows/build-apk.yml`) builds fresh `.apk` packages on every commit.
 4. **Interactive Setup Wizard:** On first launch, the mobile onboarding modal guides users through choosing their preferred operating mode with automatic PC detection.
-
----
-
-## 💻 System Hardware Requirements (Local AI Engines)
-
-Because **G-Toolbox runs 100% locally with zero cloud dependencies**, your processing speed and performance depend directly on your computer's hardware. The application dynamically routes workloads to **NVIDIA CUDA (GPU)** when available, with full fallback to **CPU (OpenMP / INT8)**.
-
-### 🧠 Local AI Models & Resource Footprint
-
-| AI Engine / Tool | Underlying Architecture | Model Weight Size | Min. Mode (CPU Fallback) | Recommended Mode (NVIDIA GPU) |
-| :--- | :--- | :--- | :--- | :--- |
-| **🌌 AI Image Upscaler** | Real-ESRGAN (`RRDBNet` / `x4plus` & `anime_6B`) | 67 MB / 18 MB | 8 GB RAM (CPU FP32, ~15–45s / img) | 4 GB+ VRAM GDDR6 (~1–3s / img) |
-| **🪄 Magic Eraser** | LaMa Inpainting (`big-lama` FFC-ResNet) | ~200 MB | 8 GB System RAM | 3 GB – 4 GB+ VRAM |
-| **✂️ Deep Background Remover** | U^2-Net / ONNX Runtime (`rembg`) | ~176 MB | 4 GB System RAM (~3–5s) | 2 GB+ VRAM (CUDA/DirectML) (~0.8s) |
-| **🎙️ AI Vocal & Stems Separator** | Meta Demucs v4 (`htdemucs` 4-stem / 2-stem) | ~300 MB | 12–16 GB RAM (Multi-core CPU, ~2–4 min) | 6 GB – 8 GB+ VRAM (CUDA, ~15–30s) |
-| **📝 Local Transcriber & Subtitles**| Faster-Whisper (`CTranslate2` base/small/med) | 150 MB – 1.5 GB | 8 GB RAM (INT8 Quantized) | 2 GB – 4 GB+ VRAM (FP16 Engine) |
-| **🔄 Media Converter & Video Tools** | FFmpeg Native Core + Libx264/Libx265 | Bundled | 4-Core CPU / 4 GB RAM | NVENC / Hardware Acceleration |
-
----
-
-### 🟢 Minimum Hardware Requirements (CPU Mode)
-> Suitable for general file conversions, AES-256 encryption, background removal, and lightweight image editing. Heavier AI tasks (Demucs stem separation, 4K upscaling) will run on CPU threads at reduced speed.
-
-* **Operating System:** Windows 10 / 11 (64-bit) or Linux (Ubuntu 20.04+, Debian 11+, Fedora 36+, Arch)
-* **Processor (CPU):** Intel Core i3 / i5 (8th Gen+) or AMD Ryzen 3 / 5 (minimum 4 Cores / 8 Threads)
-* **System Memory (RAM):** 8 GB DDR4 (12 GB+ recommended if multitasking)
-* **Graphics (GPU):** Integrated Graphics (Intel UHD / Iris Xe / AMD Radeon Vega) or basic dedicated GPU
-* **Disk Storage:** 10 GB free space (SSD recommended for model weights & PyTorch cache)
-* **Network:** Required once during initial setup to download local AI models; 100% offline thereafter.
-
-### 🚀 Recommended / Maximum Performance (Dedicated GPU Acceleration)
-> Unlocks instant sub-second AI inference, 4K/8K real-time upscaling, rapid batch audio transcription, and seamless Demucs stem separation.
-
-* **Operating System:** Windows 10 / 11 (64-bit) or Modern Linux with NVIDIA Driver 535+
-* **Processor (CPU):** Intel Core i7 / i9 (10th Gen+) or AMD Ryzen 7 / 9 (3000 / 5000 / 7000+ Series, 6–8+ physical cores)
-* **System Memory (RAM):** 16 GB – 32 GB DDR4 / DDR5
-* **Dedicated GPU (VRAM):** **NVIDIA GeForce RTX 2060, RTX 3060, RTX 4060 or higher** with **6 GB to 12 GB+ GDDR6 VRAM**
-  * *CUDA 12.1+ and Tensor Core acceleration are automatically detected and utilized.*
-  * *GTX 1650/1660 Turing & Pascal cards are automatically supported via built-in FP16/FP32 NaN fallback.*
-* **Disk Storage:** 20 GB+ free space on an **NVMe M.2 SSD** (for high-throughput model deserialization and temporary 4K video I/O)
-
-> 💡 **VRAM Management Tip:** G-Toolbox features an on-demand **Smart VRAM Purger** (`/api/purge-vram`) accessible directly from the UI header to flush cached AI weights and immediately release VRAM for other GPU tasks.
-
----
-
-## 🛠️ Installation & Quick Start Guide
-
-### ⚡ Method 1: Portable Windows Desktop (`.exe` - Recommended)
-The fastest way to get started without configuring Python environments:
-1. Download or locate `G-Toolbox.exe` in the root folder.
-2. Double-click **`G-Toolbox.exe`**.
-3. The dark splash screen launches immediately (<30ms), boots the background AI engine, verifies model integrity, and opens the native GPU-accelerated window.
-
-### 🐍 Method 2: Automated Source Setup (`installation.bat`)
-For developers or custom environments running directly from source:
-
-1. **Clone or Download Repository:**
-   ```bash
-   git clone https://github.com/Gorkem-Taha/G-Toolbox.git
-   cd G-Toolbox
-   ```
-
-2. **Run the Automated Setup Script:**
-   Double-click `installation.bat` (or run it via terminal). It automatically creates an isolated Python Virtual Environment (`venv`) and prompts for your hardware acceleration preference:
-   * **`1) CPU Mode:`** Installs CPU-optimized PyTorch and `rembg[cpu]`.
-   * **`2) GPU Mode:`** Installs NVIDIA CUDA 12.1 PyTorch (`--index-url https://download.pytorch.org/whl/cu121`) and `rembg[gpu]`.
-   * **`3) Skip:`** Re-installs general dependencies from `requirements.txt`.
-
-3. **Launch the Application:**
-   * **Web & Mobile LAN Server:** Double-click `Start.bat` (accessible at `http://localhost:8000` on PC and `http://YOUR_PC_IP:8000` on mobile).
-   * **Native Window:** Double-click `launch_desktop.bat` or run `python desktop_app.py`.
-
-4. **Clean Uninstallation (`DELETE.bat`):**
-   * If you wish to completely remove G-Toolbox, double-click `DELETE.bat`. It purges the virtual environment and cleans deep user cache directories (`~/.u2net`, AI model weights), ensuring a 100% clean disk reclaim.
 
 ---
 
