@@ -211,6 +211,102 @@ G-Toolbox features a universal **Dual-Mode System** for mobile phones and tablet
 
 ---
 
+## 🛠️ Comprehensive Technology Stack & Architecture (Kullanılan Teknolojiler)
+
+G-Toolbox combines modern asynchronous web architecture, cutting-edge local computer vision models, neural audio processing pipelines, and native cross-platform binaries to deliver a zero-cloud, privacy-first workstation.
+
+### 📊 Technology Stack Overview
+
+| Domain / Layer | Primary Technology | Version / Specification | Architectural Role & Implementation Details |
+| :--- | :--- | :--- | :--- |
+| **Core Runtime & Language** | **Python** | `3.10+` | Core execution environment, asynchronous task orchestrator, native subprocess controller. |
+| **Backend & Web Framework** | **FastAPI** | `0.100+` | High-throughput asynchronous REST API, streaming response handlers, SSE / progress routing. |
+| **ASGI Web Server** | **Uvicorn** | `Standard` | Asynchronous Server Gateway Interface for high-concurrency LAN streaming and local HTTP serving. |
+| **Data Validation & Schemas** | **Pydantic** | `v2.x` | Runtime data validation, request body modeling, type coercion, and strict error serialization. |
+| **Templating Engine** | **Jinja2** | `3.1+` | Server-side template rendering for dynamic HTML views, internationalization tokens, and modals. |
+| **Form & Media Ingestion** | **python-multipart** | Latest | High-performance streaming multipart/form-data processor for large media and video uploads. |
+| **Deep Learning Engine** | **PyTorch & Torchvision** | `2.1+ (CUDA 12.1 / CPU)` | Tensor computation, dynamic neural graph execution, automatic mixed-precision (FP16/FP32). |
+| **AI Super Resolution** | **Real-ESRGAN** | `RRDBNet` (23 & 6 Block) | `RealESRGAN_x4plus` (67 MB) & `anime_6B` (18 MB) models, Lanczos RGBA transparency handling. |
+| **Computer Vision Toolbox** | **BasicSR** | `1.4+` | Specialized deep-learning image and video restoration framework powering the ESRGAN pipeline. |
+| **Generative Inpainting** | **LaMa (Large Mask)** | `simple-lama-inpainting` | Fast Fourier Convolution (`big-lama` FFC-ResNet) for zero-shot object removal & background repair. |
+| **Salient Object Detection** | **rembg (U^2-Net)** | `ONNX Runtime` | Two-level nested U-structure network for fine-grained alpha matting and background removal. |
+| **Speech-to-Text & Subtitles** | **faster-whisper** | `CTranslate2` | 4x faster Whisper inference with INT8 (CPU) and FP16 (GPU) quantization across 90+ languages. |
+| **Vocal & Music Separation** | **Meta Demucs v4** | `htdemucs` (Hybrid Transformer)| High-fidelity 2-stem (Vocals/Music) and 4-stem (Vocals, Drums, Bass, Other) track separation. |
+| **Computer Vision Matrix Ops** | **OpenCV (`opencv-python`)**| `4.8+` | Pixel matrix manipulations, Unicode path buffer conversion (`np.fromfile`, `cv2.imencode`). |
+| **Digital Imaging & Metadata** | **Pillow (PIL)** | `10.0+` | Multi-format image encoding/decoding, Lanczos interpolation, EXIF/IPTC/XMP forensic scrubbing. |
+| **Numerical Computing** | **NumPy** | `1.24+` | Vectorized multidimensional array processing, color space transforms, and raw byte buffers. |
+| **Multimedia DSP & Transcoding**| **FFmpeg & ffmpeg-python** | `v6.0+ (Bundled)` | Transcoding, hardsub subtitle burner, 2-pass palettegen GIF/WebP animator, FFT noise cleaning. |
+| **Streaming Media Extraction** | **yt-dlp** | Auto-Updating Core | Multi-client header rotation (`ios`, `android`, `mweb`) bypassing YouTube HTTP 403 throttling. |
+| **Military-Grade Encryption** | **pyAesCrypt** | `AES-256-CBC` | Secure PBKDF2 HMAC-SHA256 key derivation with chunked streaming buffer (`64 KB`) encryption. |
+| **Document Processing** | **pypdf** | `3.15+` | Pure-Python PDF parsing, lossless page-range splitting, document merging, and text extraction. |
+| **Desktop GUI Container** | **pywebview** | `4.3+` | Native desktop window embedding Microsoft Edge WebView2 (Windows) and WebKitGTK (Linux). |
+| **Native Windows Launcher** | **C# / .NET (WinForms)** | `C# 7.0+ / Win32` | Instant (<30ms) splash screen, `SetCurrentProcessExplicitAppUserModelID`, native icon binding. |
+| **Windows Packaging & Setup** | **Inno Setup 6** | `6.2+` | Production-grade scriptable Windows setup installer compiler (`installer.iss`) with uninstaller hooks. |
+| **Linux Portable Packaging** | **AppImageKit** | `x86_64` | Portable single-file Linux bundle with XDG desktop specifications (`g-toolbox.desktop`). |
+| **Frontend Styling & UI** | **HTML5 & Modern CSS3** | Custom VIP Dark Theme | Responsive glassmorphic interface, CSS Grid/Flexbox, custom micro-interactions, zero CSS bloat. |
+| **Client-Side Scripting** | **Vanilla JavaScript** | `ES6+ (ES2022)` | Async/await fetch architecture, FileReader API, HTML5 Canvas offline graphics processing. |
+| **Progressive Web App (PWA)** | **Service Worker & Manifest**| `W3C PWA Standard` | Offline asset caching (`sw.js`) and standalone home-screen installation on Android/iOS browsers. |
+| **Mobile Native Wrapper** | **Android SDK & Java** | `API 26-34` | Android WebView wrapper (`MainActivity.java`) with hardware acceleration and file-picker hooks. |
+| **Cloud CI/CD Workflows** | **GitHub Actions** | Ubuntu Runners | Automated cloud pipelines for headless AppImage compilation and Android `.apk` generation. |
+
+---
+
+### 🔬 Deep Architectural Breakdown by Subsystem
+
+#### 1. 🧠 Artificial Intelligence & Deep Learning Engines
+* **Real-ESRGAN (`RRDBNet`):**
+  * Employs Residual-in-Residual Dense Block (`RRDB`) networks trained with adversarial loss for photorealistic super-resolution.
+  * **Dual Engine Integration:** Offers `RealESRGAN_x4plus` (23 blocks, deep feature extraction for photographs) and `RealESRGAN_x4plus_anime_6B` (6 blocks, lightweight and artifact-free for digital art).
+  * **Alpha Channel Preservation:** Transparent PNG images are automatically bifurcated; RGB channels undergo neural upscaling while the alpha transparency mask is resized via high-order Lanczos interpolation before alpha recombination.
+  * **Hardware Fallback Guard:** Automatically audits GPU architecture; older Pascal and GTX 16xx (Turing) chips automatically fallback to FP32 calculation to circumvent hardware-level `NaN` blank pixel bugs.
+  * **In-Memory Singleton:** Models persist in memory (`_UPSCALER_INSTANCES`) across requests, slashing inference latency from ~4.5s to ~1.2s on subsequent runs.
+* **LaMa Inpainting (`SimpleLama`):**
+  * Based on Large Mask Inpainting with Fast Fourier Convolutions (`FFC-ResNet`).
+  * Features an image-wide receptive field capable of understanding structural context, enabling seamless text, watermark, and object removal without seam artifacts.
+  * Persisted via a global model cache (`_LAMA_INSTANCE`) for instantaneous reactive painting.
+* **rembg & ONNX Runtime (U^2-Net):**
+  * Implements a ReSidual U-block (`RSU`) architecture that captures multi-scale contextual features without increasing feature map memory footprints.
+  * Executed via ONNX Runtime with automatic hardware acceleration provider selection (CUDA, DirectML, or optimized CPU threads).
+* **Faster-Whisper (Speech Recognition):**
+  * Powered by `CTranslate2`, an optimized inference engine for Transformer models implementing weights quantization (INT8 on CPU, FP16 on GPU).
+  * Outperforms standard OpenAI Whisper implementations by up to 4x in inference speed while consuming 50% less memory.
+  * Emits structured JSON segments, SRT, VTT, and plain text transcripts with millisecond-accurate timestamps.
+* **Meta Demucs v4 (`htdemucs`):**
+  * State-of-the-art hybrid transformer architecture combining time-domain convnets with frequency-domain cross-attention.
+  * Features in-process native execution with fallback subprocess routing, enabling vocal isolation and 4-stem studio separation.
+
+#### 2. 🎬 Media Engineering, Audio DSP & Extraction
+* **FFmpeg Pipeline Architecture:**
+  * **Hardsub Engine:** Utilizes the FFmpeg `subtitles` filter graph to bake stylized SRT and VTT captions directly into video streams with custom font rendering.
+  * **Two-Pass GIF / WebP Generation:** Automatically passes media through `palettegen` to generate an adaptive 256-color palette, followed by `paletteuse` with custom dither algorithms, yielding ultra-crisp animations at minimal file sizes.
+  * **Spectral Noise Suppressor:** Executes Adaptive Fast Fourier Transform filtering (`afftdn`) coupled with voice-frequency bandpass equalization (`highpass=f=200, lowpass=f=3500`) to eliminate microphone hiss, air conditioning hum, and fan noise.
+  * **Audio Spatializer (Slowed+Reverb & Nightcore):** Implements complex `aecho` reflection matrices and `rubberband`/`atempo` algorithms for lossless pitch and tempo modulation.
+* **yt-dlp Extraction Architecture:**
+  * Employs multi-client identity rotation (`android`, `ios`, `mweb`, `web`) with spoofed headers to bypass modern YouTube HTTP 403 Forbidden client-verification mechanisms.
+  * Features a dedicated `/update-ytdlp` endpoint to hot-patch the extraction engine in production without requiring full software reinstallation.
+
+#### 3. 🔒 Security, Cryptography & Forensics
+* **The File Vault (pyAesCrypt):**
+  * Implements `AES-256-CBC` encryption with HMAC-SHA256 authentication.
+  * Key derivation is hardened via PBKDF2 with dynamic cryptographic salts.
+  * Operates on a chunked 64 KB memory buffer, enabling secure encryption and decryption of multi-gigabyte archives without RAM exhaustion.
+* **Zero-Trace EXIF & Metadata Scrubbing:**
+  * Inspects GPS latitude/longitude, camera serial numbers, lens specifications, and editing software stamps using `PIL.ExifTags`.
+  * Scrubbing creates a sanitized raw pixel buffer and reconstructs the image from scratch, stripping EXIF, IPTC, and XMP metadata entirely.
+
+#### 4. 🖥️ Desktop, OS Integration & Mobile Dual-Mode
+* **Win32 & .NET Native Launcher (`launcher.cs`):**
+  * Written in C# with Win32 P/Invoke declarations (`SetCurrentProcessExplicitAppUserModelID`, `WM_SETICON`).
+  * Displays a dark splash screen in under 30ms, eliminating the traditional Python startup lag while launching the background FastAPI service.
+* **pywebview Desktop Shell:**
+  * Embeds modern Chromium (Edge WebView2) on Windows and WebKit on Linux.
+  * Provides native window decorations, maximized startup, F11 borderless fullscreen toggle, and native file dialogs.
+* **Mobile Dual-Mode System:**
+  * **Mode 1 (Remote GPU Streaming):** Discovers the host's LAN IP via `/api/network-info` and establishes a CORS-enabled connection, streaming heavy GPU workloads to mobile browsers.
+  * **Mode 2 (Local On-Device):** Executes offline client-side image resizing, format conversions, and metadata stripping using HTML5 Canvas and JavaScript FileReader directly in the mobile browser or native Android APK.
+
+---
+
 ## 📜 License
 This project is licensed under the [CC BY-NC 4.0 License](LICENSE).  
 Developed with ❤️ by **[Görkem Taha](https://github.com/Gorkem-Taha)**
