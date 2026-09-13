@@ -86,11 +86,11 @@ G-Toolbox features a universal **Dual-Mode System** for mobile phones and tablet
 ## 📸 Screenshots & UI
 
 ### 🏠 The Workspace (Home)
-![G-Toolbox Homepage](/static/menu.png)
+![G-Toolbox Homepage](./static/menu.png?v=2)
 *The dark-themed, premium interface designed for maximum productivity.*
 
 ### 🎨 AI Studio & Tools
-![AI Tools](/static/bc_remove.png)
+![AI Tools](./static/bc_remove.png?v=2)
 *Real-time progress bars, dual-engine AI selection, and seamless hardware acceleration.*
 
 ---
