@@ -39,6 +39,8 @@ try:
 except ImportError:
     pass
 
+logger = logging.getLogger("uvicorn.error")
+
 
 def _safe_urlopen(req: urllib.request.Request, timeout: int = 60):
     """Safely opens a URL with SSL certificate fallback for clean Windows installations missing root CA certificates."""
@@ -65,53 +67,110 @@ def _safe_urlopen(req: urllib.request.Request, timeout: int = 60):
 
 GITHUB_REPO_URL = "https://github.com/Gorkem-Taha/G-Toolbox/archive/refs/heads/main.zip"
 
-try:
-    from simple_lama_inpainting import SimpleLama
-    LAMA_AVAILABLE = True
-except ImportError:
-    LAMA_AVAILABLE = False
+os.environ.setdefault("U2NET_HOME", str(Path.home() / ".u2net"))
+os.environ.setdefault("TORCH_HOME", str(Path.home() / ".cache" / "torch"))
 
+SimpleLama = None
+LAMA_AVAILABLE = False
 _LAMA_INSTANCE = None
+
+cv2 = None
+np = None
+torch = None
+RRDBNet = None
+RealESRGANer = None
+_UPSCALER_INSTANCE = None
+_UPSCALER_INSTANCES = {}
+
+
+def ensure_ai_runtime() -> bool:
+    """Dynamically verifies and imports AI frameworks (Torch, RealESRGAN, BasicSR, Rembg, LaMa, Whisper, Demucs).
+    Ensures hotfixes are applied and libraries installed during app runtime are immediately accessible without restart.
+    """
+    global torch, cv2, np, RRDBNet, RealESRGANer, SimpleLama, LAMA_AVAILABLE, rembg_remove, REMBG_AVAILABLE
+
+    # 0. Ensure runtime/Lib/site-packages is present in sys.path (critical for portable Python)
+    try:
+        runtime_sp = BASE_DIR / "runtime" / "Lib" / "site-packages"
+        if runtime_sp.exists() and str(runtime_sp) not in sys.path:
+            sys.path.insert(0, str(runtime_sp))
+    except Exception:
+        pass
+
+    # 1. Hotfix: basicsr requires torchvision.transforms.functional_tensor
+    try:
+        import torchvision.transforms.functional_tensor
+    except ImportError:
+        try:
+            import torchvision.transforms.functional as functional
+            sys.modules['torchvision.transforms.functional_tensor'] = functional
+        except Exception:
+            pass
+
+    # 2. PyTorch & RealESRGAN
+    if RealESRGANer is None or torch is None:
+        try:
+            import torch as _t
+            import cv2 as _c
+            import numpy as _n
+            from basicsr.archs.rrdbnet_arch import RRDBNet as _RRDBNet
+            from realesrgan import RealESRGANer as _RealESRGANer
+
+            torch = _t
+            cv2 = _c
+            np = _n
+            RRDBNet = _RRDBNet
+            RealESRGANer = _RealESRGANer
+            logger.info("✅ RealESRGAN & PyTorch runtime loaded successfully.")
+        except Exception as e:
+            logger.debug(f"AI upscaler dynamic load: {e}")
+
+    # 3. Rembg
+    if not REMBG_AVAILABLE or rembg_remove is None:
+        try:
+            from rembg import remove as _rembg_remove
+            rembg_remove = _rembg_remove
+            REMBG_AVAILABLE = True
+            logger.info("✅ Rembg runtime loaded successfully.")
+        except Exception as e:
+            logger.debug(f"Rembg dynamic load: {e}")
+
+    # 4. SimpleLama
+    if not LAMA_AVAILABLE or SimpleLama is None:
+        try:
+            from simple_lama_inpainting import SimpleLama as _SimpleLama
+            SimpleLama = _SimpleLama
+            LAMA_AVAILABLE = True
+            logger.info("✅ SimpleLama runtime loaded successfully.")
+        except Exception as e:
+            logger.debug(f"SimpleLama dynamic load: {e}")
+
+    return bool(torch and RealESRGANer)
+
+
+# Initial load attempt on server startup
+try:
+    ensure_ai_runtime()
+except Exception as _e:
+    logger.debug(f"Initial AI runtime check notice: {_e}")
+
+
 
 def get_lama_model():
     global _LAMA_INSTANCE
     if _LAMA_INSTANCE is None:
-        if not LAMA_AVAILABLE:
-            raise RuntimeError("simple-lama-inpainting library is not available.")
+        ensure_ai_runtime()
+        if not LAMA_AVAILABLE or SimpleLama is None:
+            raise RuntimeError("simple-lama-inpainting kütüphanesi henüz yüklü değil. Lütfen yapay zeka kurulumunu tamamlayın.")
         _LAMA_INSTANCE = SimpleLama()
     return _LAMA_INSTANCE
 
-try:
-    import cv2
-    import numpy as np
-    import torch
-    
-    # HOTFIX: basicsr requires torchvision.transforms.functional_tensor
-    # which was removed in newer versions of torchvision.
-    import sys
-    try:
-        import torchvision.transforms.functional_tensor
-    except ImportError:
-        import torchvision.transforms.functional as functional
-        sys.modules['torchvision.transforms.functional_tensor'] = functional
-    
-    from basicsr.archs.rrdbnet_arch import RRDBNet
-    from realesrgan import RealESRGANer
-except ImportError as e:
-    print(f"Warning: Image upscaling components could not be loaded. Reason: {e}")
-    cv2 = None
-    np = None
-    torch = None
-    RRDBNet = None
-    RealESRGANer = None
-
-_UPSCALER_INSTANCE = None
-_UPSCALER_INSTANCES = {}
 
 def get_upscaler(model_type: str = "general", force_fp32: bool = False):
     global _UPSCALER_INSTANCE, _UPSCALER_INSTANCES
+    ensure_ai_runtime()
     if RealESRGANer is None:
-        raise RuntimeError("realesrgan library or dependencies not installed.")
+        raise RuntimeError("realesrgan veya PyTorch henüz yüklü değil. Lütfen yapay zeka kurulumunu tamamlayın.")
 
     m_key = "anime" if "anime" in str(model_type).lower() else "general"
     cache_key = f"{m_key}_fp32" if force_fp32 else m_key
@@ -608,6 +667,7 @@ async def remove_background(
     x_task_id: str = Header(None)
 ):
     """Removes the background from images using the rembg AI model."""
+    ensure_ai_runtime()
     update_progress(x_task_id, 20, "File uploaded, initializing process...")
     uid = uuid.uuid4().hex[:8]
     safe_name = _safe_filename(file.filename)
@@ -670,11 +730,12 @@ async def magic_erase(
     x_task_id: str = Header(None)
 ):
     """Erases specified masked regions from an image using the LaMa inpainting model."""
+    ensure_ai_runtime()
     update_progress(x_task_id, 20, "File uploaded, initializing process...")
     if not LAMA_AVAILABLE:
         return JSONResponse(
             status_code=500,
-            content={"success": False, "message": "simple-lama-inpainting not installed or could not be initialized."}
+            content={"success": False, "message": "simple-lama-inpainting kütüphanesi henüz yüklü değil. Lütfen yapay zeka kurulumunu tamamlayın."}
         )
 
     uid = uuid.uuid4().hex[:8]
@@ -736,9 +797,10 @@ async def upscale_image(
     background_tasks: BackgroundTasks = None,
     x_task_id: str = Header(None)
 ):
+    ensure_ai_runtime()
     update_progress(x_task_id, 20, "Dosya yüklendi, işleme başlanıyor...")
     if RealESRGANer is None:
-        return JSONResponse(status_code=500, content={"success": False, "message": "realesrgan not installed."})
+        return JSONResponse(status_code=500, content={"success": False, "message": "realesrgan veya PyTorch henüz yüklü değil. Lütfen yapay zeka kurulumunu tamamlayın."})
     
     if scale not in [2, 4]:
         scale = 4
@@ -1077,7 +1139,41 @@ class SaveTaskRequest(BaseModel):
 
 
 def _open_native_save_dialog(initial_filename: str, file_ext: str = "") -> Optional[str]:
-    """Opens a native Windows Save As dialog on top of all windows."""
+    """Opens a native Windows Save As dialog on top of all windows without requiring Tkinter."""
+    # 1. Primary Method on Windows: WinForms SaveFileDialog via PowerShell (works on all Windows versions with zero Python dependencies)
+    if sys.platform == "win32":
+        try:
+            clean_ext = file_ext.lstrip(".")
+            filter_str = f"{clean_ext.upper()} Files (*.{clean_ext})|*.{clean_ext}|All Files (*.*)|*.*" if clean_ext else "All Files (*.*)|*.*"
+            safe_name = initial_filename.replace("'", "''")
+            ps_cmd = (
+                "[System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms') | Out-Null; "
+                "$f = New-Object System.Windows.Forms.SaveFileDialog; "
+                f"$f.FileName = '{safe_name}'; "
+                f"$f.Filter = '{filter_str}'; "
+                "$f.Title = 'G-Toolbox — Dosyayı Farklı Kaydet'; "
+                "$top = New-Object System.Windows.Forms.Form; "
+                "$top.TopMost = $true; "
+                "if ($f.ShowDialog($top) -eq [System.Windows.Forms.DialogResult]::OK) { "
+                "Write-Output $f.FileName "
+                "} else { Write-Output '__CANCELED__' }"
+            )
+            res = subprocess.run(
+                ["powershell", "-Sta", "-NoProfile", "-NonInteractive", "-Command", ps_cmd],
+                capture_output=True,
+                text=True,
+                timeout=180,
+                creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+            )
+            out_str = res.stdout.strip()
+            if out_str == "__CANCELED__":
+                return "CANCELED"
+            if out_str and os.path.isabs(out_str):
+                return out_str
+        except Exception as e:
+            logger.warning(f"PowerShell SaveFileDialog exception: {e}")
+
+    # 2. Secondary fallback: Tkinter (if available on standard Python distros)
     try:
         import tkinter as tk
         from tkinter import filedialog
@@ -1099,10 +1195,12 @@ def _open_native_save_dialog(initial_filename: str, file_ext: str = "") -> Optio
             title="G-Toolbox — Dosyayı Farklı Kaydet"
         )
         root.destroy()
-        return chosen_path if chosen_path else None
+        return chosen_path if chosen_path else "CANCELED"
     except Exception as e:
-        logger.error(f"Native save dialog error: {e}")
-        return None
+        logger.debug(f"Tkinter dialog fallback: {e}")
+
+    # If GUI dialog cannot be opened on this OS, return None to trigger browser stream download
+    return None
 
 
 @app.post("/api/save-task-file")
@@ -1120,8 +1218,10 @@ async def save_task_file(req: SaveTaskRequest):
     ext = Path(filepath).suffix
 
     chosen = await asyncio.to_thread(_open_native_save_dialog, filename, ext)
-    if not chosen:
+    if chosen == "CANCELED":
         return JSONResponse(content={"success": False, "canceled": True, "message": "Kaydetme iptal edildi."})
+    if not chosen:
+        return JSONResponse(content={"success": False, "canceled": False, "native_unsupported": True})
 
     try:
         shutil.copy2(filepath, chosen)
@@ -1143,8 +1243,10 @@ async def save_blob_file(
     """Saves uploaded blob directly to user-chosen destination via native Windows Save As dialog."""
     ext = Path(suggested_filename).suffix or Path(file.filename or "").suffix
     chosen = await asyncio.to_thread(_open_native_save_dialog, suggested_filename, ext)
-    if not chosen:
+    if chosen == "CANCELED":
         return JSONResponse(content={"success": False, "canceled": True, "message": "Kaydetme iptal edildi."})
+    if not chosen:
+        return JSONResponse(content={"success": False, "canceled": False, "native_unsupported": True})
 
     try:
         with open(chosen, "wb") as f_out:
@@ -1348,33 +1450,7 @@ def _download_ai_models_worker():
             _run_pip_step(["install", "realesrgan", "rembg", "simple-lama-inpainting", "faster-whisper", "demucs"], "AI yardımcı kütüphaneleri kuruluyor...", 22)
 
             # Dynamic re-import after installation
-            try:
-                import torch as _torch
-                torch = _torch
-                import cv2 as _cv2
-                cv2 = _cv2
-                import numpy as _np
-                np = _np
-                from basicsr.archs.rrdbnet_arch import RRDBNet as _RRDBNet
-                RRDBNet = _RRDBNet
-                from realesrgan import RealESRGANer as _RealESRGANer
-                RealESRGANer = _RealESRGANer
-            except Exception as mod_err:
-                logger.warning(f"Dynamic import of upscaler modules: {mod_err}")
-
-            try:
-                from rembg import remove as _rembg_remove
-                rembg_remove = _rembg_remove
-                REMBG_AVAILABLE = True
-            except Exception:
-                pass
-
-            try:
-                from simple_lama_inpainting import SimpleLama as _SimpleLama
-                SimpleLama = _SimpleLama
-                LAMA_AVAILABLE = True
-            except Exception:
-                pass
+            ensure_ai_runtime()
 
         # 2. RealESRGAN General Model (~67 MB)
         gen_path = BASE_DIR / "RealESRGAN_x4plus.pth"
@@ -1412,6 +1488,7 @@ def _download_ai_models_worker():
         else:
             _AI_INSTALL_PROGRESS["progress"] = max(_AI_INSTALL_PROGRESS["progress"], 98)
 
+        ensure_ai_runtime()
         _AI_INSTALL_PROGRESS["progress"] = 100
         _AI_INSTALL_PROGRESS["status"] = "done"
         _AI_INSTALL_PROGRESS["current_model"] = "Tüm Yapay Zekâ Modelleri Hazır!"
@@ -1784,6 +1861,7 @@ async def separate_audio(
     x_task_id: str = Header(None, alias="X-Task-ID")
 ):
     """Separates audio into vocals and instrumental (or 4 stems) using Demucs."""
+    ensure_ai_runtime()
     update_progress(x_task_id, 5, "Audio uploaded. Initializing Demucs AI...")
     safe_name = _safe_filename(file.filename)
     input_path = UPLOAD_DIR / f"{uuid.uuid4().hex}_{safe_name}"
@@ -1860,6 +1938,7 @@ _WHISPER_MODELS: dict[str, object] = {}
 
 def get_whisper_model(model_size: str = "base"):
     global _WHISPER_MODELS
+    ensure_ai_runtime()
     try:
         from faster_whisper import WhisperModel
     except ImportError:
@@ -1890,6 +1969,7 @@ async def transcribe_media(
     x_task_id: str = Header(None, alias="X-Task-ID")
 ):
     """Generates transcripts and subtitles from video or audio files using Faster-Whisper."""
+    ensure_ai_runtime()
     update_progress(x_task_id, 10, "Loading audio and initializing Faster-Whisper model...")
     safe_name = _safe_filename(file.filename)
     input_path = UPLOAD_DIR / f"{uuid.uuid4().hex}_{safe_name}"
