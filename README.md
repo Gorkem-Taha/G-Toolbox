@@ -162,7 +162,6 @@ Download official standalone binaries directly from [**GitHub Releases (v4.4.0)*
 | Platform / Package | File Name | Size | Target & Architecture |
 | :--- | :--- | :--- | :--- |
 | **🪟 Windows (Portable Launcher)** | [**`G-Toolbox.exe`**](https://github.com/Gorkem-Taha/G-Toolbox/releases/download/v4.4.0/G-Toolbox.exe) | ~31 KB | Zero-dependency smart portable launcher with auto-downloading Python 3.10 runtime & splash screen. |
-| **🪟 Windows (Full Bundle)** | [**`G-Toolbox-v4.4.0-Windows.zip`**](https://github.com/Gorkem-Taha/G-Toolbox/releases/download/v4.4.0/G-Toolbox-v4.4.0-Windows.zip) | ~77 MB | Complete offline bundle with automated virtual environment installer (`installation.bat`) and native launcher. |
 | **🐧 Linux (Portable)** | [**`G-Toolbox-x86_64.AppImage`**](https://github.com/Gorkem-Taha/G-Toolbox/releases/download/v4.4.0/G-Toolbox-x86_64.AppImage) | ~1.15 MB | Zero-installation, standalone portable executable for all modern distributions (Ubuntu, Debian, Fedora, Arch). |
 | **📱 Android (Mobile App)** | [**`G-Toolbox.apk`**](https://github.com/Gorkem-Taha/G-Toolbox/releases/download/v4.4.0/G-Toolbox.apk) | ~5.27 MB | Native WebView wrapper supporting Dual-Mode (PC GPU Remote Streaming + Standalone Offline Mode). |
 
@@ -288,15 +287,7 @@ When away from your desktop or traveling without an internet connection:
    - **Instant Base Startup:** All media tools, PDF editors, file vault encryption, and audio cleaners initialize immediately.
    - **Modular AI Weights:** Heavy AI models (Real-ESRGAN, LaMa, U2-Net) and neural network weights can be installed on-demand directly inside the app with a single click.
 
-#### 2. Automated Script Setup (`installation.bat`)
-For custom developer environments or existing Python installations:
-1. Run **`installation.bat`**. This script:
-   - Provisions an isolated `.venv` virtual environment.
-   - Pre-installs binary-safe wheels (`basicsr --no-deps`) to avoid MSVC C++ compilation failures.
-   - Installs all deep learning and media dependencies (`torch`, `torchvision`, `fastapi`, etc.).
-2. Double-click **`G-Toolbox.exe`** to launch.
-
-#### 3. Native Desktop Launcher Features
+#### 2. Native Desktop Launcher Features
 * **Zero-Dependency Bootstrap Engine:** Built-in download and setup engine that configures isolated portable Python 3.10 and Pip in under 1 minute.
 * **Instant Splash Screen (<30ms):** Launching `G-Toolbox.exe` immediately presents a sleek, dark-slate loading screen while the background FastAPI engine initializes.
 * **Automatic Windows Search Indexing:** On first run, the launcher automatically registers shortcuts in `%APPDATA%\Microsoft\Windows\Start Menu\Programs\G-Toolbox.lnk` and Registry `App Paths`. Pressing the `Windows` key and typing `G-Toolbox` finds and launches the app immediately.
@@ -362,9 +353,7 @@ G-Toolbox combines modern asynchronous web architecture, cutting-edge local comp
 | **Streaming Media Extraction** | **yt-dlp** | Auto-Updating Core | Multi-client header rotation (`ios`, `android`, `mweb`) bypassing YouTube HTTP 403 throttling. |
 | **Military-Grade Encryption** | **pyAesCrypt** | `AES-256-CBC` | Secure PBKDF2 HMAC-SHA256 key derivation with chunked streaming buffer (`64 KB`) encryption. |
 | **Document Processing** | **pypdf** | `3.15+` | Pure-Python PDF parsing, lossless page-range splitting, document merging, and text extraction. |
-| **Desktop GUI Container** | **pywebview** | `4.3+` | Native desktop window embedding Microsoft Edge WebView2 (Windows) and WebKitGTK (Linux). |
-| **Native Windows Launcher** | **C# / .NET (WinForms)** | `C# 7.0+ / Win32` | Instant (<30ms) splash screen, `SetCurrentProcessExplicitAppUserModelID`, native icon binding. |
-| **Windows Packaging & Setup** | **Inno Setup 6** | `6.2+` | Production-grade scriptable Windows setup installer compiler (`installer.iss`) with uninstaller hooks. |
+| **Native Windows Launcher & Installer** | **C# / .NET (WinForms)** | `Win32 / .NET 4.5+` | Zero-dependency portable Python 3.10 auto-downloader, pip setup, instant splash screen (<30ms), and AppUserModelID taskbar binding. |
 | **Linux Portable Packaging** | **AppImageKit** | `x86_64` | Portable single-file Linux bundle with XDG desktop specifications (`g-toolbox.desktop`). |
 | **Frontend Styling & UI** | **HTML5 & Modern CSS3** | Custom VIP Dark Theme | Responsive glassmorphic interface, CSS Grid/Flexbox, custom micro-interactions, zero CSS bloat. |
 | **Client-Side Scripting** | **Vanilla JavaScript** | `ES6+ (ES2022)` | Async/await fetch architecture, FileReader API, HTML5 Canvas offline graphics processing. |
