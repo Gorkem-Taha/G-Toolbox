@@ -44,4 +44,4 @@ sudo apt install -y libfuse2
 
 ---
 
-> 🌐 **Official GitHub Release Page:** [https://github.com/Gorkem-Taha/G-Toolbox/releases/tag/v4.3.0](https://github.com/Gorkem-Taha/G-Toolbox/releases/tag/v4.3.0)
+> 🌐 **Official GitHub Release Page:** [https://github.com/Gorkem-Taha/G-Toolbox/releases/tag/v4.4.0](https://github.com/Gorkem-Taha/G-Toolbox/releases/tag/v4.4.0)
