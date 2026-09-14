@@ -159,11 +159,12 @@ G-Toolbox is packaged to run seamlessly across Desktop (Windows, Linux) and Mobi
 
 Download official standalone binaries directly from [**GitHub Releases (v4.4.0)**](https://github.com/Gorkem-Taha/G-Toolbox/releases/tag/v4.4.0) or locate them in the local repository's `Releases/` directory:
 
-| Platform / Package | File Name | Size | Target & Architecture |
-| :--- | :--- | :--- | :--- |
-| **🪟 Windows (Portable Launcher)** | [**`G-Toolbox.exe`**](https://github.com/Gorkem-Taha/G-Toolbox/releases/download/v4.4.0/G-Toolbox.exe) | ~31 KB | Zero-dependency smart portable launcher with auto-downloading Python 3.10 runtime & splash screen. |
-| **🐧 Linux (Portable)** | [**`G-Toolbox-x86_64.AppImage`**](https://github.com/Gorkem-Taha/G-Toolbox/releases/download/v4.4.0/G-Toolbox-x86_64.AppImage) | ~1.15 MB | Zero-installation, standalone portable executable for all modern distributions (Ubuntu, Debian, Fedora, Arch). |
-| **📱 Android (Mobile App)** | [**`G-Toolbox.apk`**](https://github.com/Gorkem-Taha/G-Toolbox/releases/download/v4.4.0/G-Toolbox.apk) | ~5.27 MB | Native WebView wrapper supporting Dual-Mode (PC GPU Remote Streaming + Standalone Offline Mode). |
+| Platform / Package | File Name | Size | Target & Architecture | SHA-256 Checksum |
+| :--- | :--- | :--- | :--- | :--- |
+| **🪟 Windows (Full Bundle)** | [**`G-Toolbox-v4.4.0-Windows.zip`**](https://github.com/Gorkem-Taha/G-Toolbox/releases/download/v4.4.0/G-Toolbox-v4.4.0-Windows.zip) | ~1.01 MB | Standalone Portable Source & Launcher Bundle | `7F51447395AD027D2395A1380F6CCA94E03D538328E72170CC7468429C7D1D09` |
+| **🪟 Windows (Portable Launcher)** | [**`G-Toolbox.exe`**](https://github.com/Gorkem-Taha/G-Toolbox/releases/download/v4.4.0/G-Toolbox.exe) | ~34.0 KB | Win32 / .NET Smart Portable Launcher | `6B8B58B10F205BB0D83E396AFD7055A2806002DED999A4DC3C7E59FD2B151D36` |
+| **🐧 Linux (Portable)** | [**`G-Toolbox-x86_64.AppImage`**](https://github.com/Gorkem-Taha/G-Toolbox/releases/download/v4.4.0/G-Toolbox-x86_64.AppImage) | ~1.15 MB | `x86_64` Standalone Portable | `0F7BE770D1B8B5C988CD2ACCF49F6081CE169B4B43D9D23B7C015FA1BEBD3F91` |
+| **📱 Android (Mobile App)** | [**`G-Toolbox.apk`**](https://github.com/Gorkem-Taha/G-Toolbox/releases/download/v4.4.0/G-Toolbox.apk) | ~5.27 MB | `arm64-v8a / armeabi-v7a / x86_64` | `8F897B090C4D7B81FFF1B2CBB508DDD74A5DCCE84BFCC4A0ABB4519725DEEF8F` |
 
 ---
 
@@ -175,7 +176,7 @@ G-Toolbox provides first-class Linux support packaged as a single portable `AppI
 Download the binary directly from GitHub Releases or locate it in `Releases/`:
 ```bash
 # Download directly via wget (or copy from Releases/)
-wget https://github.com/Gorkem-Taha/G-Toolbox/releases/download/v4.3.0/G-Toolbox-x86_64.AppImage
+wget https://github.com/Gorkem-Taha/G-Toolbox/releases/download/v4.4.0/G-Toolbox-x86_64.AppImage
 
 # Make the AppImage executable
 chmod +x G-Toolbox-x86_64.AppImage
@@ -236,7 +237,7 @@ chmod +x scripts/build_appimage.sh
 The G-Toolbox Android application functions both as a mobile remote controller harnessing your PC's desktop GPU and as a standalone offline media studio.
 
 #### 1. Sideloading & Installing the APK
-1. Download [**`G-Toolbox.apk`**](https://github.com/Gorkem-Taha/G-Toolbox/releases/download/v4.3.0/G-Toolbox.apk) directly via your mobile browser, or transfer it from your PC via USB cable, Bluetooth, or local network.
+1. Download [**`G-Toolbox.apk`**](https://github.com/Gorkem-Taha/G-Toolbox/releases/download/v4.4.0/G-Toolbox.apk) directly via your mobile browser, or transfer it from your PC via USB cable, Bluetooth, or local network.
 2. Tap the downloaded `G-Toolbox.apk` file.
 3. If Android prompts a security warning:
    - Tap **"Settings" -> "Install Unknown Apps"**.
