@@ -11,6 +11,47 @@ using System.Windows.Forms;
 namespace GToolboxLauncher
 {
     // ═════════════════════════════════════════════════════════════════════════
+    // 0. ICON & ASSET HELPER (Crisp, High-Resolution Icon Loader)
+    // ═════════════════════════════════════════════════════════════════════════
+    internal static class IconHelper
+    {
+        public static void ApplyAppIcon(Form form, PictureBox picBox, string baseDir)
+        {
+            string icoPath = Path.Combine(baseDir, "static", "favicon.ico");
+            if (File.Exists(icoPath))
+            {
+                try { form.Icon = new Icon(icoPath); } catch { }
+            }
+            else
+            {
+                try { form.Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { }
+            }
+
+            if (picBox != null)
+            {
+                picBox.SizeMode = PictureBoxSizeMode.Zoom;
+                picBox.BackColor = Color.Transparent;
+                string pngPath = Path.Combine(baseDir, "static", "icon.png");
+                if (File.Exists(pngPath))
+                {
+                    try
+                    {
+                        using (Image img = Image.FromFile(pngPath))
+                        {
+                            picBox.Image = new Bitmap(img);
+                        }
+                    }
+                    catch { }
+                }
+                if (picBox.Image == null && form.Icon != null)
+                {
+                    try { picBox.Image = form.Icon.ToBitmap(); } catch { }
+                }
+            }
+        }
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
     // 1. SETUP / DOWNLOAD WIZARD FORM (Portable Python 3.10 & Runtime Engine)
     // ═════════════════════════════════════════════════════════════════════════
     public class SetupForm : Form
@@ -44,12 +85,9 @@ namespace GToolboxLauncher
             this.ShowInTaskbar = true;
             this.BackColor = Color.FromArgb(13, 17, 23); // Dark slate GitHub style
 
-            // Load icon if available
-            string icoPath = Path.Combine(baseDir, "static", "favicon.ico");
-            if (File.Exists(icoPath))
-            {
-                try { this.Icon = new Icon(icoPath); } catch { }
-            }
+            // Enable double buffering and optimize painting to prevent stutter and lag
+            this.SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint, true);
+            this.DoubleBuffered = true;
 
             // Custom Paint for border & gradient glow
             this.Paint += (s, e) =>
@@ -72,12 +110,13 @@ namespace GToolboxLauncher
                 }
             };
 
-            // Icon
+            // Icon PictureBox setup (crisp display)
             picIcon = new PictureBox();
             picIcon.Size = new Size(52, 52);
             picIcon.Location = new Point(28, 26);
-            picIcon.SizeMode = PictureBoxSizeMode.StretchImage;
-            if (this.Icon != null) picIcon.Image = this.Icon.ToBitmap();
+            picIcon.SizeMode = PictureBoxSizeMode.Zoom;
+            picIcon.BackColor = Color.Transparent;
+            IconHelper.ApplyAppIcon(this, picIcon, baseDir);
             this.Controls.Add(picIcon);
 
             // Title
@@ -234,12 +273,20 @@ namespace GToolboxLauncher
                 string pyUrl = "https://www.python.org/ftp/python/3.10.11/python-3.10.11-embed-amd64.zip";
                 using (WebClient client = new WebClient())
                 {
+                    long lastProgressTick = 0;
+                    int lastPct = -1;
                     client.DownloadProgressChanged += (s, e) =>
                     {
-                        double mbReceived = e.BytesReceived / 1048576.0;
-                        double mbTotal = e.TotalBytesToReceive > 0 ? e.TotalBytesToReceive / 1048576.0 : 8.2;
-                        string detail = string.Format("İndirilen: {0:F1} MB / {1:F1} MB (%{2})", mbReceived, mbTotal, e.ProgressPercentage);
-                        UpdateUI(null, detail, e.ProgressPercentage, ProgressBarStyle.Continuous);
+                        long now = Environment.TickCount;
+                        if (e.ProgressPercentage != lastPct && (now - lastProgressTick > 80 || e.ProgressPercentage == 100))
+                        {
+                            lastProgressTick = now;
+                            lastPct = e.ProgressPercentage;
+                            double mbReceived = e.BytesReceived / 1048576.0;
+                            double mbTotal = e.TotalBytesToReceive > 0 ? e.TotalBytesToReceive / 1048576.0 : 8.2;
+                            string detail = string.Format("İndirilen: {0:F1} MB / {1:F1} MB (%{2})", mbReceived, mbTotal, e.ProgressPercentage);
+                            UpdateUI(null, detail, e.ProgressPercentage, ProgressBarStyle.Continuous);
+                        }
                     };
 
                     client.DownloadFile(new Uri(pyUrl), zipPath);
@@ -287,15 +334,17 @@ namespace GToolboxLauncher
                 // ── STEP 4: Install Core Dependencies ───────────────────
                 UpdateUI("4/4: Temel motor paketleri yükleniyor...", "FastAPI, WebView, Medya Araçları ve Bağımlılıklar (1-2 dk)...", 0, ProgressBarStyle.Marquee);
 
-                string corePackages = "fastapi uvicorn python-multipart jinja2 pydantic ffmpeg-python yt-dlp Pillow pyAesCrypt pypdf pywebview opencv-python numpy aiofiles psutil --no-warn-script-location";
+                string corePackages = "fastapi uvicorn python-multipart jinja2 pydantic ffmpeg-python yt-dlp Pillow pyAesCrypt pypdf pywebview opencv-python numpy aiofiles psutil --no-warn-script-location --prefer-binary";
                 RunProcess(pythonExe, "-m pip install " + corePackages, runtimeDir);
 
                 if (installAi)
                 {
-                    UpdateUI("4/4+: Yapay Zekâ Motoru kuruluyor...", "PyTorch CPU ve AI bileşenleri yükleniyor (~250 MB)...", 0, ProgressBarStyle.Marquee);
-                    RunProcess(pythonExe, "-m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu --no-warn-script-location", runtimeDir);
-                    RunProcess(pythonExe, "-m pip install basicsr --no-deps --no-warn-script-location", runtimeDir);
-                    RunProcess(pythonExe, "-m pip install realesrgan rembg simple-lama-inpainting faster-whisper demucs --no-warn-script-location", runtimeDir);
+                    UpdateUI("4/4+: Yapay Zekâ Motoru kuruluyor (PyTorch)...", "PyTorch CPU bileşenleri indiriliyor (~250 MB)...", 0, ProgressBarStyle.Marquee);
+                    RunProcess(pythonExe, "-m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu --no-warn-script-location --prefer-binary", runtimeDir);
+                    UpdateUI("4/4+: Yapay Zekâ Motoru kuruluyor (BasicSR)...", "BasicSR mimarisi yapılandırılıyor...", 0, ProgressBarStyle.Marquee);
+                    RunProcess(pythonExe, "-m pip install basicsr --no-deps --no-warn-script-location --prefer-binary", runtimeDir);
+                    UpdateUI("4/4+: Yapay Zekâ Motoru kuruluyor (Modüller)...", "RealESRGAN, Rembg, LaMa, Whisper, Demucs yükleniyor...", 0, ProgressBarStyle.Marquee);
+                    RunProcess(pythonExe, "-m pip install realesrgan rembg simple-lama-inpainting faster-whisper demucs --no-warn-script-location --prefer-binary", runtimeDir);
                 }
 
                 // ── STEP 5: Finished! ───────────────────────────────────
@@ -338,17 +387,55 @@ namespace GToolboxLauncher
             psi.RedirectStandardOutput = true;
             psi.WindowStyle = ProcessWindowStyle.Hidden;
 
-            using (Process p = Process.Start(psi))
+            using (Process p = new Process())
             {
-                if (p != null)
+                p.StartInfo = psi;
+                System.Text.StringBuilder errBuffer = new System.Text.StringBuilder();
+                System.Text.StringBuilder outBuffer = new System.Text.StringBuilder();
+
+                p.OutputDataReceived += (s, e) =>
                 {
-                    string stdout = p.StandardOutput.ReadToEnd();
-                    string stderr = p.StandardError.ReadToEnd();
-                    p.WaitForExit(600000); // 10 minutes timeout
-                    if (p.ExitCode != 0 && !string.IsNullOrEmpty(stderr) && (stderr.Contains("ERROR:") || stderr.Contains("Traceback")))
+                    if (e.Data != null)
                     {
-                        throw new Exception("İşlem hatası (kod " + p.ExitCode + "):\n" + stderr);
+                        outBuffer.AppendLine(e.Data);
+                        string line = e.Data.Trim();
+                        if (line.Length > 0 && !line.StartsWith("["))
+                        {
+                            string shortLine = line.Length > 60 ? line.Substring(0, 57) + "..." : line;
+                            UpdateUI(null, shortLine, -1, ProgressBarStyle.Marquee);
+                        }
                     }
+                };
+
+                p.ErrorDataReceived += (s, e) =>
+                {
+                    if (e.Data != null)
+                    {
+                        errBuffer.AppendLine(e.Data);
+                        string line = e.Data.Trim();
+                        if (line.Length > 0 && !line.StartsWith("["))
+                        {
+                            string shortLine = line.Length > 60 ? line.Substring(0, 57) + "..." : line;
+                            UpdateUI(null, shortLine, -1, ProgressBarStyle.Marquee);
+                        }
+                    }
+                };
+
+                p.Start();
+                p.BeginOutputReadLine();
+                p.BeginErrorReadLine();
+
+                // 15 minutes timeout for slow secondary laptops
+                if (!p.WaitForExit(900000))
+                {
+                    try { p.Kill(); } catch { }
+                    throw new Exception("İşlem zaman aşımına uğradı (15 dk): " + exe);
+                }
+
+                string stderr = errBuffer.ToString();
+                if (p.ExitCode != 0 && !string.IsNullOrEmpty(stderr) && (stderr.Contains("ERROR:") || stderr.Contains("Traceback") || stderr.Contains("Fatal error:")))
+                {
+                    throw new Exception("İşlem hatası (kod " + p.ExitCode + "):\n" + stderr);
                 }
             }
         }
@@ -402,11 +489,8 @@ namespace GToolboxLauncher
             this.ShowInTaskbar = true;
             this.BackColor = Color.FromArgb(13, 17, 23);
 
-            string icoPath = Path.Combine(baseDir, "static", "favicon.ico");
-            if (File.Exists(icoPath))
-            {
-                try { this.Icon = new Icon(icoPath); } catch { }
-            }
+            this.SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint, true);
+            this.DoubleBuffered = true;
 
             this.Paint += (s, e) =>
             {
@@ -431,8 +515,9 @@ namespace GToolboxLauncher
             picIcon = new PictureBox();
             picIcon.Size = new Size(54, 54);
             picIcon.Location = new Point(28, 30);
-            picIcon.SizeMode = PictureBoxSizeMode.StretchImage;
-            if (this.Icon != null) picIcon.Image = this.Icon.ToBitmap();
+            picIcon.SizeMode = PictureBoxSizeMode.Zoom;
+            picIcon.BackColor = Color.Transparent;
+            IconHelper.ApplyAppIcon(this, picIcon, baseDir);
             this.Controls.Add(picIcon);
 
             lblTitle = new Label();

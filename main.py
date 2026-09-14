@@ -1228,25 +1228,95 @@ def check_ai_models_status() -> dict:
     }
 
 
+def _run_pip_step(args: list, step_label: str, pct: int):
+    """Executes a pip command safely with timeout and live progress reporting."""
+    global _AI_INSTALL_PROGRESS
+    _AI_INSTALL_PROGRESS["current_model"] = step_label
+    _AI_INSTALL_PROGRESS["progress"] = pct
+    py_exe = sys.executable
+    cmd = [py_exe, "-m", "pip"] + args + ["--no-input", "--no-warn-script-location", "--prefer-binary"]
+    try:
+        proc = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            bufsize=1,
+            creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+        )
+        try:
+            out, err = proc.communicate(timeout=600)
+            if proc.returncode != 0:
+                logger.warning(f"Pip command warning ({step_label}): {err[:200] if err else ''}")
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            logger.error(f"Pip command timed out: {step_label}")
+    except Exception as ex:
+        logger.warning(f"Pip execution error ({step_label}): {ex}")
+
+
+def _download_chunked_file(url: str, dest_path: Path, expected_min_size: int, pct_start: int, pct_end: int, label: str):
+    """Downloads large model weights in chunks with real-time byte progress updates."""
+    global _AI_INSTALL_PROGRESS
+    tmp_path = dest_path.with_suffix(dest_path.suffix + ".tmp")
+    if tmp_path.exists():
+        try:
+            tmp_path.unlink()
+        except Exception:
+            pass
+
+    req = urllib.request.Request(
+        url,
+        headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"}
+    )
+    with urllib.request.urlopen(req, timeout=45) as resp:
+        content_len = resp.headers.get("Content-Length")
+        total_size = int(content_len) if content_len and content_len.isdigit() else 0
+        total_mb = total_size / (1024 * 1024) if total_size > 0 else 0
+        downloaded = 0
+        chunk_size = 512 * 1024  # 512 KB chunks
+
+        with open(tmp_path, "wb") as f:
+            while True:
+                chunk = resp.read(chunk_size)
+                if not chunk:
+                    break
+                f.write(chunk)
+                downloaded += len(chunk)
+                dl_mb = downloaded / (1024 * 1024)
+
+                if total_size > 0:
+                    ratio = min(1.0, downloaded / total_size)
+                    curr_pct = int(pct_start + ratio * (pct_end - pct_start))
+                    _AI_INSTALL_PROGRESS["current_model"] = f"{label} ({dl_mb:.1f} / {total_mb:.1f} MB - %{int(ratio * 100)})"
+                    _AI_INSTALL_PROGRESS["progress"] = min(99, max(pct_start, curr_pct))
+                else:
+                    _AI_INSTALL_PROGRESS["current_model"] = f"{label} ({dl_mb:.1f} MB indirildi...)"
+
+    if tmp_path.stat().st_size < expected_min_size:
+        actual_size = tmp_path.stat().st_size
+        try:
+            tmp_path.unlink()
+        except Exception:
+            pass
+        raise RuntimeError(f"{label} indirmesi eksik veya bağlantı koptu ({actual_size} bytes).")
+
+    tmp_path.replace(dest_path)
+
+
 def _download_ai_models_worker():
     global _AI_INSTALL_PROGRESS, RealESRGANer, SimpleLama, LAMA_AVAILABLE, rembg_remove, REMBG_AVAILABLE, torch, cv2, np, RRDBNet
     _AI_INSTALL_PROGRESS["status"] = "downloading"
     _AI_INSTALL_PROGRESS["error"] = None
 
     try:
-        # Check and install python AI libraries if missing
+        # 1. Check and install python AI libraries if missing
         if torch is None or RealESRGANer is None or not REMBG_AVAILABLE:
-            _AI_INSTALL_PROGRESS["current_model"] = "Yapay Zeka kütüphaneleri kuruluyor (PyTorch & RealESRGAN)..."
-            _AI_INSTALL_PROGRESS["progress"] = 5
-            py_exe = sys.executable
-            # 1. PyTorch CPU
-            subprocess.run([py_exe, "-m", "pip", "install", "torch", "torchvision", "--index-url", "https://download.pytorch.org/whl/cpu", "--no-warn-script-location"], check=False)
-            # 2. basicsr (installed with --no-deps to bypass distutils/C++ build failure)
-            subprocess.run([py_exe, "-m", "pip", "install", "basicsr", "--no-deps", "--no-warn-script-location"], check=False)
-            # 3. other AI dependencies
-            subprocess.run([py_exe, "-m", "pip", "install", "realesrgan", "rembg", "simple-lama-inpainting", "faster-whisper", "demucs", "--no-warn-script-location"], check=False)
+            _run_pip_step(["install", "torch", "torchvision", "--index-url", "https://download.pytorch.org/whl/cpu"], "PyTorch CPU kuruluyor (~250 MB, 1-3 dk)...", 5)
+            _run_pip_step(["install", "basicsr", "--no-deps"], "BasicSR mimarisi kuruluyor...", 15)
+            _run_pip_step(["install", "realesrgan", "rembg", "simple-lama-inpainting", "faster-whisper", "demucs"], "AI yardımcı kütüphaneleri kuruluyor...", 22)
 
-            # Hotfix dynamic re-import
+            # Dynamic re-import after installation
             try:
                 import torch as _torch
                 torch = _torch
@@ -1259,7 +1329,7 @@ def _download_ai_models_worker():
                 from realesrgan import RealESRGANer as _RealESRGANer
                 RealESRGANer = _RealESRGANer
             except Exception as mod_err:
-                logger.warning(f"Failed to dynamically load upscaler modules: {mod_err}")
+                logger.warning(f"Dynamic import of upscaler modules: {mod_err}")
 
             try:
                 from rembg import remove as _rembg_remove
@@ -1275,61 +1345,45 @@ def _download_ai_models_worker():
             except Exception:
                 pass
 
+        # 2. RealESRGAN General Model (~67 MB)
         gen_path = BASE_DIR / "RealESRGAN_x4plus.pth"
         if not gen_path.exists() or gen_path.stat().st_size < 60 * 1024 * 1024:
-            _AI_INSTALL_PROGRESS["current_model"] = "Real-ESRGAN General (67 MB)"
-            _AI_INSTALL_PROGRESS["progress"] = 10
             url = "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth"
-            tmp = BASE_DIR / "RealESRGAN_x4plus.pth.tmp"
-            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-            with urllib.request.urlopen(req, timeout=180) as resp, open(tmp, "wb") as f:
-                shutil.copyfileobj(resp, f)
-            tmp.replace(gen_path)
+            _download_chunked_file(url, gen_path, 60 * 1024 * 1024, 28, 48, "Real-ESRGAN General")
+        else:
+            _AI_INSTALL_PROGRESS["progress"] = max(_AI_INSTALL_PROGRESS["progress"], 48)
 
-        _AI_INSTALL_PROGRESS["progress"] = 30
-
+        # 3. RealESRGAN Anime Model (~18 MB)
         ani_path = BASE_DIR / "RealESRGAN_x4plus_anime_6B.pth"
         if not ani_path.exists() or ani_path.stat().st_size < 15 * 1024 * 1024:
-            _AI_INSTALL_PROGRESS["current_model"] = "Real-ESRGAN Anime (18 MB)"
             url = "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.2.4/RealESRGAN_x4plus_anime_6B.pth"
-            tmp = BASE_DIR / "RealESRGAN_x4plus_anime_6B.pth.tmp"
-            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-            with urllib.request.urlopen(req, timeout=180) as resp, open(tmp, "wb") as f:
-                shutil.copyfileobj(resp, f)
-            tmp.replace(ani_path)
+            _download_chunked_file(url, ani_path, 15 * 1024 * 1024, 48, 62, "Real-ESRGAN Anime")
+        else:
+            _AI_INSTALL_PROGRESS["progress"] = max(_AI_INSTALL_PROGRESS["progress"], 62)
 
-        _AI_INSTALL_PROGRESS["progress"] = 50
-
-        # LaMa Inpainting Model (~208 MB)
+        # 4. LaMa Inpainting Model (~208 MB)
         lama_dir = Path.home() / ".cache" / "torch" / "hub" / "checkpoints"
         lama_dir.mkdir(parents=True, exist_ok=True)
         lama_path = lama_dir / "big-lama.pt"
         if not lama_path.exists() or lama_path.stat().st_size < 180 * 1024 * 1024:
-            _AI_INSTALL_PROGRESS["current_model"] = "LaMa Nesne Silici (208 MB)"
             url = "https://github.com/enesmsahin/simple-lama-inpainting/releases/download/v0.1.0/big-lama.pt"
-            tmp = lama_dir / "big-lama.pt.tmp"
-            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-            with urllib.request.urlopen(req, timeout=360) as resp, open(tmp, "wb") as f:
-                shutil.copyfileobj(resp, f)
-            tmp.replace(lama_path)
+            _download_chunked_file(url, lama_path, 180 * 1024 * 1024, 62, 82, "LaMa Nesne Silici")
+        else:
+            _AI_INSTALL_PROGRESS["progress"] = max(_AI_INSTALL_PROGRESS["progress"], 82)
 
-        _AI_INSTALL_PROGRESS["progress"] = 75
-
+        # 5. U2-Net Background Remover Model (~176 MB)
         u2_dir = Path.home() / ".u2net"
         u2_dir.mkdir(parents=True, exist_ok=True)
         u2_path = u2_dir / "u2net.onnx"
         if not u2_path.exists() or u2_path.stat().st_size < 160 * 1024 * 1024:
-            _AI_INSTALL_PROGRESS["current_model"] = "U2-Net Arka Plan Kaldırma (176 MB)"
             url = "https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2net.onnx"
-            tmp = u2_dir / "u2net.onnx.tmp"
-            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-            with urllib.request.urlopen(req, timeout=300) as resp, open(tmp, "wb") as f:
-                shutil.copyfileobj(resp, f)
-            tmp.replace(u2_path)
+            _download_chunked_file(url, u2_path, 160 * 1024 * 1024, 82, 98, "U2-Net Arka Plan")
+        else:
+            _AI_INSTALL_PROGRESS["progress"] = max(_AI_INSTALL_PROGRESS["progress"], 98)
 
         _AI_INSTALL_PROGRESS["progress"] = 100
         _AI_INSTALL_PROGRESS["status"] = "done"
-        _AI_INSTALL_PROGRESS["current_model"] = "Tüm Modeller Hazır!"
+        _AI_INSTALL_PROGRESS["current_model"] = "Tüm Yapay Zekâ Modelleri Hazır!"
     except Exception as e:
         logger.error(f"AI model download failed: {e}")
         _AI_INSTALL_PROGRESS["status"] = "error"
