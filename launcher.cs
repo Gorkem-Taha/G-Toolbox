@@ -51,6 +51,23 @@ namespace GToolboxLauncher
         }
     }
 
+    internal class TimeoutWebClient : WebClient
+    {
+        private int _timeoutMs;
+        public TimeoutWebClient(int timeoutMs = 300000) { _timeoutMs = timeoutMs; }
+        protected override WebRequest GetWebRequest(Uri uri)
+        {
+            WebRequest w = base.GetWebRequest(uri);
+            w.Timeout = _timeoutMs;
+            HttpWebRequest http = w as HttpWebRequest;
+            if (http != null)
+            {
+                http.ReadWriteTimeout = _timeoutMs;
+            }
+            return w;
+        }
+    }
+
     // ═════════════════════════════════════════════════════════════════════════
     // 1. SETUP / DOWNLOAD WIZARD FORM (Portable Python 3.10 & Runtime Engine)
     // ═════════════════════════════════════════════════════════════════════════
@@ -271,7 +288,7 @@ namespace GToolboxLauncher
                 UpdateUI("1/4: Taşınabilir Python 3.10.11 indiriliyor...", "Resmi Python deposundan paket indiriliyor (~8.2 MB)...", 0, ProgressBarStyle.Continuous);
 
                 string pyUrl = "https://www.python.org/ftp/python/3.10.11/python-3.10.11-embed-amd64.zip";
-                using (WebClient client = new WebClient())
+                using (TimeoutWebClient client = new TimeoutWebClient(300000))
                 {
                     long lastProgressTick = 0;
                     int lastPct = -1;
@@ -321,30 +338,30 @@ namespace GToolboxLauncher
 
                 string getPipPath = Path.Combine(runtimeDir, "get-pip.py");
                 UpdateUI("3/4: Pip paket yöneticisi indiriliyor...", "bootstrap.pypa.io üzerinden get-pip.py çekiliyor...", 0, ProgressBarStyle.Marquee);
-                using (WebClient client = new WebClient())
+                using (TimeoutWebClient client = new TimeoutWebClient(300000))
                 {
                     client.DownloadFile("https://bootstrap.pypa.io/get-pip.py", getPipPath);
                 }
 
                 string pythonExe = Path.Combine(runtimeDir, "python.exe");
                 UpdateUI("3/4: Pip kuruluyor...", "runtime içine pip ve setuptools yükleniyor...", 0, ProgressBarStyle.Marquee);
-                RunProcess(pythonExe, "\"" + getPipPath + "\" --no-warn-script-location", runtimeDir);
+                RunProcess(pythonExe, "\"" + getPipPath + "\" --no-warn-script-location --default-timeout 180", runtimeDir);
                 try { File.Delete(getPipPath); } catch { }
 
                 // ── STEP 4: Install Core Dependencies ───────────────────
                 UpdateUI("4/4: Temel motor paketleri yükleniyor...", "FastAPI, WebView, Medya Araçları ve Bağımlılıklar (1-2 dk)...", 0, ProgressBarStyle.Marquee);
 
-                string corePackages = "fastapi uvicorn python-multipart jinja2 pydantic ffmpeg-python yt-dlp Pillow pyAesCrypt pypdf pywebview opencv-python numpy aiofiles psutil certifi --no-warn-script-location --prefer-binary";
+                string corePackages = "fastapi uvicorn python-multipart jinja2 pydantic ffmpeg-python yt-dlp Pillow pyAesCrypt pypdf pywebview opencv-python numpy aiofiles psutil certifi --no-warn-script-location --prefer-binary --default-timeout 180 --retries 5";
                 RunProcess(pythonExe, "-m pip install " + corePackages, runtimeDir);
 
                 if (installAi)
                 {
                     UpdateUI("4/4+: Yapay Zekâ Motoru kuruluyor (PyTorch)...", "PyTorch CPU bileşenleri indiriliyor (~250 MB)...", 0, ProgressBarStyle.Marquee);
-                    RunProcess(pythonExe, "-m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu --no-warn-script-location --prefer-binary", runtimeDir);
+                    RunProcess(pythonExe, "-m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu --no-warn-script-location --prefer-binary --default-timeout 180 --retries 5", runtimeDir);
                     UpdateUI("4/4+: Yapay Zekâ Motoru kuruluyor (BasicSR)...", "BasicSR mimarisi yapılandırılıyor...", 0, ProgressBarStyle.Marquee);
-                    RunProcess(pythonExe, "-m pip install basicsr --no-deps --no-warn-script-location --prefer-binary", runtimeDir);
+                    RunProcess(pythonExe, "-m pip install basicsr --no-deps --no-warn-script-location --prefer-binary --default-timeout 180 --retries 5", runtimeDir);
                     UpdateUI("4/4+: Yapay Zekâ Motoru kuruluyor (Modüller)...", "RealESRGAN, Rembg, LaMa, Whisper, Demucs yükleniyor...", 0, ProgressBarStyle.Marquee);
-                    RunProcess(pythonExe, "-m pip install realesrgan rembg simple-lama-inpainting faster-whisper demucs --no-warn-script-location --prefer-binary", runtimeDir);
+                    RunProcess(pythonExe, "-m pip install realesrgan rembg simple-lama-inpainting faster-whisper demucs --no-warn-script-location --prefer-binary --default-timeout 180 --retries 5", runtimeDir);
                 }
 
                 // ── STEP 5: Finished! ───────────────────────────────────

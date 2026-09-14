@@ -12,11 +12,28 @@ import re
 import shutil
 import subprocess
 import sys
+import socket
+import time
 import traceback
 import uuid
 import pyAesCrypt
 from fastapi import HTTPException
 from pathlib import Path
+
+# Set global socket default timeout to 180s to prevent premature read timeouts on slow networks
+socket.setdefaulttimeout(180)
+
+if getattr(sys, "frozen", False):
+    BASE_DIR = Path(sys.executable).resolve().parent
+    RESOURCE_DIR = Path(getattr(sys, "_MEIPASS", BASE_DIR))
+else:
+    BASE_DIR = Path(__file__).resolve().parent
+    RESOURCE_DIR = BASE_DIR
+
+UPLOAD_DIR = BASE_DIR / "uploads"
+DOWNLOAD_DIR = BASE_DIR / "downloads"
+UPLOAD_DIR.mkdir(exist_ok=True)
+DOWNLOAD_DIR.mkdir(exist_ok=True)
 
 import ffmpeg
 import yt_dlp
@@ -41,9 +58,16 @@ except ImportError:
 
 logger = logging.getLogger("uvicorn.error")
 
+_AI_INSTALL_PROGRESS = {
+    "status": "idle",
+    "progress": 0,
+    "current_model": "",
+    "error": None
+}
 
-def _safe_urlopen(req: urllib.request.Request, timeout: int = 60):
-    """Safely opens a URL with SSL certificate fallback for clean Windows installations missing root CA certificates."""
+
+def _safe_urlopen(req: urllib.request.Request, timeout: int = 180):
+    """Safely opens a URL with SSL certificate fallback and generous timeout for clean Windows installations."""
     # 1. Try standard / certifi SSL context
     try:
         ctx = None
@@ -204,22 +228,7 @@ def get_upscaler(model_type: str = "general", force_fp32: bool = False):
 
     if not model_path.exists():
         logger.info(f"Downloading {model_name} from {model_url}...")
-        temp_path = BASE_DIR / f"{model_name}.tmp"
-        if temp_path.exists():
-            temp_path.unlink()
-
-        req = urllib.request.Request(
-            model_url,
-            headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
-        )
-        with _safe_urlopen(req, timeout=120) as response, open(temp_path, "wb") as out_file:
-            shutil.copyfileobj(response, out_file)
-
-        if temp_path.stat().st_size < expected_min_size:
-            temp_path.unlink()
-            raise RuntimeError(f"Downloaded model weights are incomplete ({temp_path.stat().st_size} bytes).")
-
-        temp_path.replace(model_path)
+        _download_chunked_file(model_url, model_path, expected_min_size, 0, 100, model_name)
         logger.info(f"Successfully downloaded and verified {model_name} ({model_path.stat().st_size} bytes).")
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -289,18 +298,6 @@ def cleanup_files_and_memory(*filepaths):
     except ImportError:
         pass
 
-if getattr(sys, "frozen", False):
-    BASE_DIR = Path(sys.executable).resolve().parent
-    RESOURCE_DIR = Path(getattr(sys, "_MEIPASS", BASE_DIR))
-else:
-    BASE_DIR = Path(__file__).resolve().parent
-    RESOURCE_DIR = BASE_DIR
-
-UPLOAD_DIR = BASE_DIR / "uploads"
-DOWNLOAD_DIR = BASE_DIR / "downloads"
-
-UPLOAD_DIR.mkdir(exist_ok=True)
-DOWNLOAD_DIR.mkdir(exist_ok=True)
 
 
 def _find_ffmpeg() -> str | None:
@@ -1362,12 +1359,18 @@ def check_ai_models_status() -> dict:
 
 
 def _run_pip_step(args: list, step_label: str, pct: int):
-    """Executes a pip command safely with timeout and live progress reporting."""
+    """Executes a pip command safely with extended timeout and live progress reporting."""
     global _AI_INSTALL_PROGRESS
     _AI_INSTALL_PROGRESS["current_model"] = step_label
     _AI_INSTALL_PROGRESS["progress"] = pct
     py_exe = sys.executable
-    cmd = [py_exe, "-m", "pip"] + args + ["--no-input", "--no-warn-script-location", "--prefer-binary"]
+    cmd = [py_exe, "-m", "pip"] + args + [
+        "--no-input",
+        "--no-warn-script-location",
+        "--prefer-binary",
+        "--default-timeout", "180",
+        "--retries", "5"
+    ]
     try:
         proc = subprocess.Popen(
             cmd,
@@ -1378,9 +1381,9 @@ def _run_pip_step(args: list, step_label: str, pct: int):
             creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
         )
         try:
-            out, err = proc.communicate(timeout=600)
+            out, err = proc.communicate(timeout=900)
             if proc.returncode != 0:
-                logger.warning(f"Pip command warning ({step_label}): {err[:200] if err else ''}")
+                logger.warning(f"Pip command warning ({step_label}): {err[:300] if err else ''}")
         except subprocess.TimeoutExpired:
             proc.kill()
             logger.error(f"Pip command timed out: {step_label}")
@@ -1389,52 +1392,112 @@ def _run_pip_step(args: list, step_label: str, pct: int):
 
 
 def _download_chunked_file(url: str, dest_path: Path, expected_min_size: int, pct_start: int, pct_end: int, label: str):
-    """Downloads large model weights in chunks with real-time byte progress updates."""
+    """Downloads large model weights in chunks with auto-resume (HTTP Range) and retry resilience against timeouts."""
     global _AI_INSTALL_PROGRESS
     tmp_path = dest_path.with_suffix(dest_path.suffix + ".tmp")
-    if tmp_path.exists():
+
+    max_retries = 5
+    retry_delay = 2.0
+    chunk_size = 256 * 1024  # 256 KB chunks for smoother updates and faster recovery
+    total_size = 0
+
+    for attempt in range(1, max_retries + 1):
         try:
-            tmp_path.unlink()
-        except Exception:
-            pass
+            downloaded = tmp_path.stat().st_size if tmp_path.exists() else 0
 
-    req = urllib.request.Request(
-        url,
-        headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"}
-    )
-    with _safe_urlopen(req, timeout=60) as resp:
-        content_len = resp.headers.get("Content-Length")
-        total_size = int(content_len) if content_len and content_len.isdigit() else 0
-        total_mb = total_size / (1024 * 1024) if total_size > 0 else 0
-        downloaded = 0
-        chunk_size = 512 * 1024  # 512 KB chunks
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            }
 
-        with open(tmp_path, "wb") as f:
-            while True:
-                chunk = resp.read(chunk_size)
-                if not chunk:
-                    break
-                f.write(chunk)
-                downloaded += len(chunk)
-                dl_mb = downloaded / (1024 * 1024)
+            if downloaded > 0:
+                headers["Range"] = f"bytes={downloaded}-"
 
-                if total_size > 0:
-                    ratio = min(1.0, downloaded / total_size)
-                    curr_pct = int(pct_start + ratio * (pct_end - pct_start))
-                    _AI_INSTALL_PROGRESS["current_model"] = f"{label} ({dl_mb:.1f} / {total_mb:.1f} MB - %{int(ratio * 100)})"
-                    _AI_INSTALL_PROGRESS["progress"] = min(99, max(pct_start, curr_pct))
+            req = urllib.request.Request(url, headers=headers)
+
+            with _safe_urlopen(req, timeout=180) as resp:
+                status_code = getattr(resp, "status", 200)
+                content_len = resp.headers.get("Content-Length")
+                content_range = resp.headers.get("Content-Range")
+
+                if status_code == 206:
+                    # Partial content: server accepted byte range
+                    if content_range and "/" in content_range:
+                        try:
+                            range_total = int(content_range.split("/")[-1])
+                            if range_total > 0:
+                                total_size = range_total
+                        except Exception:
+                            pass
+                    if total_size == 0 and content_len and content_len.isdigit():
+                        total_size = downloaded + int(content_len)
+                    file_mode = "ab"
                 else:
-                    _AI_INSTALL_PROGRESS["current_model"] = f"{label} ({dl_mb:.1f} MB indirildi...)"
+                    # 200 OK: server sent full file or range unsupported
+                    if content_len and content_len.isdigit():
+                        total_size = int(content_len)
+                    downloaded = 0
+                    file_mode = "wb"
 
-    if tmp_path.stat().st_size < expected_min_size:
-        actual_size = tmp_path.stat().st_size
-        try:
-            tmp_path.unlink()
-        except Exception:
-            pass
-        raise RuntimeError(f"{label} indirmesi eksik veya bağlantı koptu ({actual_size} bytes).")
+                total_mb = total_size / (1024 * 1024) if total_size > 0 else 0
 
-    tmp_path.replace(dest_path)
+                with open(tmp_path, file_mode) as f:
+                    while True:
+                        try:
+                            chunk = resp.read(chunk_size)
+                        except (socket.timeout, TimeoutError, ssl.SSLError) as read_err:
+                            logger.warning(f"Chunk read timeout on {label} at {downloaded / (1024 * 1024):.1f} MB: {read_err}")
+                            raise read_err
+
+                        if not chunk:
+                            break
+                        f.write(chunk)
+                        downloaded += len(chunk)
+                        dl_mb = downloaded / (1024 * 1024)
+
+                        if total_size > 0:
+                            ratio = min(1.0, downloaded / total_size)
+                            curr_pct = int(pct_start + ratio * (pct_end - pct_start))
+                            _AI_INSTALL_PROGRESS["current_model"] = f"{label} ({dl_mb:.1f} / {total_mb:.1f} MB - %{int(ratio * 100)})"
+                            _AI_INSTALL_PROGRESS["progress"] = min(99, max(pct_start, curr_pct))
+                        else:
+                            _AI_INSTALL_PROGRESS["current_model"] = f"{label} ({dl_mb:.1f} MB indirildi...)"
+
+            # Successful stream completion
+            actual_size = tmp_path.stat().st_size if tmp_path.exists() else 0
+            if actual_size >= expected_min_size:
+                tmp_path.replace(dest_path)
+                logger.info(f"Successfully downloaded and verified {label} ({actual_size} bytes).")
+                return
+            else:
+                logger.warning(f"{label} indirilen boyut yetersiz ({actual_size} < {expected_min_size}). Yeniden deneniyor...")
+                if attempt == max_retries:
+                    raise RuntimeError(f"{label} indirmesi eksik ({actual_size} bytes, beklenen: {expected_min_size}).")
+
+        except Exception as ex:
+            err_msg = str(ex)
+            is_network_err = (
+                isinstance(ex, (socket.timeout, TimeoutError, urllib.error.URLError, ssl.SSLError))
+                or "timed out" in err_msg.lower()
+                or "timeout" in err_msg.lower()
+                or "incomplete" in err_msg.lower()
+                or "connection" in err_msg.lower()
+            )
+            if is_network_err and attempt < max_retries:
+                dl_mb = (tmp_path.stat().st_size / (1024 * 1024)) if tmp_path.exists() else 0
+                logger.warning(f"{label} bağlantı zaman aşımı/kesintisi ({ex}). {retry_delay:.1f}s sonra kaldığı yerden ({dl_mb:.1f} MB) devam edilecek (Deneme {attempt}/{max_retries})...")
+                _AI_INSTALL_PROGRESS["current_model"] = f"{label} - Bağlantı tazeleniyor (Kaldığı yerden: {dl_mb:.1f} MB, Deneme {attempt}/{max_retries})..."
+                time.sleep(retry_delay)
+                retry_delay = min(10.0, retry_delay * 1.5)
+                continue
+            elif attempt >= max_retries:
+                if tmp_path.exists():
+                    try:
+                        tmp_path.unlink()
+                    except Exception:
+                        pass
+                raise RuntimeError(f"{label} indirilirken bağlantı zaman aşımına uğradı (5 deneme başarısız): {ex}") from ex
+            else:
+                raise ex
 
 
 def _download_ai_models_worker():
