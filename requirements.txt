@@ -21,3 +21,4 @@ faster-whisper
 demucs
 aiofiles
 psutil
+certifi
