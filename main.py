@@ -58,6 +58,31 @@ except ImportError:
 
 logger = logging.getLogger("uvicorn.error")
 
+
+def _patch_pillow_compatibility():
+    """Patches PIL.Image.Image to restore backward-compatibility for AI libraries.
+    Starting with Pillow 10.1.0+, Image.mode is a read-only property without a setter.
+    Legacy AI libraries (rembg, u2net, basicsr, etc.) that assign img.mode directly throw:
+    AttributeError: can't set attribute 'mode'.
+    This patch safely restores the mode setter.
+    """
+    try:
+        from PIL import Image
+        try:
+            test_im = Image.new("RGB", (1, 1))
+            test_im.mode = "RGB"
+        except (AttributeError, TypeError):
+            fget = Image.Image.mode.fget
+            def fset(self, value):
+                self._mode = value
+            Image.Image.mode = property(fget, fset)
+            logger.info("🔧 Pillow Image.mode property setter backward-compatibility patch applied.")
+    except Exception as e:
+        logger.debug(f"Pillow compatibility patch notice: {e}")
+
+
+_patch_pillow_compatibility()
+
 _AI_INSTALL_PROGRESS = {
     "status": "idle",
     "progress": 0,
@@ -120,6 +145,9 @@ def ensure_ai_runtime() -> bool:
             sys.path.insert(0, str(runtime_sp))
     except Exception:
         pass
+
+    # 0.1 Ensure Pillow Image.mode setter is active
+    _patch_pillow_compatibility()
 
     # 1. Hotfix: basicsr requires torchvision.transforms.functional_tensor
     try:
@@ -696,8 +724,31 @@ async def remove_background(
     try:
         update_progress(x_task_id, 50, "AI model is executing. This process relies on CPU and GPU overhead...")
         img = Image.open(src_path)
+        try:
+            from PIL import ImageOps
+            img = ImageOps.exif_transpose(img)
+        except Exception:
+            pass
+
+        # Convert non-RGB/RGBA modes (CMYK, P, L, 1, etc.) cleanly
+        if img.mode not in ("RGB", "RGBA"):
+            img = img.convert("RGBA" if "A" in img.mode or "transparency" in img.info else "RGB")
+
         result = rembg_remove(img)
-        result.save(str(out_path), format="PNG")
+        if isinstance(result, Image.Image):
+            if result.mode != "RGBA":
+                result = result.convert("RGBA")
+            result.save(str(out_path), format="PNG")
+        elif isinstance(result, (bytes, bytearray)):
+            with open(out_path, "wb") as f:
+                f.write(result)
+        elif isinstance(result, np.ndarray):
+            res_img = Image.fromarray(result)
+            if res_img.mode != "RGBA":
+                res_img = res_img.convert("RGBA")
+            res_img.save(str(out_path), format="PNG")
+        else:
+            raise ValueError(f"Unexpected rembg output format: {type(result)}")
 
         update_progress(x_task_id, 90, "Packaging results...")
         if background_tasks:
@@ -756,9 +807,25 @@ async def magic_erase(
         def process_lama():
             lama_model = get_lama_model()
             orig = Image.open(img_path)
-            # Mask format needs to be grayscale (L) where white is inpaint area
-            mask_img = Image.open(mask_path).convert("L") 
-            result = lama_model(orig, mask_img)
+            try:
+                from PIL import ImageOps
+                orig = ImageOps.exif_transpose(orig)
+            except Exception:
+                pass
+
+            has_alpha = orig.mode == "RGBA" or "transparency" in orig.info
+            orig_alpha = orig.split()[-1] if has_alpha and orig.mode == "RGBA" else None
+
+            orig_rgb = orig.convert("RGB")
+            mask_img = Image.open(mask_path).convert("L")
+            if mask_img.size != orig_rgb.size:
+                mask_img = mask_img.resize(orig_rgb.size, Image.NEAREST)
+
+            result = lama_model(orig_rgb, mask_img)
+            if orig_alpha is not None:
+                if result.size != orig_alpha.size:
+                    orig_alpha = orig_alpha.resize(result.size, Image.LANCZOS)
+                result.putalpha(orig_alpha)
             result.save(out_path, format="PNG")
 
         await asyncio.to_thread(process_lama)
@@ -1650,6 +1717,11 @@ async def delete_ai_models():
 def _convert_image(src: str, dst: str, fmt: str) -> None:
     """Converts image formats using Pillow safely handling all color modes."""
     img = Image.open(src)
+    try:
+        from PIL import ImageOps
+        img = ImageOps.exif_transpose(img)
+    except Exception:
+        pass
 
     if fmt in ("jpg", "jpeg", "bmp"):
         if img.mode not in ("RGB", "L"):
@@ -1662,7 +1734,7 @@ def _convert_image(src: str, dst: str, fmt: str) -> None:
             img = img.convert("RGB")
         img.thumbnail((256, 256), Image.LANCZOS)
 
-    elif fmt == "png":
+    elif fmt in ("png", "webp"):
         if img.mode == "CMYK":
             img = img.convert("RGB")
 
@@ -2146,8 +2218,15 @@ async def strip_metadata(background_tasks: BackgroundTasks, file: UploadFile = F
     dest_path = DOWNLOAD_DIR / f"clean_{uuid.uuid4().hex}_{safe_name}"
     try:
         image = Image.open(file.file)
-        # Recreate image purely from pixel buffer to strip all hidden metadata
-        clean_img = Image.frombytes(image.mode, image.size, image.tobytes())
+        try:
+            from PIL import ImageOps
+            image = ImageOps.exif_transpose(image)
+        except Exception:
+            pass
+
+        # Recreate image purely without metadata tags
+        clean_img = Image.new(image.mode, image.size)
+        clean_img.paste(image)
 
         fmt = image.format or "PNG"
         if fmt.upper() in ("JPG", "JPEG"):
