@@ -46,6 +46,8 @@ if "%choice%"=="2" (
 
 echo.
 echo [STEP 3] Installing remaining requirements...
+echo [INFO] Pre-installing basicsr without build isolation to avoid C++ build errors...
+pip install basicsr --no-deps
 pip install -r requirements.txt
 
 echo.

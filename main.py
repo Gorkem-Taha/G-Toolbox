@@ -19,7 +19,13 @@ from pathlib import Path
 import ffmpeg
 import yt_dlp
 from PIL import Image, ExifTags
-from rembg import remove as rembg_remove
+try:
+    from rembg import remove as rembg_remove
+    REMBG_AVAILABLE = True
+except ImportError:
+    rembg_remove = None
+    REMBG_AVAILABLE = False
+
 from typing import List, Optional, Dict, Any
 import zipfile
 import urllib.request
@@ -536,6 +542,13 @@ async def remove_background(
     stem = Path(safe_name).stem
     out_name = f"{stem}_nobg_{uid}.png"
     out_path = DOWNLOAD_DIR / out_name
+
+    if not REMBG_AVAILABLE or rembg_remove is None:
+        cleanup_files_and_memory(src_path)
+        raise HTTPException(
+            status_code=500,
+            detail="rembg kütüphanesi henüz yüklü değil. Lütfen yapay zeka kurulumunu tamamlayın."
+        )
 
     try:
         update_progress(x_task_id, 50, "AI model is executing. This process relies on CPU and GPU overhead...")
@@ -1161,11 +1174,52 @@ def check_ai_models_status() -> dict:
 
 
 def _download_ai_models_worker():
-    global _AI_INSTALL_PROGRESS
+    global _AI_INSTALL_PROGRESS, RealESRGANer, SimpleLama, LAMA_AVAILABLE, rembg_remove, REMBG_AVAILABLE, torch, cv2, np, RRDBNet
     _AI_INSTALL_PROGRESS["status"] = "downloading"
     _AI_INSTALL_PROGRESS["error"] = None
 
     try:
+        # Check and install python AI libraries if missing
+        if torch is None or RealESRGANer is None or not REMBG_AVAILABLE:
+            _AI_INSTALL_PROGRESS["current_model"] = "Yapay Zeka kütüphaneleri kuruluyor (PyTorch & RealESRGAN)..."
+            _AI_INSTALL_PROGRESS["progress"] = 5
+            py_exe = sys.executable
+            # 1. PyTorch CPU
+            subprocess.run([py_exe, "-m", "pip", "install", "torch", "torchvision", "--index-url", "https://download.pytorch.org/whl/cpu", "--no-warn-script-location"], check=False)
+            # 2. basicsr (installed with --no-deps to bypass distutils/C++ build failure)
+            subprocess.run([py_exe, "-m", "pip", "install", "basicsr", "--no-deps", "--no-warn-script-location"], check=False)
+            # 3. other AI dependencies
+            subprocess.run([py_exe, "-m", "pip", "install", "realesrgan", "rembg", "simple-lama-inpainting", "faster-whisper", "demucs", "--no-warn-script-location"], check=False)
+
+            # Hotfix dynamic re-import
+            try:
+                import torch as _torch
+                torch = _torch
+                import cv2 as _cv2
+                cv2 = _cv2
+                import numpy as _np
+                np = _np
+                from basicsr.archs.rrdbnet_arch import RRDBNet as _RRDBNet
+                RRDBNet = _RRDBNet
+                from realesrgan import RealESRGANer as _RealESRGANer
+                RealESRGANer = _RealESRGANer
+            except Exception as mod_err:
+                logger.warning(f"Failed to dynamically load upscaler modules: {mod_err}")
+
+            try:
+                from rembg import remove as _rembg_remove
+                rembg_remove = _rembg_remove
+                REMBG_AVAILABLE = True
+            except Exception:
+                pass
+
+            try:
+                from simple_lama_inpainting import SimpleLama as _SimpleLama
+                SimpleLama = _SimpleLama
+                LAMA_AVAILABLE = True
+            except Exception:
+                pass
+
         gen_path = BASE_DIR / "RealESRGAN_x4plus.pth"
         if not gen_path.exists() or gen_path.stat().st_size < 60 * 1024 * 1024:
             _AI_INSTALL_PROGRESS["current_model"] = "Real-ESRGAN General (67 MB)"

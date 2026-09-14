@@ -155,16 +155,16 @@ Because **G-Toolbox runs 100% locally with zero cloud dependencies**, your proce
 
 G-Toolbox is packaged to run seamlessly across Desktop (Windows, Linux) and Mobile (Android) environments with **zero cloud dependencies**. Choose the distribution package suited for your operating system:
 
-### 📥 Official Release Packages (v4.3.0 Releases)
+### 📥 Official Release Packages (v4.4.0 Releases)
 
-Download official standalone binaries directly from [**GitHub Releases (v4.3.0)**](https://github.com/Gorkem-Taha/G-Toolbox/releases/tag/v4.3.0) or locate them in the local repository's `Releases/` directory:
+Download official standalone binaries directly from [**GitHub Releases (v4.4.0)**](https://github.com/Gorkem-Taha/G-Toolbox/releases/tag/v4.4.0) or locate them in the local repository's `Releases/` directory:
 
 | Platform / Package | File Name | Size | Target & Architecture |
 | :--- | :--- | :--- | :--- |
-| **🪟 Windows (Full Bundle)** | [**`G-Toolbox-v4.3.0-Windows.zip`**](https://github.com/Gorkem-Taha/G-Toolbox/releases/download/v4.3.0/G-Toolbox-v4.3.0-Windows.zip) | ~77 MB | Complete bundle with automated virtual environment installer (`installation.bat`) and native C# launcher. |
-| **🪟 Windows (Native Launcher)** | [**`G-Toolbox.exe`**](https://github.com/Gorkem-Taha/G-Toolbox/releases/download/v4.3.0/G-Toolbox.exe) | ~19 KB | Ultra-fast splash screen (<30ms), Windows Search indexing, and Taskbar integration. |
-| **🐧 Linux (Portable)** | [**`G-Toolbox-x86_64.AppImage`**](https://github.com/Gorkem-Taha/G-Toolbox/releases/download/v4.3.0/G-Toolbox-x86_64.AppImage) | ~1.15 MB | Zero-installation, standalone portable executable for all modern distributions (Ubuntu, Debian, Fedora, Arch). |
-| **📱 Android (Mobile App)** | [**`G-Toolbox.apk`**](https://github.com/Gorkem-Taha/G-Toolbox/releases/download/v4.3.0/G-Toolbox.apk) | ~5.27 MB | Native WebView wrapper supporting Dual-Mode (PC GPU Remote Streaming + Standalone Offline Mode). |
+| **🪟 Windows (Portable Launcher)** | [**`G-Toolbox.exe`**](https://github.com/Gorkem-Taha/G-Toolbox/releases/download/v4.4.0/G-Toolbox.exe) | ~31 KB | Zero-dependency smart portable launcher with auto-downloading Python 3.10 runtime & splash screen. |
+| **🪟 Windows (Full Bundle)** | [**`G-Toolbox-v4.4.0-Windows.zip`**](https://github.com/Gorkem-Taha/G-Toolbox/releases/download/v4.4.0/G-Toolbox-v4.4.0-Windows.zip) | ~77 MB | Complete offline bundle with automated virtual environment installer (`installation.bat`) and native launcher. |
+| **🐧 Linux (Portable)** | [**`G-Toolbox-x86_64.AppImage`**](https://github.com/Gorkem-Taha/G-Toolbox/releases/download/v4.4.0/G-Toolbox-x86_64.AppImage) | ~1.15 MB | Zero-installation, standalone portable executable for all modern distributions (Ubuntu, Debian, Fedora, Arch). |
+| **📱 Android (Mobile App)** | [**`G-Toolbox.apk`**](https://github.com/Gorkem-Taha/G-Toolbox/releases/download/v4.4.0/G-Toolbox.apk) | ~5.27 MB | Native WebView wrapper supporting Dual-Mode (PC GPU Remote Streaming + Standalone Offline Mode). |
 
 ---
 
@@ -281,16 +281,24 @@ When away from your desktop or traveling without an internet connection:
 
 ### 🪟 Windows Installation & Desktop Setup Guide
 
-#### 1. Automated Setup (Recommended)
-1. Download [**`G-Toolbox-v4.3.0-Windows.zip`**](https://github.com/Gorkem-Taha/G-Toolbox/releases/download/v4.3.0/G-Toolbox-v4.3.0-Windows.zip) and extract it to your preferred folder.
-2. Run **`installation.bat`**. This automated script:
-   - Detects Python 3.10+ on your system.
-   - Provisions an isolated `.venv` virtual environment.
-   - Installs all deep learning and media dependencies (`torch`, `torchvision`, `basicsr`, `rembg`, `fastapi`, etc.).
-3. Once installation completes, double-click **`G-Toolbox.exe`** to launch.
+#### 1. Zero-Dependency One-Click Launch (Recommended)
+1. Download or clone the repository into your preferred folder.
+2. Double-click **`G-Toolbox.exe`**:
+   - **Zero Setup Required:** If no compatible Python runtime is detected (e.g. fresh machine or Python 3.12+ build tool conflicts), `G-Toolbox.exe` automatically provisions an isolated portable Python 3.10 runtime (~8.2 MB) without requiring system installations, PATH adjustments, or C++ compilers.
+   - **Instant Base Startup:** All media tools, PDF editors, file vault encryption, and audio cleaners initialize immediately.
+   - **Modular AI Weights:** Heavy AI models (Real-ESRGAN, LaMa, U2-Net) and neural network weights can be installed on-demand directly inside the app with a single click.
 
-#### 2. Native Desktop Launcher Features
-* **Instant Splash Screen (<30ms):** Launching `G-Toolbox.exe` immediately presents a sleek, dark-slate loading screen while the background FastAPI engine and neural networks initialize. Eliminates startup delay anxiety.
+#### 2. Automated Script Setup (`installation.bat`)
+For custom developer environments or existing Python installations:
+1. Run **`installation.bat`**. This script:
+   - Provisions an isolated `.venv` virtual environment.
+   - Pre-installs binary-safe wheels (`basicsr --no-deps`) to avoid MSVC C++ compilation failures.
+   - Installs all deep learning and media dependencies (`torch`, `torchvision`, `fastapi`, etc.).
+2. Double-click **`G-Toolbox.exe`** to launch.
+
+#### 3. Native Desktop Launcher Features
+* **Zero-Dependency Bootstrap Engine:** Built-in download and setup engine that configures isolated portable Python 3.10 and Pip in under 1 minute.
+* **Instant Splash Screen (<30ms):** Launching `G-Toolbox.exe` immediately presents a sleek, dark-slate loading screen while the background FastAPI engine initializes.
 * **Automatic Windows Search Indexing:** On first run, the launcher automatically registers shortcuts in `%APPDATA%\Microsoft\Windows\Start Menu\Programs\G-Toolbox.lnk` and Registry `App Paths`. Pressing the `Windows` key and typing `G-Toolbox` finds and launches the app immediately.
 * **Official Branding & Taskbar Icon:** Low-level Win32 `SetCurrentProcessExplicitAppUserModelID` integration ensures the official G-Toolbox icon appears in the Windows Taskbar and window title bar.
 * **One-Click Storage Purge:** Reclaim ~460 MB of disk space anytime by wiping cached AI model weights directly from the "AI" / "Yapay Zeka" header menu (`/api/delete-ai-models`).
@@ -412,6 +420,7 @@ G-Toolbox combines modern asynchronous web architecture, cutting-edge local comp
 #### 4. 🖥️ Desktop, OS Integration & Mobile Dual-Mode
 * **Win32 & .NET Native Launcher (`launcher.cs`):**
   * Written in C# with Win32 P/Invoke declarations (`SetCurrentProcessExplicitAppUserModelID`, `WM_SETICON`).
+  * Features an integrated Zero-Dependency Runtime Engine: automatically detects, downloads (~8.2 MB), and provisions isolated portable Python 3.10, bypassing system Python conflicts and C++ compiler prerequisites.
   * Displays a dark splash screen in under 30ms, eliminating the traditional Python startup lag while launching the background FastAPI service.
 * **pywebview Desktop Shell:**
   * Embeds modern Chromium (Edge WebView2) on Windows and WebKit on Linux.
