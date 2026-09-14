@@ -11,6 +11,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import uuid
 import pyAesCrypt
 from fastapi import HTTPException
