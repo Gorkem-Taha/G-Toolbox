@@ -82,8 +82,6 @@ namespace GToolboxLauncher
         private PictureBox picIcon;
         private CheckBox chkInstallAi;
         private Button btnStart;
-        private System.Windows.Forms.Timer autoStartTimer;
-        private int countdown = 3;
         private bool isInstalling = false;
         private string baseDir;
 
@@ -186,7 +184,7 @@ namespace GToolboxLauncher
             // Progress Bar
             progressBar = new ProgressBar();
             progressBar.Location = new Point(30, 154);
-            progressBar.Size = new Size(460, 8);
+            progressBar.Size = new Size(460, 10);
             progressBar.Style = ProgressBarStyle.Continuous;
             this.Controls.Add(progressBar);
 
@@ -198,12 +196,11 @@ namespace GToolboxLauncher
             chkInstallAi.Location = new Point(30, 180);
             chkInstallAi.Size = new Size(460, 24);
             chkInstallAi.Checked = false;
-            chkInstallAi.CheckedChanged += (s, e) => { StopCountdown(); };
             this.Controls.Add(chkInstallAi);
 
             // Start Button
             btnStart = new Button();
-            btnStart.Text = "Kurulumu Başlat (3s)...";
+            btnStart.Text = "Kurulumu Başlat";
             btnStart.Font = new Font("Segoe UI", 9.5f, FontStyle.Bold);
             btnStart.ForeColor = Color.White;
             btnStart.BackColor = Color.FromArgb(99, 102, 241);
@@ -214,7 +211,6 @@ namespace GToolboxLauncher
             btnStart.Cursor = Cursors.Hand;
             btnStart.Click += (s, e) =>
             {
-                StopCountdown();
                 StartInstallation();
             };
             this.Controls.Add(btnStart);
@@ -227,47 +223,21 @@ namespace GToolboxLauncher
             lblVer.Location = new Point(30, 264);
             lblVer.AutoSize = true;
             this.Controls.Add(lblVer);
-
-            // Countdown timer for automatic zero-click start
-            autoStartTimer = new System.Windows.Forms.Timer();
-            autoStartTimer.Interval = 1000;
-            autoStartTimer.Tick += (s, e) =>
-            {
-                countdown--;
-                if (countdown > 0)
-                {
-                    btnStart.Text = string.Format("Kurulumu Başlat ({0}s)...", countdown);
-                }
-                else
-                {
-                    StopCountdown();
-                    StartInstallation();
-                }
-            };
-            autoStartTimer.Start();
-        }
-
-        private void StopCountdown()
-        {
-            if (autoStartTimer != null)
-            {
-                autoStartTimer.Stop();
-                autoStartTimer.Dispose();
-                autoStartTimer = null;
-            }
-            if (!isInstalling)
-            {
-                btnStart.Text = "Hızlı Kurulumu Başlat";
-            }
         }
 
         private void StartInstallation()
         {
             if (isInstalling) return;
             isInstalling = true;
-            btnStart.Enabled = false;
-            chkInstallAi.Enabled = false;
+
+            // İndirme başlayınca butonlar ve seçenekler gizlenir
+            btnStart.Visible = false;
+            chkInstallAi.Visible = false;
             lblClose.Visible = false;
+
+            progressBar.Size = new Size(460, 14);
+            progressBar.Style = ProgressBarStyle.Continuous;
+            progressBar.Value = 0;
 
             Thread worker = new Thread(new ParameterizedThreadStart(RunInstallationWorker));
             worker.IsBackground = true;
@@ -283,31 +253,17 @@ namespace GToolboxLauncher
             try
             {
                 ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | (SecurityProtocolType)3072;
+                try
+                {
+                    ServicePointManager.ServerCertificateValidationCallback = delegate { return true; };
+                }
+                catch { }
 
                 // ── STEP 1: Download Python 3.10.11 Embeddable ZIP ───────
                 UpdateUI("1/4: Taşınabilir Python 3.10.11 indiriliyor...", "Resmi Python deposundan paket indiriliyor (~8.2 MB)...", 0, ProgressBarStyle.Continuous);
 
                 string pyUrl = "https://www.python.org/ftp/python/3.10.11/python-3.10.11-embed-amd64.zip";
-                using (TimeoutWebClient client = new TimeoutWebClient(300000))
-                {
-                    long lastProgressTick = 0;
-                    int lastPct = -1;
-                    client.DownloadProgressChanged += (s, e) =>
-                    {
-                        long now = Environment.TickCount;
-                        if (e.ProgressPercentage != lastPct && (now - lastProgressTick > 80 || e.ProgressPercentage == 100))
-                        {
-                            lastProgressTick = now;
-                            lastPct = e.ProgressPercentage;
-                            double mbReceived = e.BytesReceived / 1048576.0;
-                            double mbTotal = e.TotalBytesToReceive > 0 ? e.TotalBytesToReceive / 1048576.0 : 8.2;
-                            string detail = string.Format("İndirilen: {0:F1} MB / {1:F1} MB (%{2})", mbReceived, mbTotal, e.ProgressPercentage);
-                            UpdateUI(null, detail, e.ProgressPercentage, ProgressBarStyle.Continuous);
-                        }
-                    };
-
-                    client.DownloadFile(new Uri(pyUrl), zipPath);
-                }
+                DownloadFileWithProgress(pyUrl, zipPath, "1/4: Taşınabilir Python 3.10.11 indiriliyor...", 8.2);
 
                 // ── STEP 2: Extract to runtime/ ──────────────────────────
                 UpdateUI("2/4: Çalışma ortamı runtime/ dizinine çıkartılıyor...", "Lütfen bekleyin, arşiv açılıyor...", 0, ProgressBarStyle.Marquee);
@@ -338,57 +294,122 @@ namespace GToolboxLauncher
 
                 string getPipPath = Path.Combine(runtimeDir, "get-pip.py");
                 UpdateUI("3/4: Pip paket yöneticisi indiriliyor...", "bootstrap.pypa.io üzerinden get-pip.py çekiliyor...", 0, ProgressBarStyle.Marquee);
-                using (TimeoutWebClient client = new TimeoutWebClient(300000))
-                {
-                    client.DownloadFile("https://bootstrap.pypa.io/get-pip.py", getPipPath);
-                }
+                DownloadFileWithProgress("https://bootstrap.pypa.io/get-pip.py", getPipPath, "3/4: Pip paket yöneticisi indiriliyor...", 2.5);
 
                 string pythonExe = Path.Combine(runtimeDir, "python.exe");
                 UpdateUI("3/4: Pip kuruluyor...", "runtime içine pip ve setuptools yükleniyor...", 0, ProgressBarStyle.Marquee);
-                RunProcess(pythonExe, "\"" + getPipPath + "\" --no-warn-script-location --default-timeout 180", runtimeDir);
+                RunProcess(pythonExe, "\"" + getPipPath + "\" --no-warn-script-location --default-timeout 180 --trusted-host pypi.org --trusted-host files.pythonhosted.org", runtimeDir);
                 try { File.Delete(getPipPath); } catch { }
 
                 // ── STEP 4: Install Core Dependencies ───────────────────
                 UpdateUI("4/4: Temel motor paketleri yükleniyor...", "FastAPI, WebView, Medya Araçları ve Bağımlılıklar (1-2 dk)...", 0, ProgressBarStyle.Marquee);
 
-                string corePackages = "fastapi uvicorn python-multipart jinja2 pydantic ffmpeg-python yt-dlp Pillow pyAesCrypt pypdf pywebview opencv-python numpy aiofiles psutil certifi --no-warn-script-location --prefer-binary --default-timeout 180 --retries 5";
+                string corePackages = "fastapi uvicorn python-multipart jinja2 pydantic ffmpeg-python yt-dlp Pillow pyAesCrypt pypdf pywebview opencv-python numpy aiofiles psutil certifi --no-warn-script-location --prefer-binary --default-timeout 180 --retries 5 --trusted-host pypi.org --trusted-host files.pythonhosted.org";
                 RunProcess(pythonExe, "-m pip install " + corePackages, runtimeDir);
 
                 if (installAi)
                 {
                     UpdateUI("4/4+: Yapay Zekâ Motoru kuruluyor (PyTorch)...", "PyTorch CPU bileşenleri indiriliyor (~250 MB)...", 0, ProgressBarStyle.Marquee);
-                    RunProcess(pythonExe, "-m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu --no-warn-script-location --prefer-binary --default-timeout 180 --retries 5", runtimeDir);
+                    RunProcess(pythonExe, "-m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu --no-warn-script-location --prefer-binary --default-timeout 180 --retries 5 --trusted-host download.pytorch.org --trusted-host pypi.org --trusted-host files.pythonhosted.org", runtimeDir);
                     UpdateUI("4/4+: Yapay Zekâ Motoru kuruluyor (BasicSR)...", "BasicSR mimarisi yapılandırılıyor...", 0, ProgressBarStyle.Marquee);
-                    RunProcess(pythonExe, "-m pip install basicsr --no-deps --no-warn-script-location --prefer-binary --default-timeout 180 --retries 5", runtimeDir);
+                    RunProcess(pythonExe, "-m pip install basicsr --no-deps --no-warn-script-location --prefer-binary --default-timeout 180 --trusted-host pypi.org --trusted-host files.pythonhosted.org", runtimeDir);
                     UpdateUI("4/4+: Yapay Zekâ Motoru kuruluyor (Modüller)...", "RealESRGAN, Rembg, LaMa, Whisper, Demucs yükleniyor...", 0, ProgressBarStyle.Marquee);
-                    RunProcess(pythonExe, "-m pip install realesrgan rembg simple-lama-inpainting faster-whisper demucs --no-warn-script-location --prefer-binary --default-timeout 180 --retries 5", runtimeDir);
+                    RunProcess(pythonExe, "-m pip install realesrgan rembg simple-lama-inpainting faster-whisper demucs --no-warn-script-location --prefer-binary --default-timeout 180 --retries 5 --trusted-host pypi.org --trusted-host files.pythonhosted.org", runtimeDir);
                 }
 
                 // ── STEP 5: Finished! ───────────────────────────────────
                 UpdateUI("🎉 Kurulum tamamlandı!", "G-Toolbox başlatılıyor...", 100, ProgressBarStyle.Continuous);
                 Thread.Sleep(1200);
 
-                this.Invoke((MethodInvoker)delegate
+                try
                 {
-                    this.DialogResult = DialogResult.OK;
-                    this.Close();
-                });
+                    this.BeginInvoke((MethodInvoker)delegate
+                    {
+                        this.DialogResult = DialogResult.OK;
+                        this.Close();
+                    });
+                }
+                catch { }
             }
             catch (Exception ex)
             {
-                this.Invoke((MethodInvoker)delegate
+                try
                 {
-                    MessageBox.Show("Kurulum sırasında bir hata oluştu:\n\n" + ex.Message + "\n\nLütfen internet bağlantınızı kontrol edip tekrar deneyin.", "G-Toolbox Kurulum Hatası", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    isInstalling = false;
-                    btnStart.Enabled = true;
-                    btnStart.Text = "Yeniden Dene";
-                    chkInstallAi.Enabled = true;
-                    lblClose.Visible = true;
-                    lblStatus.Text = "Kurulum tamamlanamadı.";
-                    lblDetail.Text = "Hata: " + ex.Message;
-                    progressBar.Style = ProgressBarStyle.Continuous;
-                    progressBar.Value = 0;
-                });
+                    this.BeginInvoke((MethodInvoker)delegate
+                    {
+                        MessageBox.Show("Kurulum sırasında bir hata oluştu:\n\n" + ex.Message + "\n\nLütfen internet bağlantınızı kontrol edip tekrar deneyin.", "G-Toolbox Kurulum Hatası", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        isInstalling = false;
+                        btnStart.Visible = true;
+                        btnStart.Enabled = true;
+                        btnStart.Text = "Yeniden Dene";
+                        chkInstallAi.Visible = true;
+                        chkInstallAi.Enabled = true;
+                        lblClose.Visible = true;
+                        lblStatus.Text = "Kurulum tamamlanamadı.";
+                        lblDetail.Text = "Hata: " + ex.Message;
+                        progressBar.Style = ProgressBarStyle.Continuous;
+                        progressBar.Value = 0;
+                    });
+                }
+                catch { }
+            }
+        }
+
+        private void DownloadFileWithProgress(string url, string destPath, string stepLabel, double expectedMb)
+        {
+            string parent = Path.GetDirectoryName(destPath);
+            if (!string.IsNullOrEmpty(parent) && !Directory.Exists(parent))
+            {
+                Directory.CreateDirectory(parent);
+            }
+
+            if (File.Exists(destPath))
+            {
+                try { File.Delete(destPath); } catch { }
+            }
+
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
+            request.Proxy = null; // Bypasses 15-30s WPAD proxy delay on Windows
+            request.Timeout = 180000;
+            request.ReadWriteTimeout = 180000;
+            request.UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) G-Toolbox/4.4";
+            request.KeepAlive = true;
+            request.AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate;
+
+            using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
+            {
+                long totalBytes = response.ContentLength;
+                double totalMb = totalBytes > 0 ? totalBytes / 1048576.0 : expectedMb;
+
+                using (Stream responseStream = response.GetResponseStream())
+                using (FileStream fileStream = new FileStream(destPath, FileMode.Create, FileAccess.Write, FileShare.None, 65536))
+                {
+                    byte[] buffer = new byte[65536];
+                    long totalRead = 0;
+                    int bytesRead;
+                    long lastUiUpdate = 0;
+
+                    while ((bytesRead = responseStream.Read(buffer, 0, buffer.Length)) > 0)
+                    {
+                        fileStream.Write(buffer, 0, bytesRead);
+                        totalRead += bytesRead;
+
+                        long now = Environment.TickCount;
+                        if (now - lastUiUpdate > 60 || (totalBytes > 0 && totalRead == totalBytes))
+                        {
+                            lastUiUpdate = now;
+                            double receivedMb = totalRead / 1048576.0;
+                            int pct = totalBytes > 0 ? (int)((totalRead * 100) / totalBytes) : -1;
+                            string detail = string.Format("İndirilen: {0:F1} MB / {1:F1} MB{2}",
+                                receivedMb,
+                                totalMb,
+                                pct >= 0 ? string.Format(" (%{0})", pct) : "");
+
+                            UpdateUI(stepLabel, detail, pct >= 0 ? pct : 0, pct >= 0 ? ProgressBarStyle.Continuous : ProgressBarStyle.Marquee);
+                        }
+                    }
+                    fileStream.Flush();
+                }
             }
         }
 
@@ -459,17 +480,23 @@ namespace GToolboxLauncher
 
         private void UpdateUI(string status, string detail, int progress, ProgressBarStyle style)
         {
-            if (this.IsDisposed || !this.IsHandleCreated) return;
-            this.Invoke((MethodInvoker)delegate
+            if (this.IsDisposed) return;
+            try
             {
-                if (status != null) lblStatus.Text = status;
-                if (detail != null) lblDetail.Text = detail;
-                progressBar.Style = style;
-                if (style == ProgressBarStyle.Continuous)
+                if (!this.IsHandleCreated) return;
+                this.BeginInvoke((MethodInvoker)delegate
                 {
-                    if (progress >= 0 && progress <= 100) progressBar.Value = progress;
-                }
-            });
+                    if (this.IsDisposed) return;
+                    if (status != null) lblStatus.Text = status;
+                    if (detail != null) lblDetail.Text = detail;
+                    if (progressBar.Style != style) progressBar.Style = style;
+                    if (style == ProgressBarStyle.Continuous)
+                    {
+                        if (progress >= 0 && progress <= 100) progressBar.Value = progress;
+                    }
+                });
+            }
+            catch { }
         }
     }
 
