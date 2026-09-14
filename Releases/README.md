@@ -8,8 +8,8 @@ This directory contains standalone portable Windows Launcher, Linux AppImage, an
 
 | File Name | Target Platform | Size | Architecture / Format | SHA-256 Checksum |
 | :--- | :--- | :--- | :--- | :--- |
-| **`G-Toolbox-v4.4.0-Windows.zip`** | Windows 10 / 11 (x64) | ~1.01 MB | Standalone Portable Source & Launcher Bundle | `B5252F37B099EF95D4C3A851CD81DAD9905C46BA223FE28E6C8C6D646FAF7F8F` |
-| **`G-Toolbox.exe`** | Windows 10 / 11 (x64) | ~33.5 KB | Win32 / .NET Smart Portable Launcher | `3348C976AB65C0028368BD597988A64AE8649A61D4B1E40855CF6DAB57FBCBC1` |
+| **`G-Toolbox-v4.4.0-Windows.zip`** | Windows 10 / 11 (x64) | ~1.01 MB | Standalone Portable Source & Launcher Bundle | `FC3097292A09E84C35449C48007DCAC37DBA10149C423C9564EA5E666AD24C1A` |
+| **`G-Toolbox.exe`** | Windows 10 / 11 (x64) | ~33.5 KB | Win32 / .NET Smart Portable Launcher | `A1D727E9DC416FE48B9B80C256A9FAC41C8E2DDFD96981E09B1D5B626ED3162E` |
 | **`G-Toolbox-x86_64.AppImage`** | Linux (Ubuntu, Debian, Fedora, Arch) | ~1.15 MB | `x86_64` Standalone Portable | `0F7BE770D1B8B5C988CD2ACCF49F6081CE169B4B43D9D23B7C015FA1BEBD3F91` |
 | **`G-Toolbox.apk`** | Android (Mobile & Tablet) | ~5.27 MB | `arm64-v8a / armeabi-v7a / x86_64` | `8F897B090C4D7B81FFF1B2CBB508DDD74A5DCCE84BFCC4A0ABB4519725DEEF8F` |
 

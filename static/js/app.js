@@ -1134,8 +1134,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         btnUniConvert.disabled = true;
-        btnUniConvert.querySelector('span').textContent = i18n('converting');
-        btnUniConvert.querySelector('i').className = "fa-solid fa-circle-notch fa-spin text-white text-xl";
+        btnUniConvert.classList.add("hidden");
 
         const taskId = generateTaskId();
         startGlobalProgress(taskId);
@@ -1169,7 +1168,14 @@ document.addEventListener("DOMContentLoaded", () => {
             .catch(err => {
                 stopGlobalProgress(false);
                 showToast("error", `⚠️ ${err.message}`);
-
+            })
+            .finally(() => {
+                btnUniConvert.classList.remove("hidden");
+                btnUniConvert.disabled = false;
+                const sp = btnUniConvert.querySelector('span');
+                if (sp) sp.textContent = i18n('btn_convert');
+                const ic = btnUniConvert.querySelector('i');
+                if (ic) ic.className = "fa-solid fa-bolt text-xl text-amber-400";
             });
     });
 
@@ -1338,6 +1344,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (!magicOriginalFile || !maskCanvas) return;
 
             btnMagicApply.disabled = true;
+            btnMagicApply.classList.add("hidden");
             btnMagicApply.querySelector('span').textContent = i18n('erasing_ai');
             btnMagicApply.querySelector('i').className = "fa-solid fa-circle-notch fa-spin text-white text-xl";
 
@@ -1392,6 +1399,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         showToast("error", `⚠️ ${err.message}`);
                     })
                     .finally(() => {
+                        btnMagicApply.classList.remove("hidden");
                         btnMagicApply.disabled = false;
                         btnMagicApply.querySelector('span').textContent = i18n('magic_erase_btn');
                         btnMagicApply.querySelector('i').className = "fa-solid fa-wand-magic-sparkles text-xl group-hover:animate-pulse text-gold-light";
@@ -1497,6 +1505,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (!upscaleFile) return;
 
             btnUpscaleApply.disabled = true;
+            btnUpscaleApply.classList.add("hidden");
             btnUpscaleApply.querySelector('span').textContent = i18n('erasing_ai');
             btnUpscaleApply.querySelector('i').className = "fa-solid fa-circle-notch fa-spin text-white text-xl";
 
@@ -1532,16 +1541,14 @@ document.addEventListener("DOMContentLoaded", () => {
                     downloadBlob(blob, outName);
                     stopGlobalProgress(true, i18n('completed'));
                     showToast("success", `🎉 ${i18n('pixel_upscale_success')} — ${outName}`);
-
-                    btnUpscaleApply.disabled = false;
-                    btnUpscaleApply.querySelector('span').textContent = i18n('btn_start_upscale');
-                    btnUpscaleApply.querySelector('i').className = "fa-solid fa-wand-magic-sparkles text-xl group-hover:animate-pulse text-gold-light";
                 })
                 .catch(err => {
                     stopGlobalProgress(false);
                     upscaleProcessing.classList.add("hidden");
                     showToast("error", `⚠️ ${err.message}`);
-
+                })
+                .finally(() => {
+                    btnUpscaleApply.classList.remove("hidden");
                     btnUpscaleApply.disabled = false;
                     btnUpscaleApply.querySelector('span').textContent = i18n('btn_start_upscale');
                     btnUpscaleApply.querySelector('i').className = "fa-solid fa-wand-magic-sparkles text-xl group-hover:animate-pulse text-gold-light";
@@ -1614,6 +1621,7 @@ document.addEventListener("DOMContentLoaded", () => {
         progBg.classList.add("visible");
         barBg.style.width = "0%";
         btnRemoveBg.disabled = true;
+        btnRemoveBg.classList.add("hidden");
         btnRemoveBg.innerHTML = `<div class="spinner visible" style="width:18px;height:18px;border-width:2px;display:inline-block"></div><span>Processing...</span>`;
 
         aiProcessing.classList.remove("hidden");
@@ -1656,6 +1664,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 progBg.classList.remove("visible");
                 barBg.style.width = "0%";
                 document.getElementById("percent-bg").textContent = "0%";
+                btnRemoveBg.classList.remove("hidden");
                 btnRemoveBg.disabled = false;
                 btnRemoveBg.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i><span>${i18n('btn_remove_bg')}</span>`;
             }, 1500);
@@ -1665,6 +1674,7 @@ document.addEventListener("DOMContentLoaded", () => {
             stopGlobalProgress(false);
             aiProcessing.classList.add("hidden");
             showToast("error", `⚠️ ${i18n('server_error')}`);
+            btnRemoveBg.classList.remove("hidden");
             btnRemoveBg.disabled = false;
             btnRemoveBg.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i><span>${i18n('btn_remove_bg')}</span>`;
         });
@@ -1809,6 +1819,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         btnDownloadVideo.disabled = true;
+        btnDownloadVideo.classList.add("hidden");
         btnDownloadVideo.innerHTML = `<div class="spinner visible" style="width:18px;height:18px;border-width:2px;display:inline-block"></div><span>${i18n('video_starting')}</span>`;
         downloadLoading.classList.remove("hidden");
         spinner.classList.add("visible");
@@ -1925,6 +1936,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function resetVideoUI() {
+        btnDownloadVideo.classList.remove("hidden");
         btnDownloadVideo.disabled = false;
         btnDownloadVideo.innerHTML = `<i class="fa-solid fa-download"></i><span>${i18n('btn_start_download')}</span>`;
         downloadLoading.classList.add("hidden");
@@ -2092,6 +2104,8 @@ document.addEventListener("DOMContentLoaded", () => {
         const btn = isEncrypt ? btnVaultEncrypt : btnVaultDecrypt;
         const originalContent = btn.innerHTML;
 
+        if (btnVaultEncrypt) btnVaultEncrypt.classList.add("hidden");
+        if (btnVaultDecrypt) btnVaultDecrypt.classList.add("hidden");
         btn.disabled = true;
         btn.innerHTML = `<div class="spinner visible" style="width:18px;height:18px;border-width:2px;display:inline-block"></div><span>İşleniyor…</span>`;
 
@@ -2159,7 +2173,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 showToast("error", `⚠️ Hata: ${err.message}`);
             })
             .finally(() => {
-                btn.disabled = false;
+                if (btnVaultEncrypt) {
+                    btnVaultEncrypt.classList.remove("hidden");
+                    btnVaultEncrypt.disabled = false;
+                }
+                if (btnVaultDecrypt) {
+                    btnVaultDecrypt.classList.remove("hidden");
+                    btnVaultDecrypt.disabled = false;
+                }
                 btn.innerHTML = originalContent;
             });
     }
@@ -2417,6 +2438,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const taskId = generateTaskId();
             btnSepApply.disabled = true;
+            btnSepApply.classList.add("hidden");
             startGlobalProgress(taskId);
 
             const fd = new FormData();
@@ -2443,6 +2465,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 stopGlobalProgress(false);
                 showToast("error", `⚠️ ${err.message}`);
             } finally {
+                btnSepApply.classList.remove("hidden");
                 btnSepApply.disabled = false;
             }
         });
@@ -2506,6 +2529,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const taskId = generateTaskId();
             btnTransApply.disabled = true;
+            btnTransApply.classList.add("hidden");
             startGlobalProgress(taskId);
 
             const fd = new FormData();
@@ -2546,6 +2570,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 stopGlobalProgress(false);
                 showToast("error", `⚠️ ${err.message}`);
             } finally {
+                btnTransApply.classList.remove("hidden");
                 btnTransApply.disabled = false;
             }
         });
@@ -2595,6 +2620,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 showToast("error", i18n("select_inspect_img_error"));
                 return;
             }
+            btnMetaInspect.disabled = true;
+            btnMetaInspect.classList.add("hidden");
             const fd = new FormData();
             fd.append("file", metaFile);
             try {
@@ -2619,6 +2646,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 showToast("info", `🔍 ${data.tag_count} adet metaveri etiketi tarandı.`);
             } catch (err) {
                 showToast("error", `⚠️ ${err.message}`);
+            } finally {
+                btnMetaInspect.classList.remove("hidden");
+                btnMetaInspect.disabled = false;
             }
         });
 
@@ -2628,30 +2658,33 @@ document.addEventListener("DOMContentLoaded", () => {
                 return;
             }
 
-            // Client-side instant offline stripping in Local Mode
-            if (currentMode === 'local') {
-                const img = new Image();
-                const objUrl = URL.createObjectURL(metaFile);
-                img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    canvas.width = img.naturalWidth;
-                    canvas.height = img.naturalHeight;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0);
-                    canvas.toBlob((blob) => {
-                        URL.revokeObjectURL(objUrl);
-                        const outName = `clean_${metaFile.name}`;
-                        downloadBlob(blob, outName);
-                        showToast("success", `🛡️ [Yerel Cihaz] Metaveriler tarayıcıda temizlendi: ${outName}`);
-                    }, metaFile.type || 'image/png');
-                };
-                img.src = objUrl;
-                return;
-            }
+            btnMetaStrip.disabled = true;
+            btnMetaStrip.classList.add("hidden");
 
-            const fd = new FormData();
-            fd.append("file", metaFile);
             try {
+                // Client-side instant offline stripping in Local Mode
+                if (currentMode === 'local') {
+                    const img = new Image();
+                    const objUrl = URL.createObjectURL(metaFile);
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = img.naturalWidth;
+                        canvas.height = img.naturalHeight;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0);
+                        canvas.toBlob((blob) => {
+                            URL.revokeObjectURL(objUrl);
+                            const outName = `clean_${metaFile.name}`;
+                            downloadBlob(blob, outName);
+                            showToast("success", `🛡️ [Yerel Cihaz] Metaveriler tarayıcıda temizlendi: ${outName}`);
+                        }, metaFile.type || 'image/png');
+                    };
+                    img.src = objUrl;
+                    return;
+                }
+
+                const fd = new FormData();
+                fd.append("file", metaFile);
                 const apiBase = getApiBaseUrl();
                 const resp = await fetch(`${apiBase}/strip-metadata`, { method: "POST", body: fd });
                 if (!resp.ok) throw new Error("Metaveri temizleme başarısız oldu.");
@@ -2661,6 +2694,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 showToast("success", `🛡️ Metaveriler silindi ve temiz görsel indirildi: ${outName}`);
             } catch (err) {
                 showToast("error", `⚠️ ${err.message}`);
+            } finally {
+                btnMetaStrip.classList.remove("hidden");
+                btnMetaStrip.disabled = false;
             }
         });
     }
@@ -2724,6 +2760,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const taskId = generateTaskId();
             btnAnimApply.disabled = true;
+            btnAnimApply.classList.add("hidden");
             startGlobalProgress(taskId);
 
             const fd = new FormData();
@@ -2755,6 +2792,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 stopGlobalProgress(false);
                 showToast("error", `⚠️ ${err.message}`);
             } finally {
+                btnAnimApply.classList.remove("hidden");
                 btnAnimApply.disabled = false;
             }
         });
@@ -2871,6 +2909,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const taskId = generateTaskId();
             btnSubApply.disabled = true;
+            btnSubApply.classList.add("hidden");
             startGlobalProgress(taskId);
 
             const fd = new FormData();
@@ -2899,6 +2938,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 stopGlobalProgress(false);
                 showToast("error", `⚠️ ${err.message}`);
             } finally {
+                btnSubApply.classList.remove("hidden");
                 btnSubApply.disabled = false;
             }
         });
@@ -2982,6 +3022,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
             const taskId = generateTaskId();
             btnPdfMergeApply.disabled = true;
+            btnPdfMergeApply.classList.add("hidden");
             startGlobalProgress(taskId);
 
             const fd = new FormData();
@@ -3006,6 +3047,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 stopGlobalProgress(false);
                 showToast("error", `⚠️ ${err.message}`);
             } finally {
+                btnPdfMergeApply.classList.remove("hidden");
                 btnPdfMergeApply.disabled = false;
             }
         });
@@ -3071,6 +3113,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const taskId = generateTaskId();
             btnPdfSplitApply.disabled = true;
+            btnPdfSplitApply.classList.add("hidden");
             startGlobalProgress(taskId);
 
             const fd = new FormData();
@@ -3097,6 +3140,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 stopGlobalProgress(false);
                 showToast("error", `⚠️ ${err.message}`);
             } finally {
+                btnPdfSplitApply.classList.remove("hidden");
                 btnPdfSplitApply.disabled = false;
             }
         });
@@ -3160,6 +3204,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
             const taskId = generateTaskId();
             btnPdfTextApply.disabled = true;
+            btnPdfTextApply.classList.add("hidden");
             startGlobalProgress(taskId);
 
             const fd = new FormData();
@@ -3185,6 +3230,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 stopGlobalProgress(false);
                 showToast("error", `⚠️ ${err.message}`);
             } finally {
+                btnPdfTextApply.classList.remove("hidden");
                 btnPdfTextApply.disabled = false;
             }
         });
@@ -3314,6 +3360,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
             const taskId = generateTaskId();
             btnAudioFxApply.disabled = true;
+            btnAudioFxApply.classList.add("hidden");
             startGlobalProgress(taskId);
 
             const fd = new FormData();
@@ -3342,6 +3389,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 stopGlobalProgress(false);
                 showToast("error", `⚠️ ${err.message}`);
             } finally {
+                btnAudioFxApply.classList.remove("hidden");
                 btnAudioFxApply.disabled = false;
             }
         });
@@ -3418,6 +3466,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
             const taskId = generateTaskId();
             btnNoiseApply.disabled = true;
+            btnNoiseApply.classList.add("hidden");
             startGlobalProgress(taskId);
 
             const fd = new FormData();
@@ -3445,6 +3494,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 stopGlobalProgress(false);
                 showToast("error", `⚠️ ${err.message}`);
             } finally {
+                btnNoiseApply.classList.remove("hidden");
                 btnNoiseApply.disabled = false;
             }
         });
@@ -3732,7 +3782,7 @@ window.deleteInstalledAiModels = async function() {
     const btn = document.getElementById('btn-delete-ai-models');
     if (btn) {
         btn.disabled = true;
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-red-400"></i> <span>Siliniyor...</span>';
+        btn.classList.add('hidden');
     }
 
     try {
@@ -3749,6 +3799,7 @@ window.deleteInstalledAiModels = async function() {
         showToast("error", "Bağlantı hatası: Modeller silinemedi.");
     } finally {
         if (btn) {
+            btn.classList.remove('hidden');
             btn.disabled = false;
             btn.innerHTML = `<i class="fa-solid fa-trash-can text-red-400"></i> <span>${i18n('btn_delete_ai_models')}</span>`;
         }
@@ -3762,7 +3813,10 @@ window.startAiInstallation = async function() {
     const percentText = document.getElementById('ai-install-percent');
     const bar = document.getElementById('ai-install-progress-bar');
 
-    if (btn) btn.disabled = true;
+    if (btn) {
+        btn.disabled = true;
+        btn.classList.add('hidden');
+    }
     if (progressBox) progressBox.classList.remove('hidden');
 
     try {
@@ -3786,11 +3840,18 @@ window.startAiInstallation = async function() {
                         setTimeout(() => {
                             window.closeAiSetupModal(true);
                             window.checkAiIntegrity();
+                            if (btn) {
+                                btn.classList.remove('hidden');
+                                btn.disabled = false;
+                            }
                         }, 1200);
                     } else if (prog.status === 'error') {
                         clearInterval(poll);
                         if (statusText) statusText.textContent = `⚠️ Hata: ${prog.error}`;
-                        if (btn) btn.disabled = false;
+                        if (btn) {
+                            btn.classList.remove('hidden');
+                            btn.disabled = false;
+                        }
                         showToast("error", `⚠️ ${prog.error}`);
                     }
                 }
@@ -3800,7 +3861,10 @@ window.startAiInstallation = async function() {
         }, 1000);
     } catch (e) {
         showToast("error", "Bağlantı hatası: Modeller indirilemedi.");
-        if (btn) btn.disabled = false;
+        if (btn) {
+            btn.classList.remove('hidden');
+            btn.disabled = false;
+        }
     }
 };
 
