@@ -21,11 +21,6 @@ if sys.platform == "win32":
     except Exception:
         pass
 
-if sys.stdout is None:
-    sys.stdout = open(os.devnull, "w", encoding="utf-8")
-if sys.stderr is None:
-    sys.stderr = open(os.devnull, "w", encoding="utf-8")
-
 # Ensure project root is available on sys.path
 if getattr(sys, "frozen", False):
     APP_DIR = Path(sys.executable).resolve().parent
@@ -35,6 +30,20 @@ if getattr(sys, "frozen", False):
 else:
     APP_DIR = Path(__file__).resolve().parent
     sys.path.insert(0, str(APP_DIR))
+
+# Setup file logger so exceptions and diagnostics are recorded
+log_path = APP_DIR / "desktop.log"
+try:
+    log_fp = open(log_path, "a", encoding="utf-8", buffering=1)
+    if sys.stdout is None:
+        sys.stdout = log_fp
+    if sys.stderr is None:
+        sys.stderr = log_fp
+except Exception:
+    if sys.stdout is None:
+        sys.stdout = open(os.devnull, "w", encoding="utf-8")
+    if sys.stderr is None:
+        sys.stderr = open(os.devnull, "w", encoding="utf-8")
 
 import uvicorn
 import webview
@@ -48,7 +57,7 @@ def find_available_port(start_port: int = 8000, max_attempts: int = 20) -> int:
     for port in range(start_port, start_port + max_attempts):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             try:
-                s.bind(("127.0.0.1", port))
+                s.bind(("0.0.0.0", port))
                 return port
             except OSError:
                 continue
@@ -92,44 +101,46 @@ def wait_for_server(url: str, timeout: float = 12.0) -> bool:
     return False
 
 
-def set_win32_window_icon(window_title: str, ico_path: Path):
-    """Applies native G-Toolbox icon to the Win32 window and taskbar."""
+def setup_native_icon(window, window_title: str, ico_path: Path):
+    """Safely applies native G-Toolbox icon to Win32 window and taskbar after window is shown."""
     if sys.platform != "win32" or not ico_path.exists():
         return
 
-    def _worker():
-        try:
-            import ctypes
-            WM_SETICON = 0x0080
-            ICON_SMALL = 0
-            ICON_BIG = 1
-            IMAGE_ICON = 1
-            LR_LOADFROMFILE = 0x0010
-            LR_DEFAULTSIZE = 0x0040
+    def _on_shown():
+        def _apply():
+            time.sleep(0.4)
+            try:
+                import ctypes
+                WM_SETICON = 0x0080
+                ICON_SMALL = 0
+                ICON_BIG = 1
+                IMAGE_ICON = 1
+                LR_LOADFROMFILE = 0x0010
+                LR_DEFAULTSIZE = 0x0040
 
-            h_icon = ctypes.windll.user32.LoadImageW(
-                None,
-                str(ico_path.resolve()),
-                IMAGE_ICON,
-                0, 0,
-                LR_LOADFROMFILE | LR_DEFAULTSIZE
-            )
-            if not h_icon:
-                return
+                h_icon = ctypes.windll.user32.LoadImageW(
+                    None,
+                    str(ico_path.resolve()),
+                    IMAGE_ICON,
+                    0, 0,
+                    LR_LOADFROMFILE | LR_DEFAULTSIZE
+                )
+                if not h_icon:
+                    return
 
-            # Wait for window to be created and set icon
-            for _ in range(40):
-                hwnd = ctypes.windll.user32.FindWindowW(None, window_title)
-                if hwnd:
-                    ctypes.windll.user32.SendMessageW(hwnd, WM_SETICON, ICON_SMALL, h_icon)
-                    ctypes.windll.user32.SendMessageW(hwnd, WM_SETICON, ICON_BIG, h_icon)
-                    break
-                time.sleep(0.15)
-        except Exception:
-            pass
+                for _ in range(20):
+                    hwnd = ctypes.windll.user32.FindWindowW(None, window_title)
+                    if hwnd:
+                        ctypes.windll.user32.SendMessageW(hwnd, WM_SETICON, ICON_SMALL, h_icon)
+                        ctypes.windll.user32.SendMessageW(hwnd, WM_SETICON, ICON_BIG, h_icon)
+                        break
+                    time.sleep(0.2)
+            except Exception:
+                pass
 
-    t = threading.Thread(target=_worker, daemon=True)
-    t.start()
+        threading.Thread(target=_apply, daemon=True).start()
+
+    window.events.shown += _on_shown
 
 
 def notify_ready():
@@ -169,10 +180,7 @@ def main():
     window_title = "G-Toolbox — All-in-One Media & AI Studio"
     favicon_path = APP_DIR / "static" / "favicon.ico"
 
-    # Start icon applier thread for native taskbar and titlebar icon
-    set_win32_window_icon(window_title, favicon_path)
-
-    # Signal splash launcher that window is about to open
+    # Signal splash launcher that backend is responding
     notify_ready()
 
     print("[*] Launching Native Desktop Window (Maximized / Fullscreen)...")
@@ -188,6 +196,9 @@ def main():
         zoomable=True
     )
 
+    # Attach native taskbar and titlebar icon hook
+    setup_native_icon(window, window_title, favicon_path)
+
     try:
         # Edge Chromium (WebView2) on Windows, WebKitGTK on Linux
         gui_type = "edgechromium" if sys.platform == "win32" else "gtk"
@@ -199,4 +210,13 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        import traceback
+        err_msg = traceback.format_exc()
+        try:
+            (APP_DIR / "desktop_error.log").write_text(err_msg, encoding="utf-8")
+        except Exception:
+            pass
+        raise

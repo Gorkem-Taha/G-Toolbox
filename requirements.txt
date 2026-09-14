@@ -19,3 +19,5 @@ pypdf
 pywebview
 faster-whisper
 demucs
+aiofiles
+psutil

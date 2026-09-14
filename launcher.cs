@@ -264,13 +264,8 @@ namespace GToolboxLauncher
                 if (pthFiles.Length > 0)
                 {
                     string pthPath = pthFiles[0];
-                    string pthContent = File.ReadAllText(pthPath);
-                    pthContent = pthContent.Replace("#import site", "import site");
-                    pthContent = pthContent.Replace("# import site", "import site");
-                    if (!pthContent.Contains("Lib\\site-packages"))
-                    {
-                        pthContent += "\r\nLib\\site-packages\r\n.\r\n";
-                    }
+                    // Configure isolated search paths: runtime, root (..), site-packages and enable site.main()
+                    string pthContent = "python310.zip\r\n.\r\n..\r\nLib\\site-packages\r\nimport site\r\n";
                     File.WriteAllText(pthPath, pthContent);
                 }
 
@@ -292,7 +287,7 @@ namespace GToolboxLauncher
                 // ── STEP 4: Install Core Dependencies ───────────────────
                 UpdateUI("4/4: Temel motor paketleri yükleniyor...", "FastAPI, WebView, Medya Araçları ve Bağımlılıklar (1-2 dk)...", 0, ProgressBarStyle.Marquee);
 
-                string corePackages = "fastapi uvicorn python-multipart jinja2 pydantic ffmpeg-python yt-dlp Pillow pyAesCrypt pypdf pywebview opencv-python numpy --no-warn-script-location";
+                string corePackages = "fastapi uvicorn python-multipart jinja2 pydantic ffmpeg-python yt-dlp Pillow pyAesCrypt pypdf pywebview opencv-python numpy aiofiles psutil --no-warn-script-location";
                 RunProcess(pythonExe, "-m pip install " + corePackages, runtimeDir);
 
                 if (installAi)
@@ -339,16 +334,20 @@ namespace GToolboxLauncher
             psi.WorkingDirectory = workDir;
             psi.UseShellExecute = false;
             psi.CreateNoWindow = true;
+            psi.RedirectStandardError = true;
+            psi.RedirectStandardOutput = true;
             psi.WindowStyle = ProcessWindowStyle.Hidden;
 
             using (Process p = Process.Start(psi))
             {
                 if (p != null)
                 {
+                    string stdout = p.StandardOutput.ReadToEnd();
+                    string stderr = p.StandardError.ReadToEnd();
                     p.WaitForExit(600000); // 10 minutes timeout
-                    if (p.ExitCode != 0)
+                    if (p.ExitCode != 0 && !string.IsNullOrEmpty(stderr) && (stderr.Contains("ERROR:") || stderr.Contains("Traceback")))
                     {
-                        // Some warnings produce non-zero exit in certain environments, continue
+                        throw new Exception("İşlem hatası (kod " + p.ExitCode + "):\n" + stderr);
                     }
                 }
             }
@@ -488,7 +487,29 @@ namespace GToolboxLauncher
             if (pythonProcess != null && pythonProcess.HasExited)
             {
                 pollTimer.Stop();
-                MessageBox.Show("G-Toolbox başlatılırken kapandı. Lütfen gereksinimleri kontrol edin.", "G-Toolbox Hata", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                string details = "";
+                string errFile = Path.Combine(baseDir, "desktop_error.log");
+                if (File.Exists(errFile))
+                {
+                    try { details = "\n\nHata Ayrıntısı:\n" + File.ReadAllText(errFile).Trim(); } catch { }
+                }
+                if (string.IsNullOrEmpty(details))
+                {
+                    string logFile = Path.Combine(baseDir, "desktop.log");
+                    if (File.Exists(logFile))
+                    {
+                        try
+                        {
+                            string[] lines = File.ReadAllLines(logFile);
+                            int take = Math.Min(lines.Length, 12);
+                            string[] tail = new string[take];
+                            Array.Copy(lines, lines.Length - take, tail, 0, take);
+                            details = "\n\nLog Çıktısı:\n" + string.Join("\n", tail).Trim();
+                        }
+                        catch { }
+                    }
+                }
+                MessageBox.Show("G-Toolbox başlatılırken kapandı." + (string.IsNullOrEmpty(details) ? " Lütfen gereksinimleri kontrol edin." : details), "G-Toolbox Hata", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 this.Close();
                 return;
             }
@@ -564,11 +585,16 @@ namespace GToolboxLauncher
                 string baseDir = AppDomain.CurrentDomain.BaseDirectory;
                 string script = Path.Combine(baseDir, "desktop_app.py");
 
-                // Clean any leftover ready flag
+                // Clean any leftover ready flag and old crash log
                 string readyFile = Path.Combine(baseDir, ".gtoolbox_ready");
                 if (File.Exists(readyFile))
                 {
                     try { File.Delete(readyFile); } catch { }
+                }
+                string oldErr = Path.Combine(baseDir, "desktop_error.log");
+                if (File.Exists(oldErr))
+                {
+                    try { File.Delete(oldErr); } catch { }
                 }
 
                 if (!File.Exists(script))
