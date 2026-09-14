@@ -12,6 +12,7 @@ import re
 import shutil
 import subprocess
 import sys
+import traceback
 import uuid
 import pyAesCrypt
 from fastapi import HTTPException
@@ -163,7 +164,7 @@ def get_upscaler(model_type: str = "general", force_fp32: bool = False):
     return upscaler_model
 
 from fastapi import BackgroundTasks, FastAPI, File, Form, UploadFile, Request, Header
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
@@ -256,6 +257,25 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    err_tb = traceback.format_exc()
+    logger.error(f"Unhandled error on {request.method} {request.url.path}: {exc}\n{err_tb}")
+    if request.url.path == "/" or "text/html" in request.headers.get("accept", ""):
+        return HTMLResponse(
+            status_code=500,
+            content=f"<!DOCTYPE html><html><head><meta charset='utf-8'><title>G-Toolbox Hata</title></head><body style='font-family:sans-serif;background:#0d1117;color:#c9d1d9;padding:30px;'>"
+                    f"<h2 style='color:#f85149;'>⚠️ G-Toolbox — Sunucu Hatası (500)</h2>"
+                    f"<p>İstek: <code>{request.method} {request.url.path}</code></p>"
+                    f"<p>Hata: <b>{exc}</b></p>"
+                    f"<pre style='background:#161b22;padding:15px;border-radius:6px;overflow-x:auto;color:#ff7b72;'>{err_tb}</pre>"
+                    f"</body></html>"
+        )
+    return JSONResponse(
+        status_code=500,
+        content={"success": False, "error": str(exc), "path": request.url.path}
+    )
+
 def get_lan_ip() -> str:
     """Detects the primary LAN IPv4 address of the host machine."""
     import socket
@@ -323,8 +343,23 @@ async def on_startup():
     except Exception as e:
         logger.warning(f"Startup purge warning: {e}")
 
-STATIC_DIR = RESOURCE_DIR / "static" if (RESOURCE_DIR / "static").exists() else BASE_DIR / "static"
-TEMPLATES_DIR = RESOURCE_DIR / "templates" if (RESOURCE_DIR / "templates").exists() else BASE_DIR / "templates"
+STATIC_DIR = None
+for s_cand in [RESOURCE_DIR / "static", BASE_DIR / "static", Path.cwd() / "static"]:
+    if s_cand.exists():
+        STATIC_DIR = s_cand
+        break
+if STATIC_DIR is None:
+    STATIC_DIR = BASE_DIR / "static"
+    STATIC_DIR.mkdir(parents=True, exist_ok=True)
+
+TEMPLATES_DIR = None
+for t_cand in [RESOURCE_DIR / "templates", BASE_DIR / "templates", Path.cwd() / "templates"]:
+    if t_cand.exists():
+        TEMPLATES_DIR = t_cand
+        break
+if TEMPLATES_DIR is None:
+    TEMPLATES_DIR = BASE_DIR / "templates"
+    TEMPLATES_DIR.mkdir(parents=True, exist_ok=True)
 
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
@@ -352,7 +387,26 @@ MIME_MAP = {
 @app.get("/")
 async def index(request: Request):
     """Renders the main application interface."""
-    return templates.TemplateResponse("index.html", {"request": request})
+    # 1. Direct file streaming (immune to Starlette 1.x / Jinja2 breaking signature changes)
+    index_candidates = [
+        TEMPLATES_DIR / "index.html",
+        BASE_DIR / "templates" / "index.html",
+        RESOURCE_DIR / "templates" / "index.html",
+        BASE_DIR / "index.html",
+        Path.cwd() / "templates" / "index.html",
+    ]
+    for candidate in index_candidates:
+        if candidate.exists():
+            return FileResponse(str(candidate), media_type="text/html; charset=utf-8")
+
+    # 2. Universal Jinja2 fallback supporting Starlette 1.x and legacy Starlette
+    try:
+        return templates.TemplateResponse(request=request, name="index.html")
+    except (TypeError, ValueError):
+        try:
+            return templates.TemplateResponse(request, "index.html", {"request": request})
+        except (TypeError, ValueError):
+            return templates.TemplateResponse("index.html", {"request": request})
 
 
 @app.post("/upload")
