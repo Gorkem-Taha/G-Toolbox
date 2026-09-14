@@ -1,6 +1,6 @@
-# 📦 G-Toolbox v4.3.0 Release Binaries
+# 📦 G-Toolbox v4.4.0 Release Binaries
 
-This directory contains standalone portable Linux AppImage and Android APK distribution packages for G-Toolbox v4.3.0.
+This directory contains standalone portable Windows Launcher, Linux AppImage, and Android APK distribution packages for G-Toolbox.
 
 ---
 
@@ -8,8 +8,16 @@ This directory contains standalone portable Linux AppImage and Android APK distr
 
 | File Name | Target Platform | Size | Architecture / Format | SHA-256 Checksum |
 | :--- | :--- | :--- | :--- | :--- |
+| **`G-Toolbox.exe`** | Windows 10 / 11 (x64) | ~30.5 KB | Win32 / .NET Smart Portable Launcher | `8998d15ab314037385102e9a62a051410c0644654ad59d2ae6c507034d1cefca` |
 | **`G-Toolbox-x86_64.AppImage`** | Linux (Ubuntu, Debian, Fedora, Arch) | ~1.15 MB | `x86_64` Standalone Portable | `0f7be770d1b8b5c988cd2accf49f6081ce169b4b43d9d23b7c015fa1bebd3f91` |
 | **`G-Toolbox.apk`** | Android (Mobile & Tablet) | ~5.27 MB | `arm64-v8a / armeabi-v7a / x86_64` | `8f897b090c4d7b81fff1b2cbb508ddd74a5dcce84bfcc4a0abb4519725deef8f` |
+
+---
+
+## 🪟 Windows (Portable Launcher) Quick Execution
+1. Double-click **`G-Toolbox.exe`**.
+2. If Python is missing or incompatible (e.g. Python 3.12+ build tool conflicts), the built-in Setup Engine automatically downloads an isolated Python 3.10.11 runtime (~8.2 MB), configures dependencies, and starts the desktop app.
+3. AI weights and GPU engines can be installed on-demand inside the app via the AI Setup Wizard.
 
 ---
 
