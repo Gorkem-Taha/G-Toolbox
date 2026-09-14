@@ -31,6 +31,37 @@ except ImportError:
 from typing import List, Optional, Dict, Any
 import zipfile
 import urllib.request
+import ssl
+
+try:
+    import certifi
+    os.environ.setdefault("SSL_CERT_FILE", certifi.where())
+except ImportError:
+    pass
+
+
+def _safe_urlopen(req: urllib.request.Request, timeout: int = 60):
+    """Safely opens a URL with SSL certificate fallback for clean Windows installations missing root CA certificates."""
+    # 1. Try standard / certifi SSL context
+    try:
+        ctx = None
+        try:
+            import certifi
+            ctx = ssl.create_default_context(cafile=certifi.where())
+        except Exception:
+            pass
+        return urllib.request.urlopen(req, timeout=timeout, context=ctx) if ctx else urllib.request.urlopen(req, timeout=timeout)
+    except Exception as e:
+        err_str = str(e)
+        if "CERTIFICATE_VERIFY_FAILED" in err_str or "certificate" in err_str.lower() or "ssl" in err_str.lower():
+            logger.warning(f"SSL certificate verification failed ({e}). Retrying with unverified context fallback...")
+            try:
+                unverified_ctx = ssl._create_unverified_context()
+                return urllib.request.urlopen(req, timeout=timeout, context=unverified_ctx)
+            except Exception as retry_err:
+                raise retry_err from e
+        raise e
+
 
 GITHUB_REPO_URL = "https://github.com/Gorkem-Taha/G-Toolbox/archive/refs/heads/main.zip"
 
@@ -122,7 +153,7 @@ def get_upscaler(model_type: str = "general", force_fp32: bool = False):
             model_url,
             headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
         )
-        with urllib.request.urlopen(req, timeout=120) as response, open(temp_path, "wb") as out_file:
+        with _safe_urlopen(req, timeout=120) as response, open(temp_path, "wb") as out_file:
             shutil.copyfileobj(response, out_file)
 
         if temp_path.stat().st_size < expected_min_size:
@@ -1269,7 +1300,7 @@ def _download_chunked_file(url: str, dest_path: Path, expected_min_size: int, pc
         url,
         headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"}
     )
-    with urllib.request.urlopen(req, timeout=45) as resp:
+    with _safe_urlopen(req, timeout=60) as resp:
         content_len = resp.headers.get("Content-Length")
         total_size = int(content_len) if content_len and content_len.isdigit() else 0
         total_mb = total_size / (1024 * 1024) if total_size > 0 else 0
