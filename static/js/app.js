@@ -3776,7 +3776,7 @@ window.closeAiSetupModal = function(rememberDismiss = false) {
 };
 
 window.deleteInstalledAiModels = async function() {
-    const confirmMsg = i18n('confirm_delete_ai') || "Yüklü yerel yapay zeka modellerini diskten silip alan açmak istediğinize emin misiniz?";
+    const confirmMsg = i18n('confirm_delete_ai') || "Are you sure you want to delete local AI models from disk to free up space?";
     if (!confirm(confirmMsg)) return;
 
     const btn = document.getElementById('btn-delete-ai-models');
@@ -3793,10 +3793,10 @@ window.deleteInstalledAiModels = async function() {
             localStorage.removeItem('gtoolbox_ai_setup_dismissed');
             await window.checkAiIntegrity(true);
         } else {
-            showToast("error", "Silme işlemi sırasında bir hata oluştu.");
+            showToast("error", "An error occurred while deleting models.");
         }
     } catch (e) {
-        showToast("error", "Bağlantı hatası: Modeller silinemedi.");
+        showToast("error", "Connection error: Failed to delete models.");
     } finally {
         if (btn) {
             btn.classList.remove('hidden');
@@ -3806,18 +3806,39 @@ window.deleteInstalledAiModels = async function() {
     }
 };
 
+window.restartAsAdmin = async function() {
+    if (!confirm("Do you want to restart G-Toolbox as Administrator? Windows will prompt for confirmation.")) return;
+    try {
+        showToast("info", "Requesting Administrator privileges...");
+        await fetch(`${getApiBaseUrl()}/api/restart-as-admin`, { method: 'POST' });
+    } catch (e) {
+        console.warn("Restart triggered", e);
+    }
+};
+
+window.openSecuritySettings = async function() {
+    try {
+        await fetch(`${getApiBaseUrl()}/api/open-security-settings`, { method: 'POST' });
+    } catch (e) {
+        console.warn("Open security settings failed", e);
+    }
+};
+
 window.startAiInstallation = async function() {
     const btn = document.getElementById('btn-start-ai-install');
     const progressBox = document.getElementById('ai-install-progress-box');
     const statusText = document.getElementById('ai-install-status-text');
     const percentText = document.getElementById('ai-install-percent');
     const bar = document.getElementById('ai-install-progress-bar');
+    const errBox = document.getElementById('ai-install-error-box');
+    const errDesc = document.getElementById('ai-install-error-desc');
 
     if (btn) {
         btn.disabled = true;
         btn.classList.add('hidden');
     }
     if (progressBox) progressBox.classList.remove('hidden');
+    if (errBox) errBox.classList.add('hidden');
 
     try {
         await fetch(`${getApiBaseUrl()}/api/install-ai-models`, { method: 'POST' });
@@ -3836,6 +3857,7 @@ window.startAiInstallation = async function() {
                     if (prog.status === 'done' || prog.progress >= 100) {
                         clearInterval(poll);
                         if (statusText) statusText.textContent = `🎉 ${i18n('models_ready')}`;
+                        if (errBox) errBox.classList.add('hidden');
                         showToast("success", `🎉 ${i18n('models_ready')}`);
                         setTimeout(() => {
                             window.closeAiSetupModal(true);
@@ -3847,10 +3869,14 @@ window.startAiInstallation = async function() {
                         }, 1200);
                     } else if (prog.status === 'error') {
                         clearInterval(poll);
-                        if (statusText) statusText.textContent = `⚠️ Hata: ${prog.error}`;
+                        if (statusText) statusText.textContent = `⚠️ Error: ${prog.error}`;
                         if (btn) {
                             btn.classList.remove('hidden');
                             btn.disabled = false;
+                        }
+                        if (errBox) {
+                            errBox.classList.remove('hidden');
+                            if (errDesc) errDesc.textContent = prog.error;
                         }
                         showToast("error", `⚠️ ${prog.error}`);
                     }
@@ -3860,7 +3886,7 @@ window.startAiInstallation = async function() {
             }
         }, 1000);
     } catch (e) {
-        showToast("error", "Bağlantı hatası: Modeller indirilemedi.");
+        showToast("error", "Connection error: Failed to download models.");
         if (btn) {
             btn.classList.remove('hidden');
             btn.disabled = false;

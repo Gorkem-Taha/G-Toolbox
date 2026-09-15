@@ -1663,8 +1663,8 @@
                         <i class="fa-solid fa-wand-magic-sparkles"></i>
                     </div>
                     <div>
-                        <h3 class="text-base font-extrabold" data-i18n="ai_setup_title">Yapay Zeka Kurulumu</h3>
-                        <p class="text-xs text-gray-400" data-i18n="ai_setup_subtitle">G-Toolbox Yerel AI Modelleri</p>
+                        <h3 class="text-base font-extrabold" data-i18n="ai_setup_title">AI Models Setup</h3>
+                        <p class="text-xs text-gray-400" data-i18n="ai_setup_subtitle">G-Toolbox Local AI Models</p>
                     </div>
                 </div>
                 <button onclick="closeAiSetupModal(true)" class="text-gray-400 hover:text-white transition-colors p-1">
@@ -1674,28 +1674,28 @@
 
             <div class="space-y-4">
                 <p class="text-sm text-gray-300 leading-relaxed" data-i18n="ai_setup_desc">
-                    G-Toolbox yapay zeka özelliklerini (4K Görsel Büyütme, Sihirli Nesne Silici ve Arka Plan Kaldırma) kullanmak için gerekli modelleri şimdi indirmek ister misiniz?
+                    Would you like to download the AI models (4K Upscaler, Magic Eraser, and Background Remover) now to process your media with full quality?
                 </p>
 
                 <div class="bg-black/40 border border-white/10 rounded-2xl p-4 space-y-2.5 text-xs">
                     <div class="flex items-center justify-between">
                         <span class="flex items-center gap-2"><i class="fa-solid fa-image text-purple-400"></i> Real-ESRGAN (4K Upscale)</span>
-                        <span id="badge-ai-realesrgan" class="text-gray-400">Kontrol ediliyor...</span>
+                        <span id="badge-ai-realesrgan" class="text-gray-400">Checking...</span>
                     </div>
                     <div class="flex items-center justify-between">
-                        <span class="flex items-center gap-2"><i class="fa-solid fa-eraser text-amber-400"></i> LaMa Inpainting (Nesne Silici)</span>
-                        <span id="badge-ai-lama" class="text-gray-400">Kontrol ediliyor...</span>
+                        <span class="flex items-center gap-2"><i class="fa-solid fa-eraser text-amber-400"></i> LaMa Inpainting (Object Remover)</span>
+                        <span id="badge-ai-lama" class="text-gray-400">Checking...</span>
                     </div>
                     <div class="flex items-center justify-between">
-                        <span class="flex items-center gap-2"><i class="fa-solid fa-scissors text-teal-400"></i> U2-Net (Arka Plan Kaldırma)</span>
-                        <span id="badge-ai-u2net" class="text-gray-400">Kontrol ediliyor...</span>
+                        <span class="flex items-center gap-2"><i class="fa-solid fa-scissors text-teal-400"></i> U2-Net (Background Remover)</span>
+                        <span id="badge-ai-u2net" class="text-gray-400">Checking...</span>
                     </div>
                 </div>
 
                 <!-- Progress container -->
                 <div id="ai-install-progress-box" class="hidden space-y-2">
                     <div class="flex justify-between text-xs font-semibold">
-                        <span id="ai-install-status-text" class="text-purple-300">Modeller indiriliyor...</span>
+                        <span id="ai-install-status-text" class="text-purple-300">Downloading models...</span>
                         <span id="ai-install-percent" class="text-purple-400">0%</span>
                     </div>
                     <div class="w-full h-2.5 bg-black/60 rounded-full overflow-hidden border border-white/10">
@@ -1703,22 +1703,38 @@
                     </div>
                 </div>
 
+                <!-- Error Action Box (WinError 4551 / Admin Elevation) -->
+                <div id="ai-install-error-box" class="hidden p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-xs space-y-2.5">
+                    <div class="flex items-start gap-2.5 text-amber-300 font-semibold">
+                        <i class="fa-solid fa-shield-halved text-amber-400 mt-0.5"></i>
+                        <span id="ai-install-error-desc">Windows Application Control blocked AI dependencies (c10.dll).</span>
+                    </div>
+                    <div class="flex items-center gap-2 pt-1 flex-wrap">
+                        <button type="button" onclick="restartAsAdmin()" class="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-black font-bold text-[11px] transition-all flex items-center gap-1.5 shadow-sm">
+                            <i class="fa-solid fa-user-shield"></i> <span>Restart as Administrator</span>
+                        </button>
+                        <button type="button" onclick="openSecuritySettings()" class="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-gray-200 font-medium text-[11px] transition-all flex items-center gap-1.5">
+                            <i class="fa-solid fa-gear"></i> <span>Open Windows Security</span>
+                        </button>
+                    </div>
+                </div>
+
                 <p class="text-[11px] text-gray-500 italic" data-i18n="ai_setup_note">
-                    * Tüm modeller bilgisayarınızda %100 çevrimdışı ve gizli çalışır. İstediğiniz zaman bu işlemi atlayabilir ve daha sonra Ayarlar menüsünden kurabilirsiniz.
+                    * All models run 100% locally and privately on your machine. You can skip this and install later from Settings.
                 </p>
             </div>
 
             <div class="mt-6 flex items-center justify-between gap-3 flex-wrap">
                 <button id="btn-delete-ai-models" onclick="deleteInstalledAiModels()" class="hidden px-4 py-2.5 rounded-xl bg-red-500/15 hover:bg-red-500/25 border border-red-500/30 text-red-300 text-xs font-bold transition-all flex items-center gap-2">
                     <i class="fa-solid fa-trash-can text-red-400"></i>
-                    <span data-i18n="btn_delete_ai_models">Yüklü Yapay Zekayı Sil</span>
+                    <span data-i18n="btn_delete_ai_models">Delete Installed AI</span>
                 </button>
                 <div class="flex items-center gap-3 ml-auto">
                     <button id="btn-skip-ai-install" onclick="closeAiSetupModal(true)" class="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-bold transition-all" data-i18n="btn_skip_for_now">
-                        Şimdilik Atla (Daha Sonra)
+                        Skip for Now (Later)
                     </button>
                     <button id="btn-start-ai-install" onclick="startAiInstallation()" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-amber-500 text-white text-xs font-extrabold shadow-[0_0_20px_rgba(168,85,247,0.4)] hover:opacity-90 transition-all flex items-center gap-2">
-                        <i class="fa-solid fa-download"></i> <span data-i18n="btn_install_ai_models">Evet, Yapay Zekayı İndir</span>
+                        <i class="fa-solid fa-download"></i> <span data-i18n="btn_install_ai_models">Yes, Download AI Models</span>
                     </button>
                 </div>
             </div>

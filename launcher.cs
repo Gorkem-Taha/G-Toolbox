@@ -5,13 +5,129 @@ using System.Drawing.Drawing2D;
 using System.IO;
 using System.IO.Compression;
 using System.Net;
+using System.Runtime.InteropServices;
+using System.Security.Principal;
 using System.Threading;
 using System.Windows.Forms;
 
 namespace GToolboxLauncher
 {
     // ═════════════════════════════════════════════════════════════════════════
-    // 0. ICON & ASSET HELPER (Crisp, High-Resolution Icon Loader)
+    // 0. SYSTEM & SECURITY HELPERS (Admin Elevation, Zone.Identifier, VC++ Redist)
+    // ═════════════════════════════════════════════════════════════════════════
+    internal static class SecurityHelper
+    {
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool DeleteFile(string name);
+
+        public static bool IsAdministrator()
+        {
+            try
+            {
+                WindowsIdentity identity = WindowsIdentity.GetCurrent();
+                WindowsPrincipal principal = new WindowsPrincipal(identity);
+                return principal.IsInRole(WindowsBuiltInRole.Administrator);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public static bool RestartAsAdministrator(string[] args)
+        {
+            try
+            {
+                ProcessStartInfo psi = new ProcessStartInfo();
+                psi.FileName = Application.ExecutablePath;
+                if (args != null && args.Length > 0)
+                {
+                    psi.Arguments = string.Join(" ", args);
+                }
+                psi.Verb = "runas";
+                psi.UseShellExecute = true;
+                Process.Start(psi);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public static void UnblockDirectory(string dirPath)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(dirPath) || !Directory.Exists(dirPath)) return;
+
+                string[] files = Directory.GetFiles(dirPath, "*.*", SearchOption.AllDirectories);
+                foreach (string file in files)
+                {
+                    try
+                    {
+                        DeleteFile(file + ":Zone.Identifier");
+                    }
+                    catch { }
+                }
+            }
+            catch { }
+        }
+
+        public static bool IsVcRedistInstalled()
+        {
+            try
+            {
+                string sysDir = Environment.GetFolderPath(Environment.SpecialFolder.System);
+                string vc140_1 = Path.Combine(sysDir, "vcruntime140_1.dll");
+                string msvcp140 = Path.Combine(sysDir, "msvcp140.dll");
+
+                if (File.Exists(vc140_1) && File.Exists(msvcp140))
+                {
+                    return true;
+                }
+
+                using (Microsoft.Win32.RegistryKey key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\X64"))
+                {
+                    if (key != null)
+                    {
+                        object val = key.GetValue("Installed");
+                        if (val != null && Convert.ToInt32(val) == 1)
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
+            catch { }
+
+            return false;
+        }
+
+        public static void AddDefenderExclusion(string folderPath)
+        {
+            if (!IsAdministrator() || string.IsNullOrEmpty(folderPath) || !Directory.Exists(folderPath)) return;
+            try
+            {
+                ProcessStartInfo psi = new ProcessStartInfo();
+                psi.FileName = "powershell.exe";
+                psi.Arguments = "-NoProfile -ExecutionPolicy Bypass -Command \"Add-MpPreference -ExclusionPath '" + folderPath.Replace("'", "''") + "' -ErrorAction SilentlyContinue\"";
+                psi.UseShellExecute = false;
+                psi.CreateNoWindow = true;
+                psi.WindowStyle = ProcessWindowStyle.Hidden;
+
+                using (Process p = Process.Start(psi))
+                {
+                    if (p != null) p.WaitForExit(5000);
+                }
+            }
+            catch { }
+        }
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // 1. ICON & ASSET HELPER (Crisp, High-Resolution Icon Loader)
     // ═════════════════════════════════════════════════════════════════════════
     internal static class IconHelper
     {
@@ -69,7 +185,7 @@ namespace GToolboxLauncher
     }
 
     // ═════════════════════════════════════════════════════════════════════════
-    // 1. SETUP / DOWNLOAD WIZARD FORM (Portable Python 3.10 & Runtime Engine)
+    // 2. SETUP / DOWNLOAD WIZARD FORM (Portable Python 3.10 & Runtime Engine)
     // ═════════════════════════════════════════════════════════════════════════
     public class SetupForm : Form
     {
@@ -93,7 +209,7 @@ namespace GToolboxLauncher
 
         private void InitUI()
         {
-            this.Size = new Size(520, 310);
+            this.Size = new Size(540, 320);
             this.FormBorderStyle = FormBorderStyle.None;
             this.StartPosition = FormStartPosition.CenterScreen;
             this.TopMost = true;
@@ -143,9 +259,9 @@ namespace GToolboxLauncher
             lblTitle.AutoSize = true;
             this.Controls.Add(lblTitle);
 
-            // Subtitle
+            // Subtitle (English)
             lblSubtitle = new Label();
-            lblSubtitle.Text = "Sıfır Kurulum: Taşınabilir Python 3.10 & Temel Motor Hazırlığı";
+            lblSubtitle.Text = "Zero-Config Setup: Portable Python 3.10 & Core Engine";
             lblSubtitle.Font = new Font("Segoe UI", 9.2f, FontStyle.Regular);
             lblSubtitle.ForeColor = Color.FromArgb(148, 163, 184);
             lblSubtitle.Location = new Point(94, 56);
@@ -157,57 +273,57 @@ namespace GToolboxLauncher
             lblClose.Text = "✕";
             lblClose.Font = new Font("Segoe UI", 11, FontStyle.Bold);
             lblClose.ForeColor = Color.FromArgb(148, 163, 184);
-            lblClose.Location = new Point(485, 12);
+            lblClose.Location = new Point(505, 12);
             lblClose.Size = new Size(24, 24);
             lblClose.Cursor = Cursors.Hand;
             lblClose.Click += (s, e) => { if (!isInstalling) { this.DialogResult = DialogResult.Cancel; this.Close(); } };
             this.Controls.Add(lblClose);
 
-            // Status text
+            // Status text (English)
             lblStatus = new Label();
-            lblStatus.Text = "Python ortamı bulunamadı. Taşınabilir runtime indirilecek.";
+            lblStatus.Text = "Python environment not found. Downloading portable runtime...";
             lblStatus.Font = new Font("Segoe UI", 9.5f, FontStyle.Bold);
             lblStatus.ForeColor = Color.FromArgb(203, 213, 225);
             lblStatus.Location = new Point(30, 102);
-            lblStatus.Size = new Size(460, 22);
+            lblStatus.Size = new Size(480, 22);
             this.Controls.Add(lblStatus);
 
-            // Detail text
+            // Detail text (English)
             lblDetail = new Label();
-            lblDetail.Text = "Sisteminiz temiz kalır. Kurulum bittiğinde uygulama otomatik açılır.";
+            lblDetail.Text = "Your system remains clean. The application will launch automatically when ready.";
             lblDetail.Font = new Font("Segoe UI", 8.5f, FontStyle.Regular);
             lblDetail.ForeColor = Color.FromArgb(148, 163, 184);
             lblDetail.Location = new Point(30, 126);
-            lblDetail.Size = new Size(460, 20);
+            lblDetail.Size = new Size(480, 20);
             this.Controls.Add(lblDetail);
 
             // Progress Bar
             progressBar = new ProgressBar();
             progressBar.Location = new Point(30, 154);
-            progressBar.Size = new Size(460, 10);
+            progressBar.Size = new Size(480, 10);
             progressBar.Style = ProgressBarStyle.Continuous;
             this.Controls.Add(progressBar);
 
-            // AI Checkbox
+            // AI Checkbox (English)
             chkInstallAi = new CheckBox();
-            chkInstallAi.Text = "Yapay zekâ motorunu da hemen indir (PyTorch CPU ~200MB)";
+            chkInstallAi.Text = "Download AI Engine now (PyTorch CPU, Real-ESRGAN, LaMa, U2-Net ~250MB)";
             chkInstallAi.Font = new Font("Segoe UI", 8.5f, FontStyle.Regular);
             chkInstallAi.ForeColor = Color.FromArgb(203, 213, 225);
             chkInstallAi.Location = new Point(30, 180);
-            chkInstallAi.Size = new Size(460, 24);
+            chkInstallAi.Size = new Size(480, 24);
             chkInstallAi.Checked = false;
             this.Controls.Add(chkInstallAi);
 
-            // Start Button
+            // Start Button (English)
             btnStart = new Button();
-            btnStart.Text = "Kurulumu Başlat";
+            btnStart.Text = "Start Installation";
             btnStart.Font = new Font("Segoe UI", 9.5f, FontStyle.Bold);
             btnStart.ForeColor = Color.White;
             btnStart.BackColor = Color.FromArgb(99, 102, 241);
             btnStart.FlatStyle = FlatStyle.Flat;
             btnStart.FlatAppearance.BorderSize = 0;
             btnStart.Location = new Point(30, 216);
-            btnStart.Size = new Size(460, 36);
+            btnStart.Size = new Size(480, 36);
             btnStart.Cursor = Cursors.Hand;
             btnStart.Click += (s, e) =>
             {
@@ -215,12 +331,12 @@ namespace GToolboxLauncher
             };
             this.Controls.Add(btnStart);
 
-            // Version info footer
+            // Version info footer (English)
             Label lblVer = new Label();
-            lblVer.Text = "G-Toolbox v4.4 • Sıfır Bağımlılık & Taşınabilir Çalışma Ortamı";
+            lblVer.Text = "G-Toolbox v4.4 • Zero Dependencies & Portable Environment" + (SecurityHelper.IsAdministrator() ? " (Administrator)" : "");
             lblVer.Font = new Font("Segoe UI", 8f, FontStyle.Regular);
             lblVer.ForeColor = Color.FromArgb(100, 116, 139);
-            lblVer.Location = new Point(30, 264);
+            lblVer.Location = new Point(30, 268);
             lblVer.AutoSize = true;
             this.Controls.Add(lblVer);
         }
@@ -230,12 +346,12 @@ namespace GToolboxLauncher
             if (isInstalling) return;
             isInstalling = true;
 
-            // İndirme başlayınca butonlar ve seçenekler gizlenir
+            // Hide buttons and options when download begins
             btnStart.Visible = false;
             chkInstallAi.Visible = false;
             lblClose.Visible = false;
 
-            progressBar.Size = new Size(460, 14);
+            progressBar.Size = new Size(480, 14);
             progressBar.Style = ProgressBarStyle.Continuous;
             progressBar.Value = 0;
 
@@ -260,13 +376,13 @@ namespace GToolboxLauncher
                 catch { }
 
                 // ── STEP 1: Download Python 3.10.11 Embeddable ZIP ───────
-                UpdateUI("1/4: Taşınabilir Python 3.10.11 indiriliyor...", "Resmi Python deposundan paket indiriliyor (~8.2 MB)...", 0, ProgressBarStyle.Continuous);
+                UpdateUI("1/5: Downloading Portable Python 3.10.11...", "Fetching official package from python.org (~8.2 MB)...", 0, ProgressBarStyle.Continuous);
 
                 string pyUrl = "https://www.python.org/ftp/python/3.10.11/python-3.10.11-embed-amd64.zip";
-                DownloadFileWithProgress(pyUrl, zipPath, "1/4: Taşınabilir Python 3.10.11 indiriliyor...", 8.2);
+                DownloadFileWithProgress(pyUrl, zipPath, "1/5: Downloading Portable Python 3.10.11...", 8.2);
 
                 // ── STEP 2: Extract to runtime/ ──────────────────────────
-                UpdateUI("2/4: Çalışma ortamı runtime/ dizinine çıkartılıyor...", "Lütfen bekleyin, arşiv açılıyor...", 0, ProgressBarStyle.Marquee);
+                UpdateUI("2/5: Extracting runtime environment to runtime/...", "Please wait, extracting files...", 0, ProgressBarStyle.Marquee);
 
                 if (Directory.Exists(runtimeDir))
                 {
@@ -278,7 +394,7 @@ namespace GToolboxLauncher
                 try { File.Delete(zipPath); } catch { }
 
                 // ── STEP 3: Configure python310._pth & Pip ───────────────
-                UpdateUI("3/4: Paket yolları ve Pip yapılandırılıyor...", "python310._pth dosyasında import site etkinleştiriliyor...", 0, ProgressBarStyle.Marquee);
+                UpdateUI("3/5: Configuring package paths and Pip...", "Enabling site packages in python310._pth...", 0, ProgressBarStyle.Marquee);
 
                 string[] pthFiles = Directory.GetFiles(runtimeDir, "python*._pth");
                 if (pthFiles.Length > 0)
@@ -293,32 +409,77 @@ namespace GToolboxLauncher
                 if (!Directory.Exists(sitePackages)) Directory.CreateDirectory(sitePackages);
 
                 string getPipPath = Path.Combine(runtimeDir, "get-pip.py");
-                UpdateUI("3/4: Pip paket yöneticisi indiriliyor...", "bootstrap.pypa.io üzerinden get-pip.py çekiliyor...", 0, ProgressBarStyle.Marquee);
-                DownloadFileWithProgress("https://bootstrap.pypa.io/get-pip.py", getPipPath, "3/4: Pip paket yöneticisi indiriliyor...", 2.5);
+                UpdateUI("3/5: Downloading Pip package manager...", "Fetching get-pip.py from bootstrap.pypa.io...", 0, ProgressBarStyle.Marquee);
+                DownloadFileWithProgress("https://bootstrap.pypa.io/get-pip.py", getPipPath, "3/5: Downloading Pip package manager...", 2.5);
 
                 string pythonExe = Path.Combine(runtimeDir, "python.exe");
-                UpdateUI("3/4: Pip kuruluyor...", "runtime içine pip ve setuptools yükleniyor...", 0, ProgressBarStyle.Marquee);
+                UpdateUI("3/5: Installing Pip...", "Installing pip and setuptools into runtime...", 0, ProgressBarStyle.Marquee);
                 RunProcess(pythonExe, "\"" + getPipPath + "\" --no-warn-script-location --default-timeout 180 --trusted-host pypi.org --trusted-host files.pythonhosted.org", runtimeDir);
                 try { File.Delete(getPipPath); } catch { }
 
-                // ── STEP 4: Install Core Dependencies ───────────────────
-                UpdateUI("4/4: Temel motor paketleri yükleniyor...", "FastAPI, WebView, Medya Araçları ve Bağımlılıklar (1-2 dk)...", 0, ProgressBarStyle.Marquee);
+                // ── STEP 4: System Dependencies & Security Policies ──────
+                UpdateUI("4/5: Checking system dependencies (Visual C++ Redist)...", "Verifying Microsoft Visual C++ 2015-2022 Redistributable...", 0, ProgressBarStyle.Marquee);
+
+                if (!SecurityHelper.IsVcRedistInstalled())
+                {
+                    UpdateUI("4/5: Installing Microsoft Visual C++ Redistributable...", "Downloading and installing official vc_redist.x64.exe...", 0, ProgressBarStyle.Marquee);
+                    string vcRedistPath = Path.Combine(Path.GetTempPath(), "vc_redist.x64.exe");
+                    try
+                    {
+                        DownloadFileWithProgress("https://aka.ms/vs/17/release/vc_redist.x64.exe", vcRedistPath, "4/5: Installing Microsoft Visual C++ Redistributable...", 24.0);
+                        ProcessStartInfo psiVc = new ProcessStartInfo();
+                        psiVc.FileName = vcRedistPath;
+                        psiVc.Arguments = "/install /quiet /norestart";
+                        psiVc.UseShellExecute = true;
+                        if (!SecurityHelper.IsAdministrator())
+                        {
+                            psiVc.Verb = "runas";
+                        }
+                        using (Process pVc = Process.Start(psiVc))
+                        {
+                            if (pVc != null) pVc.WaitForExit(180000);
+                        }
+                    }
+                    catch { }
+                    finally
+                    {
+                        try { if (File.Exists(vcRedistPath)) File.Delete(vcRedistPath); } catch { }
+                    }
+                }
+
+                // Remove Zone.Identifier from base directory and runtime
+                UpdateUI("4/5: Unblocking files & applying security policies...", "Removing Mark-of-the-Web (Zone.Identifier)...", 0, ProgressBarStyle.Marquee);
+                SecurityHelper.UnblockDirectory(baseDir);
+                if (SecurityHelper.IsAdministrator())
+                {
+                    SecurityHelper.AddDefenderExclusion(baseDir);
+                }
+
+                // ── STEP 5: Install Core Dependencies ───────────────────
+                UpdateUI("5/5: Installing core engine packages...", "FastAPI, WebView, Media Tools and dependencies (1-2 min)...", 0, ProgressBarStyle.Marquee);
 
                 string corePackages = "fastapi uvicorn python-multipart jinja2 pydantic ffmpeg-python yt-dlp Pillow pyAesCrypt pypdf pywebview opencv-python numpy aiofiles psutil certifi --no-warn-script-location --prefer-binary --default-timeout 180 --retries 5 --trusted-host pypi.org --trusted-host files.pythonhosted.org";
                 RunProcess(pythonExe, "-m pip install " + corePackages, runtimeDir);
 
                 if (installAi)
                 {
-                    UpdateUI("4/4+: Yapay Zekâ Motoru kuruluyor (PyTorch)...", "PyTorch CPU bileşenleri indiriliyor (~250 MB)...", 0, ProgressBarStyle.Marquee);
+                    UpdateUI("5/5+: Installing AI Engine (PyTorch CPU)...", "Downloading PyTorch CPU packages (~250 MB)...", 0, ProgressBarStyle.Marquee);
                     RunProcess(pythonExe, "-m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu --no-warn-script-location --prefer-binary --default-timeout 180 --retries 5 --trusted-host download.pytorch.org --trusted-host pypi.org --trusted-host files.pythonhosted.org", runtimeDir);
-                    UpdateUI("4/4+: Yapay Zekâ Motoru kuruluyor (BasicSR)...", "BasicSR mimarisi yapılandırılıyor...", 0, ProgressBarStyle.Marquee);
+                    UpdateUI("5/5+: Configuring BasicSR architecture...", "Installing BasicSR components...", 0, ProgressBarStyle.Marquee);
                     RunProcess(pythonExe, "-m pip install basicsr --no-deps --no-warn-script-location --prefer-binary --default-timeout 180 --trusted-host pypi.org --trusted-host files.pythonhosted.org", runtimeDir);
-                    UpdateUI("4/4+: Yapay Zekâ Motoru kuruluyor (Modüller)...", "RealESRGAN, Rembg, LaMa, Whisper, Demucs yükleniyor...", 0, ProgressBarStyle.Marquee);
+                    UpdateUI("5/5+: Installing AI modules...", "Installing RealESRGAN, Rembg, LaMa, Whisper, Demucs...", 0, ProgressBarStyle.Marquee);
                     RunProcess(pythonExe, "-m pip install realesrgan rembg simple-lama-inpainting faster-whisper demucs --no-warn-script-location --prefer-binary --default-timeout 180 --retries 5 --trusted-host pypi.org --trusted-host files.pythonhosted.org", runtimeDir);
+
+                    // Ensure PyTorch DLLs are completely unblocked
+                    string torchLib = Path.Combine(runtimeDir, "Lib", "site-packages", "torch", "lib");
+                    if (Directory.Exists(torchLib))
+                    {
+                        SecurityHelper.UnblockDirectory(torchLib);
+                    }
                 }
 
-                // ── STEP 5: Finished! ───────────────────────────────────
-                UpdateUI("🎉 Kurulum tamamlandı!", "G-Toolbox başlatılıyor...", 100, ProgressBarStyle.Continuous);
+                // ── STEP 6: Finished! ───────────────────────────────────
+                UpdateUI("🎉 Installation complete!", "Launching G-Toolbox...", 100, ProgressBarStyle.Continuous);
                 Thread.Sleep(1200);
 
                 try
@@ -337,16 +498,37 @@ namespace GToolboxLauncher
                 {
                     this.BeginInvoke((MethodInvoker)delegate
                     {
-                        MessageBox.Show("Kurulum sırasında bir hata oluştu:\n\n" + ex.Message + "\n\nLütfen internet bağlantınızı kontrol edip tekrar deneyin.", "G-Toolbox Kurulum Hatası", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        string errText = ex.Message;
+                        bool isPolicyError = errText.Contains("4551") || errText.Contains("c10.dll") || errText.ToLower().Contains("application control") || errText.ToLower().Contains("uygulama denetimi");
+
+                        string msg = "An error occurred during installation:\n\n" + errText;
+                        if (isPolicyError || !SecurityHelper.IsAdministrator())
+                        {
+                            msg += "\n\nThis may be caused by Windows security policies or missing permissions.\nWould you like to restart G-Toolbox as Administrator to resolve this?";
+                            DialogResult dr = MessageBox.Show(msg, "G-Toolbox Setup Error", MessageBoxButtons.YesNo, MessageBoxIcon.Error);
+                            if (dr == DialogResult.Yes)
+                            {
+                                SecurityHelper.RestartAsAdministrator(null);
+                                this.DialogResult = DialogResult.Cancel;
+                                this.Close();
+                                return;
+                            }
+                        }
+                        else
+                        {
+                            msg += "\n\nPlease check your internet connection and try again.";
+                            MessageBox.Show(msg, "G-Toolbox Setup Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }
+
                         isInstalling = false;
                         btnStart.Visible = true;
                         btnStart.Enabled = true;
-                        btnStart.Text = "Yeniden Dene";
+                        btnStart.Text = "Retry";
                         chkInstallAi.Visible = true;
                         chkInstallAi.Enabled = true;
                         lblClose.Visible = true;
-                        lblStatus.Text = "Kurulum tamamlanamadı.";
-                        lblDetail.Text = "Hata: " + ex.Message;
+                        lblStatus.Text = "Installation could not be completed.";
+                        lblDetail.Text = "Error: " + ex.Message;
                         progressBar.Style = ProgressBarStyle.Continuous;
                         progressBar.Value = 0;
                     });
@@ -400,10 +582,10 @@ namespace GToolboxLauncher
                             lastUiUpdate = now;
                             double receivedMb = totalRead / 1048576.0;
                             int pct = totalBytes > 0 ? (int)((totalRead * 100) / totalBytes) : -1;
-                            string detail = string.Format("İndirilen: {0:F1} MB / {1:F1} MB{2}",
+                            string detail = string.Format("Downloaded: {0:F1} MB / {1:F1} MB{2}",
                                 receivedMb,
                                 totalMb,
-                                pct >= 0 ? string.Format(" (%{0})", pct) : "");
+                                pct >= 0 ? string.Format(" ({0}%)", pct) : "");
 
                             UpdateUI(stepLabel, detail, pct >= 0 ? pct : 0, pct >= 0 ? ProgressBarStyle.Continuous : ProgressBarStyle.Marquee);
                         }
@@ -467,13 +649,13 @@ namespace GToolboxLauncher
                 if (!p.WaitForExit(900000))
                 {
                     try { p.Kill(); } catch { }
-                    throw new Exception("İşlem zaman aşımına uğradı (15 dk): " + exe);
+                    throw new Exception("Operation timed out (15 min): " + exe);
                 }
 
                 string stderr = errBuffer.ToString();
                 if (p.ExitCode != 0 && !string.IsNullOrEmpty(stderr) && (stderr.Contains("ERROR:") || stderr.Contains("Traceback") || stderr.Contains("Fatal error:")))
                 {
-                    throw new Exception("İşlem hatası (kod " + p.ExitCode + "):\n" + stderr);
+                    throw new Exception("Process error (code " + p.ExitCode + "):\n" + stderr);
                 }
             }
         }
@@ -501,7 +683,7 @@ namespace GToolboxLauncher
     }
 
     // ═════════════════════════════════════════════════════════════════════════
-    // 2. SPLASH SCREEN FORM (Fast Startup & Readiness Poller)
+    // 3. SPLASH SCREEN FORM (Fast Startup & Readiness Poller)
     // ═════════════════════════════════════════════════════════════════════════
     public class SplashForm : Form
     {
@@ -581,7 +763,7 @@ namespace GToolboxLauncher
             this.Controls.Add(lblSubtitle);
 
             lblStatus = new Label();
-            lblStatus.Text = "Yapay zekâ ve medya motorları başlatılıyor...";
+            lblStatus.Text = "Starting AI and media engines...";
             lblStatus.Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
             lblStatus.ForeColor = Color.FromArgb(203, 213, 225);
             lblStatus.Location = new Point(30, 120);
@@ -596,7 +778,7 @@ namespace GToolboxLauncher
             this.Controls.Add(progressBar);
 
             lblVersion = new Label();
-            lblVersion.Text = "v4.4 Desktop • Lütfen bekleyin...";
+            lblVersion.Text = "v4.4 Desktop • Please wait...";
             lblVersion.Font = new Font("Segoe UI", 8.5f, FontStyle.Regular);
             lblVersion.ForeColor = Color.FromArgb(100, 116, 139);
             lblVersion.Location = new Point(30, 175);
@@ -620,7 +802,7 @@ namespace GToolboxLauncher
                 string errFile = Path.Combine(baseDir, "desktop_error.log");
                 if (File.Exists(errFile))
                 {
-                    try { details = "\n\nHata Ayrıntısı:\n" + File.ReadAllText(errFile).Trim(); } catch { }
+                    try { details = "\n\nError Details:\n" + File.ReadAllText(errFile).Trim(); } catch { }
                 }
                 if (string.IsNullOrEmpty(details))
                 {
@@ -633,12 +815,26 @@ namespace GToolboxLauncher
                             int take = Math.Min(lines.Length, 12);
                             string[] tail = new string[take];
                             Array.Copy(lines, lines.Length - take, tail, 0, take);
-                            details = "\n\nLog Çıktısı:\n" + string.Join("\n", tail).Trim();
+                            details = "\n\nLog Output:\n" + string.Join("\n", tail).Trim();
                         }
                         catch { }
                     }
                 }
-                MessageBox.Show("G-Toolbox başlatılırken kapandı." + (string.IsNullOrEmpty(details) ? " Lütfen gereksinimleri kontrol edin." : details), "G-Toolbox Hata", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+
+                bool isPolicyBlocked = details.Contains("4551") || details.Contains("c10.dll") || details.ToLower().Contains("application control") || details.ToLower().Contains("uygulama denetimi");
+                if (isPolicyBlocked && !SecurityHelper.IsAdministrator())
+                {
+                    DialogResult dr = MessageBox.Show("G-Toolbox was blocked by Windows Application Control policies (Smart App Control / c10.dll).\n\nWould you like to restart G-Toolbox as Administrator to resolve this?" + details, "G-Toolbox Security Policy Block", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+                    if (dr == DialogResult.Yes)
+                    {
+                        SecurityHelper.RestartAsAdministrator(null);
+                    }
+                }
+                else
+                {
+                    MessageBox.Show("G-Toolbox closed unexpectedly." + (string.IsNullOrEmpty(details) ? " Please check requirements or run as Administrator." : details), "G-Toolbox Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
+
                 this.Close();
                 return;
             }
@@ -675,7 +871,7 @@ namespace GToolboxLauncher
 
             if (isReady)
             {
-                lblStatus.Text = "Arayüz yükleniyor...";
+                lblStatus.Text = "Loading interface...";
                 pollTimer.Stop();
 
                 System.Windows.Forms.Timer closeTimer = new System.Windows.Forms.Timer();
@@ -699,7 +895,7 @@ namespace GToolboxLauncher
     }
 
     // ═════════════════════════════════════════════════════════════════════════
-    // 3. MAIN PROGRAM ENTRY & RUNTIME DETECTOR
+    // 4. MAIN PROGRAM ENTRY & RUNTIME DETECTOR
     // ═════════════════════════════════════════════════════════════════════════
     static class Program
     {
@@ -726,14 +922,41 @@ namespace GToolboxLauncher
                     try { File.Delete(oldErr); } catch { }
                 }
 
+                // Automatically unblock all files in base directory to strip Zone.Identifier
+                SecurityHelper.UnblockDirectory(baseDir);
+
                 if (!File.Exists(script))
                 {
-                    MessageBox.Show("desktop_app.py bulunamadı:\n" + script, "G-Toolbox Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show("desktop_app.py was not found:\n" + script, "G-Toolbox Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
 
                 // Check for valid Python environment
                 string pythonExe = DetectWorkingPython(baseDir);
+
+                // If setup is needed OR Visual C++ Redistributable is missing, recommend Administrator privileges with user confirmation
+                if (!SecurityHelper.IsAdministrator())
+                {
+                    bool needsSetup = string.IsNullOrEmpty(pythonExe);
+                    bool needsVcRedist = !SecurityHelper.IsVcRedistInstalled();
+
+                    if (needsSetup || needsVcRedist)
+                    {
+                        DialogResult prompt = MessageBox.Show(
+                            "G-Toolbox requires Administrator privileges to install system runtime components (Microsoft Visual C++ Redistributable) and configure Windows security policies.\n\nWould you like to run G-Toolbox as Administrator?",
+                            "G-Toolbox - Administrator Privileges Recommended",
+                            MessageBoxButtons.YesNo,
+                            MessageBoxIcon.Question);
+
+                        if (prompt == DialogResult.Yes)
+                        {
+                            if (SecurityHelper.RestartAsAdministrator(args))
+                            {
+                                return; // Exit non-admin instance; elevated instance is starting
+                            }
+                        }
+                    }
+                }
 
                 // If no working environment is found, launch Setup Wizard!
                 if (string.IsNullOrEmpty(pythonExe))
@@ -751,7 +974,7 @@ namespace GToolboxLauncher
                     pythonExe = DetectWorkingPython(baseDir);
                     if (string.IsNullOrEmpty(pythonExe))
                     {
-                        MessageBox.Show("Taşınabilir Python çalışma ortamı kurulamadı.", "G-Toolbox Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        MessageBox.Show("Portable Python runtime could not be installed.", "G-Toolbox Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                         return;
                     }
                 }
@@ -781,7 +1004,7 @@ namespace GToolboxLauncher
                 Process pythonProc = Process.Start(psi);
                 if (pythonProc == null)
                 {
-                    MessageBox.Show("G-Toolbox başlatılamadı. Python çalışma ortamını kontrol edin.", "G-Toolbox", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show("G-Toolbox could not be started. Check Python runtime environment.", "G-Toolbox", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
 
@@ -795,7 +1018,7 @@ namespace GToolboxLauncher
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Başlatma hatası: " + ex.Message, "G-Toolbox", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Startup error: " + ex.Message, "G-Toolbox", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
