@@ -35,13 +35,31 @@ DOWNLOAD_DIR = BASE_DIR / "downloads"
 UPLOAD_DIR.mkdir(exist_ok=True)
 DOWNLOAD_DIR.mkdir(exist_ok=True)
 
+# Configure AI model directories BEFORE importing rembg or torch
+u2_base = BASE_DIR / "u2net.onnx"
+u2_home = Path.home() / ".u2net"
+if u2_base.exists() and u2_base.stat().st_size > 160 * 1024 * 1024:
+    os.environ["U2NET_HOME"] = str(BASE_DIR)
+else:
+    os.environ.setdefault("U2NET_HOME", str(u2_home))
+
+lama_base = BASE_DIR / "big-lama.pt"
+lama_home = Path.home() / ".cache" / "torch" / "hub" / "checkpoints" / "big-lama.pt"
+if lama_base.exists() and lama_base.stat().st_size > 180 * 1024 * 1024:
+    os.environ["LAMA_MODEL"] = str(lama_base)
+elif lama_home.exists() and lama_home.stat().st_size > 180 * 1024 * 1024:
+    os.environ["LAMA_MODEL"] = str(lama_home)
+
+os.environ.setdefault("TORCH_HOME", str(Path.home() / ".cache" / "torch"))
+os.environ.setdefault("MODEL_CHECKSUM_DISABLED", "1")
+
 import ffmpeg
 import yt_dlp
 from PIL import Image, ExifTags
 try:
     from rembg import remove as rembg_remove
     REMBG_AVAILABLE = True
-except ImportError:
+except Exception:
     rembg_remove = None
     REMBG_AVAILABLE = False
 
@@ -116,12 +134,10 @@ def _safe_urlopen(req: urllib.request.Request, timeout: int = 180):
 
 GITHUB_REPO_URL = "https://github.com/Gorkem-Taha/G-Toolbox/archive/refs/heads/main.zip"
 
-os.environ.setdefault("U2NET_HOME", str(Path.home() / ".u2net"))
-os.environ.setdefault("TORCH_HOME", str(Path.home() / ".cache" / "torch"))
-
 SimpleLama = None
 LAMA_AVAILABLE = False
 _LAMA_INSTANCE = None
+_REMBG_SESSION = None
 
 cv2 = None
 np = None
@@ -198,28 +214,62 @@ def _ensure_vc_redist() -> bool:
         return False
 
 
+def _register_dll_directories():
+    """Registers potential native DLL directories for Windows Python 3.8+ to prevent DLL load failed errors."""
+    if sys.platform != "win32":
+        return
+
+    sp_candidates = []
+    for p in sys.path:
+        p_obj = Path(p)
+        if p_obj.is_dir() and "site-packages" in p_obj.parts and p_obj not in sp_candidates:
+            sp_candidates.append(p_obj)
+
+    runtime_sp = BASE_DIR / "runtime" / "Lib" / "site-packages"
+    if runtime_sp.exists() and runtime_sp not in sp_candidates:
+        sp_candidates.append(runtime_sp)
+
+    dll_subdirs = [
+        Path("torch") / "lib",
+        Path("onnxruntime") / "capi",
+        Path("cv2"),
+        Path("scipy") / ".libs",
+        Path("PIL") / ".libs",
+    ]
+
+    added_dirs = set()
+    for sp in sp_candidates:
+        for subdir in dll_subdirs:
+            target = sp / subdir
+            if target.is_dir():
+                target_str = str(target.resolve())
+                if target_str not in added_dirs:
+                    added_dirs.add(target_str)
+                    _unblock_directory(target)
+                    if hasattr(os, "add_dll_directory"):
+                        try:
+                            os.add_dll_directory(target_str)
+                        except Exception:
+                            pass
+                    if target_str not in os.environ.get("PATH", ""):
+                        os.environ["PATH"] = target_str + os.path.pathsep + os.environ.get("PATH", "")
+
+
 def ensure_ai_runtime() -> bool:
     """Dynamically verifies and imports AI frameworks (Torch, RealESRGAN, BasicSR, Rembg, LaMa, Whisper, Demucs).
     Ensures hotfixes are applied and libraries installed during app runtime are immediately accessible without restart.
     """
     global torch, cv2, np, RRDBNet, RealESRGANer, SimpleLama, LAMA_AVAILABLE, rembg_remove, REMBG_AVAILABLE
 
+    import importlib
+    importlib.invalidate_caches()
+
     # 0. Ensure runtime/Lib/site-packages is present in sys.path (critical for portable Python)
     try:
         runtime_sp = BASE_DIR / "runtime" / "Lib" / "site-packages"
-        if runtime_sp.exists():
-            if str(runtime_sp) not in sys.path:
-                sys.path.insert(0, str(runtime_sp))
-            torch_lib = runtime_sp / "torch" / "lib"
-            if torch_lib.exists():
-                _unblock_directory(torch_lib)
-                if hasattr(os, "add_dll_directory"):
-                    try:
-                        os.add_dll_directory(str(torch_lib))
-                    except Exception:
-                        pass
-                if str(torch_lib) not in os.environ.get("PATH", ""):
-                    os.environ["PATH"] = str(torch_lib) + os.path.pathsep + os.environ.get("PATH", "")
+        if runtime_sp.exists() and str(runtime_sp) not in sys.path:
+            sys.path.insert(0, str(runtime_sp))
+        _register_dll_directories()
     except Exception:
         pass
 
@@ -270,7 +320,7 @@ def ensure_ai_runtime() -> bool:
             REMBG_AVAILABLE = True
             logger.info("✅ Rembg runtime loaded successfully.")
         except Exception as e:
-            logger.debug(f"Rembg dynamic load: {e}")
+            logger.warning(f"Rembg dynamic load: {e}")
 
     # 4. SimpleLama
     if not LAMA_AVAILABLE or SimpleLama is None:
@@ -290,6 +340,25 @@ try:
     ensure_ai_runtime()
 except Exception as _e:
     logger.debug(f"Initial AI runtime check notice: {_e}")
+
+
+def get_rembg_session():
+    """Returns singleton rembg session for u2net to avoid reloading and reallocating ONNX graph per request."""
+    global _REMBG_SESSION
+    if _REMBG_SESSION is None:
+        ensure_ai_runtime()
+        if not REMBG_AVAILABLE or rembg_remove is None:
+            raise RuntimeError("rembg library is not installed yet. Please complete AI setup.")
+        u2_base = BASE_DIR / "u2net.onnx"
+        if u2_base.exists() and u2_base.stat().st_size > 160 * 1024 * 1024:
+            os.environ["U2NET_HOME"] = str(BASE_DIR)
+        else:
+            u2_home = Path.home() / ".u2net"
+            os.environ.setdefault("U2NET_HOME", str(u2_home))
+        os.environ.setdefault("MODEL_CHECKSUM_DISABLED", "1")
+        from rembg import new_session
+        _REMBG_SESSION = new_session("u2net")
+    return _REMBG_SESSION
 
 
 
@@ -801,39 +870,48 @@ async def remove_background(
 
     if not REMBG_AVAILABLE or rembg_remove is None:
         cleanup_files_and_memory(src_path)
-        raise HTTPException(
+        return JSONResponse(
             status_code=500,
-            detail="rembg library is not installed yet. Please complete AI setup."
+            content={
+                "success": False,
+                "message": "Arka plan silme AI motoru (rembg) yüklü değil. Lütfen Ayarlar > AI Kurulumu yapın.",
+                "detail": "rembg library is not installed yet. Please complete AI setup."
+            }
         )
 
     try:
         update_progress(x_task_id, 50, "AI model is executing. This process relies on CPU and GPU overhead...")
-        img = Image.open(src_path)
-        try:
-            from PIL import ImageOps
-            img = ImageOps.exif_transpose(img)
-        except Exception:
-            pass
 
-        # Convert non-RGB/RGBA modes (CMYK, P, L, 1, etc.) cleanly
-        if img.mode not in ("RGB", "RGBA"):
-            img = img.convert("RGBA" if "A" in img.mode or "transparency" in img.info else "RGB")
+        def process_rembg():
+            session = get_rembg_session()
+            img = Image.open(src_path)
+            try:
+                from PIL import ImageOps
+                img = ImageOps.exif_transpose(img)
+            except Exception:
+                pass
 
-        result = rembg_remove(img)
-        if isinstance(result, Image.Image):
-            if result.mode != "RGBA":
-                result = result.convert("RGBA")
-            result.save(str(out_path), format="PNG")
-        elif isinstance(result, (bytes, bytearray)):
-            with open(out_path, "wb") as f:
-                f.write(result)
-        elif isinstance(result, np.ndarray):
-            res_img = Image.fromarray(result)
-            if res_img.mode != "RGBA":
-                res_img = res_img.convert("RGBA")
-            res_img.save(str(out_path), format="PNG")
-        else:
-            raise ValueError(f"Unexpected rembg output format: {type(result)}")
+            # Convert non-RGB/RGBA modes (CMYK, P, L, 1, etc.) cleanly
+            if img.mode not in ("RGB", "RGBA"):
+                img = img.convert("RGBA" if "A" in img.mode or "transparency" in img.info else "RGB")
+
+            result = rembg_remove(img, session=session)
+            if isinstance(result, Image.Image):
+                if result.mode != "RGBA":
+                    result = result.convert("RGBA")
+                result.save(str(out_path), format="PNG")
+            elif isinstance(result, (bytes, bytearray)):
+                with open(out_path, "wb") as f:
+                    f.write(result)
+            elif isinstance(result, np.ndarray):
+                res_img = Image.fromarray(result)
+                if res_img.mode != "RGBA":
+                    res_img = res_img.convert("RGBA")
+                res_img.save(str(out_path), format="PNG")
+            else:
+                raise ValueError(f"Unexpected rembg output format: {type(result)}")
+
+        await asyncio.to_thread(process_rembg)
 
         update_progress(x_task_id, 90, "Packaging results...")
         if background_tasks:
@@ -850,9 +928,10 @@ async def remove_background(
 
     except Exception as exc:
         cleanup_files_and_memory(src_path, out_path)
+        logger.error(f"Remove background error: {exc}")
         return JSONResponse(
             status_code=500,
-            content={"success": False, "message": f"Background removal error: {str(exc)}"},
+            content={"success": False, "message": f"Background removal error: {str(exc)}", "detail": str(exc)},
         )
 
 @app.post("/magic-erase")
@@ -1444,7 +1523,9 @@ _AI_INSTALL_PROGRESS = {
 
 
 def check_ai_models_status() -> dict:
-    """Checks the status and presence of local AI model weights."""
+    """Checks the status and presence of local AI model weights and runtime availability."""
+    ensure_ai_runtime()
+
     models = {
         "realesrgan_general": {
             "name": "Real-ESRGAN (General 4x)",
@@ -1468,31 +1549,38 @@ def check_ai_models_status() -> dict:
             "name": "U2-Net Background Remover",
             "installed": False,
             "size_mb": 176.0,
-            "path": str(Path.home() / ".u2net" / "u2net.onnx"),
+            "path": "",
         },
     }
 
+    # 1. RealESRGAN General
     p_gen = BASE_DIR / "RealESRGAN_x4plus.pth"
-    if p_gen.exists() and p_gen.stat().st_size > 60 * 1024 * 1024:
-        models["realesrgan_general"]["installed"] = True
+    gen_ok = p_gen.exists() and p_gen.stat().st_size > 60 * 1024 * 1024
+    models["realesrgan_general"]["installed"] = bool(gen_ok and torch is not None and RealESRGANer is not None)
+    models["realesrgan_general"]["path"] = str(p_gen)
 
+    # 2. RealESRGAN Anime
     p_ani = BASE_DIR / "RealESRGAN_x4plus_anime_6B.pth"
-    if p_ani.exists() and p_ani.stat().st_size > 15 * 1024 * 1024:
-        models["realesrgan_anime"]["installed"] = True
+    ani_ok = p_ani.exists() and p_ani.stat().st_size > 15 * 1024 * 1024
+    models["realesrgan_anime"]["installed"] = bool(ani_ok and torch is not None and RealESRGANer is not None)
+    models["realesrgan_anime"]["path"] = str(p_ani)
 
-    torch_checkpoints = Path.home() / ".cache" / "torch" / "hub" / "checkpoints"
-    p_lama = torch_checkpoints / "big-lama.pt"
-    if p_lama.exists() and p_lama.stat().st_size > 180 * 1024 * 1024:
-        models["lama"]["installed"] = True
-        models["lama"]["path"] = str(p_lama)
-    else:
-        alt_lama = Path.home() / ".cache" / "torch" / "hub" / "smartyagy_simple-lama-inpainting_main"
-        if alt_lama.exists():
-            models["lama"]["installed"] = True
+    # 3. LaMa Inpainting
+    lama_base = BASE_DIR / "big-lama.pt"
+    lama_home = Path.home() / ".cache" / "torch" / "hub" / "checkpoints" / "big-lama.pt"
+    alt_lama = Path.home() / ".cache" / "torch" / "hub" / "smartyagy_simple-lama-inpainting_main"
+    p_lama = lama_base if (lama_base.exists() and lama_base.stat().st_size > 180 * 1024 * 1024) else lama_home
+    lama_ok = (p_lama.exists() and p_lama.stat().st_size > 180 * 1024 * 1024) or alt_lama.exists()
+    models["lama"]["installed"] = bool(lama_ok and LAMA_AVAILABLE and SimpleLama is not None)
+    models["lama"]["path"] = str(p_lama) if p_lama.exists() else str(lama_home)
 
-    p_u2 = Path.home() / ".u2net" / "u2net.onnx"
-    if p_u2.exists() and p_u2.stat().st_size > 160 * 1024 * 1024:
-        models["u2net"]["installed"] = True
+    # 4. U2-Net Background Remover
+    u2_base = BASE_DIR / "u2net.onnx"
+    u2_home = Path.home() / ".u2net" / "u2net.onnx"
+    p_u2 = u2_base if (u2_base.exists() and u2_base.stat().st_size > 160 * 1024 * 1024) else u2_home
+    u2_ok = p_u2.exists() and p_u2.stat().st_size > 160 * 1024 * 1024
+    models["u2net"]["installed"] = bool(u2_ok and REMBG_AVAILABLE and rembg_remove is not None)
+    models["u2net"]["path"] = str(p_u2) if p_u2.exists() else str(u2_home)
 
     all_installed = all(m["installed"] for m in models.values())
     essential_installed = (
@@ -1507,6 +1595,9 @@ def check_ai_models_status() -> dict:
         "all_installed": all_installed,
         "essential_installed": essential_installed,
         "torch_cuda_available": bool(torch.cuda.is_available()) if torch else False,
+        "rembg_available": bool(REMBG_AVAILABLE and rembg_remove is not None),
+        "torch_available": bool(torch is not None and RealESRGANer is not None),
+        "lama_available": bool(LAMA_AVAILABLE and SimpleLama is not None),
     }
 
 
@@ -1516,10 +1607,15 @@ def _run_pip_step(args: list, step_label: str, pct: int):
     _AI_INSTALL_PROGRESS["current_model"] = step_label
     _AI_INSTALL_PROGRESS["progress"] = pct
     py_exe = sys.executable
-    cmd = [py_exe, "-m", "pip"] + args + [
+    cmd = [
+        py_exe, "-m", "pip"
+    ] + args + [
         "--no-input",
         "--no-warn-script-location",
         "--prefer-binary",
+        "--trusted-host", "pypi.org",
+        "--trusted-host", "files.pythonhosted.org",
+        "--trusted-host", "download.pytorch.org",
         "--default-timeout", "180",
         "--retries", "5"
     ]
@@ -1535,12 +1631,16 @@ def _run_pip_step(args: list, step_label: str, pct: int):
         try:
             out, err = proc.communicate(timeout=900)
             if proc.returncode != 0:
-                logger.warning(f"Pip command warning ({step_label}): {err[:300] if err else ''}")
+                err_clean = (err or out or "Unknown pip error").strip()
+                logger.error(f"Pip command failed ({step_label}) [code {proc.returncode}]: {err_clean}")
+                raise RuntimeError(f"Pip error during '{step_label}': {err_clean[-300:]}")
         except subprocess.TimeoutExpired:
             proc.kill()
             logger.error(f"Pip command timed out: {step_label}")
+            raise RuntimeError(f"Pip timed out during '{step_label}'. Please check network.")
     except Exception as ex:
-        logger.warning(f"Pip execution error ({step_label}): {ex}")
+        logger.error(f"Pip execution error ({step_label}): {ex}")
+        raise ex
 
 
 def _download_chunked_file(url: str, dest_path: Path, expected_min_size: int, pct_start: int, pct_end: int, label: str):
@@ -1665,14 +1765,20 @@ def _download_ai_models_worker():
             _ensure_vc_redist()
 
         # 1. Check and install python AI libraries if missing
-        if torch is None or RealESRGANer is None or not REMBG_AVAILABLE:
+        ensure_ai_runtime()
+        if torch is None or RealESRGANer is None:
             _run_pip_step(["install", "torch", "torchvision", "--index-url", "https://download.pytorch.org/whl/cpu"], "Installing PyTorch CPU (~250 MB, 1-3 min)...", 5)
             _run_pip_step(["install", "basicsr", "--no-deps"], "Configuring BasicSR architecture...", 15)
-            _run_pip_step(["install", "realesrgan", "rembg", "simple-lama-inpainting", "faster-whisper", "demucs"], "Installing AI helper libraries (RealESRGAN, Rembg, LaMa, Whisper, Demucs)...", 22)
+            _run_pip_step(["install", "realesrgan"], "Installing RealESRGAN...", 20)
 
-            # Unblock newly installed libraries
-            _unblock_directory(BASE_DIR)
-            ensure_ai_runtime()
+        if not REMBG_AVAILABLE or rembg_remove is None or not LAMA_AVAILABLE or SimpleLama is None:
+            _run_pip_step(["install", "rembg", "simple-lama-inpainting", "faster-whisper", "demucs"], "Installing AI libraries (Rembg, LaMa, Whisper, Demucs)...", 24)
+
+        # Invalidate import caches, register DLLs, and unblock directory
+        import importlib
+        importlib.invalidate_caches()
+        _unblock_directory(BASE_DIR)
+        ensure_ai_runtime()
 
         # 2. RealESRGAN General Model (~67 MB)
         gen_path = BASE_DIR / "RealESRGAN_x4plus.pth"
@@ -1691,26 +1797,48 @@ def _download_ai_models_worker():
             _AI_INSTALL_PROGRESS["progress"] = max(_AI_INSTALL_PROGRESS["progress"], 62)
 
         # 4. LaMa Inpainting Model (~208 MB)
+        lama_base = BASE_DIR / "big-lama.pt"
         lama_dir = Path.home() / ".cache" / "torch" / "hub" / "checkpoints"
         lama_dir.mkdir(parents=True, exist_ok=True)
         lama_path = lama_dir / "big-lama.pt"
-        if not lama_path.exists() or lama_path.stat().st_size < 180 * 1024 * 1024:
+        if lama_base.exists() and lama_base.stat().st_size >= 180 * 1024 * 1024:
+            _AI_INSTALL_PROGRESS["progress"] = max(_AI_INSTALL_PROGRESS["progress"], 82)
+            os.environ["LAMA_MODEL"] = str(lama_base)
+        elif lama_path.exists() and lama_path.stat().st_size >= 180 * 1024 * 1024:
+            _AI_INSTALL_PROGRESS["progress"] = max(_AI_INSTALL_PROGRESS["progress"], 82)
+            os.environ["LAMA_MODEL"] = str(lama_path)
+        else:
             url = "https://github.com/enesmsahin/simple-lama-inpainting/releases/download/v0.1.0/big-lama.pt"
             _download_chunked_file(url, lama_path, 180 * 1024 * 1024, 62, 82, "LaMa Object Remover")
-        else:
-            _AI_INSTALL_PROGRESS["progress"] = max(_AI_INSTALL_PROGRESS["progress"], 82)
+            os.environ["LAMA_MODEL"] = str(lama_path)
 
         # 5. U2-Net Background Remover Model (~176 MB)
+        u2_base = BASE_DIR / "u2net.onnx"
         u2_dir = Path.home() / ".u2net"
         u2_dir.mkdir(parents=True, exist_ok=True)
         u2_path = u2_dir / "u2net.onnx"
-        if not u2_path.exists() or u2_path.stat().st_size < 160 * 1024 * 1024:
+        if u2_base.exists() and u2_base.stat().st_size >= 160 * 1024 * 1024:
+            _AI_INSTALL_PROGRESS["progress"] = max(_AI_INSTALL_PROGRESS["progress"], 98)
+            os.environ["U2NET_HOME"] = str(BASE_DIR)
+        elif u2_path.exists() and u2_path.stat().st_size >= 160 * 1024 * 1024:
+            _AI_INSTALL_PROGRESS["progress"] = max(_AI_INSTALL_PROGRESS["progress"], 98)
+            os.environ["U2NET_HOME"] = str(u2_dir)
+        else:
             url = "https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2net.onnx"
             _download_chunked_file(url, u2_path, 160 * 1024 * 1024, 82, 98, "U2-Net Background Remover")
-        else:
-            _AI_INSTALL_PROGRESS["progress"] = max(_AI_INSTALL_PROGRESS["progress"], 98)
+            os.environ["U2NET_HOME"] = str(u2_dir)
 
         ensure_ai_runtime()
+        missing = []
+        if not REMBG_AVAILABLE or rembg_remove is None:
+            missing.append("rembg (Background Remover)")
+        if torch is None or RealESRGANer is None:
+            missing.append("torch / RealESRGAN (Upscaler)")
+        if not LAMA_AVAILABLE or SimpleLama is None:
+            missing.append("simple-lama-inpainting (Magic Eraser)")
+        if missing:
+            raise RuntimeError(f"AI kütüphaneleri eksik veya başlatılamadı: {', '.join(missing)}. Lütfen yönetici olarak yeniden başlatın veya internet bağlantınızı kontrol edin.")
+
         _AI_INSTALL_PROGRESS["progress"] = 100
         _AI_INSTALL_PROGRESS["status"] = "done"
         _AI_INSTALL_PROGRESS["current_model"] = "All AI Models Ready!"
@@ -1787,7 +1915,7 @@ async def open_security_settings():
 @app.post("/api/delete-ai-models")
 async def delete_ai_models():
     """Deletes all local AI model weights from disk to free up disk space and flushes RAM/VRAM."""
-    global _UPSCALER_INSTANCE, _UPSCALER_INSTANCES, _LAMA_INSTANCE
+    global _UPSCALER_INSTANCE, _UPSCALER_INSTANCES, _LAMA_INSTANCE, _REMBG_SESSION
     
     # 1. Clear memory & VRAM
     try:
@@ -1798,6 +1926,11 @@ async def delete_ai_models():
 
     try:
         _LAMA_INSTANCE = None
+    except Exception:
+        pass
+
+    try:
+        _REMBG_SESSION = None
     except Exception:
         pass
 
@@ -1818,6 +1951,10 @@ async def delete_ai_models():
         BASE_DIR / "RealESRGAN_x4plus_anime_6B.pth",
         BASE_DIR / "RealESRGAN_x4plus.pth.tmp",
         BASE_DIR / "RealESRGAN_x4plus_anime_6B.pth.tmp",
+        BASE_DIR / "big-lama.pt",
+        BASE_DIR / "big-lama.pt.tmp",
+        BASE_DIR / "u2net.onnx",
+        BASE_DIR / "u2net.onnx.tmp",
         Path.home() / ".cache" / "torch" / "hub" / "checkpoints" / "big-lama.pt",
         Path.home() / ".u2net" / "u2net.onnx",
         Path.home() / ".u2net" / "u2net.onnx.tmp",
@@ -2456,11 +2593,12 @@ async def video_to_anim(
 
 # ── Hardware Telemetry & VRAM Management ─────────────────────────
 def purge_vram_and_models():
-    """Unloads cached AI models (RealESRGAN, LaMa, Faster-Whisper) and purges CUDA/RAM cache."""
-    global _UPSCALER_INSTANCE, _UPSCALER_INSTANCES, _LAMA_INSTANCE, _WHISPER_MODELS
+    """Unloads cached AI models (RealESRGAN, LaMa, Rembg, Faster-Whisper) and purges CUDA/RAM cache."""
+    global _UPSCALER_INSTANCE, _UPSCALER_INSTANCES, _LAMA_INSTANCE, _REMBG_SESSION, _WHISPER_MODELS
     _UPSCALER_INSTANCE = None
     _UPSCALER_INSTANCES.clear()
     _LAMA_INSTANCE = None
+    _REMBG_SESSION = None
     _WHISPER_MODELS.clear()
     
     import gc
@@ -2491,6 +2629,7 @@ async def get_system_status():
         "models_cached": {
             "upscalers": len(_UPSCALER_INSTANCES),
             "lama": _LAMA_INSTANCE is not None,
+            "rembg": _REMBG_SESSION is not None,
             "whisper": len(_WHISPER_MODELS)
         }
     }

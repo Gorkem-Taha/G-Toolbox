@@ -1203,7 +1203,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function handleMagicFile(file) {
-        if (!file.type.startsWith("image/")) {
+        const isImg = (file.type && file.type.startsWith("image/")) || /\.(jpe?g|png|webp|bmp|gif|tiff?)$/i.test(file.name || "");
+        if (!isImg) {
             showToast("error", `⚠️ ${i18n('select_image_error')}`);
             return;
         }
@@ -1430,7 +1431,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function handleUpscaleFile(file) {
-        if (!file.type.startsWith("image/")) {
+        const isImg = (file.type && file.type.startsWith("image/")) || /\.(jpe?g|png|webp|bmp|gif|tiff?)$/i.test(file.name || "");
+        if (!isImg) {
             showToast("error", `⚠️ ${i18n('select_image_error')}`);
             return;
         }
@@ -1578,7 +1580,8 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     function handleBgFile(file) {
-        if (!file.type.startsWith("image/")) {
+        const isImg = (file.type && file.type.startsWith("image/")) || /\.(jpe?g|png|webp|bmp|gif|tiff?)$/i.test(file.name || "");
+        if (!isImg) {
             showToast("error", `⚠️ ${i18n('select_image_error')}`);
             return;
         }
@@ -2294,7 +2297,7 @@ document.addEventListener("DOMContentLoaded", () => {
         reader.onload = () => {
             try {
                 const err = JSON.parse(reader.result);
-                showToast("error", `⚠️ ${err.message || i18n('vault_action_failed')}`);
+                showToast("error", `⚠️ ${err.detail || err.message || err.error || i18n('vault_action_failed')}`);
             } catch {
                 showToast("error", `⚠️ ${i18n('vault_action_failed')}`);
             }
