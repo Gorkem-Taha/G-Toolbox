@@ -132,6 +132,72 @@ _UPSCALER_INSTANCE = None
 _UPSCALER_INSTANCES = {}
 
 
+def _unblock_directory(dir_path: Path):
+    """Recursively removes Zone.Identifier alternate data streams (Mark of the Web) from files."""
+    if sys.platform != "win32":
+        return
+    try:
+        import ctypes
+        del_file = ctypes.windll.kernel32.DeleteFileW
+        if dir_path.is_file():
+            del_file(str(dir_path) + ":Zone.Identifier")
+            return
+        if not dir_path.exists():
+            return
+        for f in dir_path.rglob("*"):
+            if f.is_file():
+                try:
+                    del_file(str(f) + ":Zone.Identifier")
+                except Exception:
+                    pass
+    except Exception as e:
+        logger.debug(f"Unblock notice: {e}")
+
+
+def _is_vc_redist_installed() -> bool:
+    """Checks if Microsoft Visual C++ 2015-2022 Redistributable (x64) is installed."""
+    if sys.platform != "win32":
+        return True
+    try:
+        sys_dir = Path(os.environ.get("SystemRoot", "C:\\Windows")) / "System32"
+        vc140_1 = sys_dir / "vcruntime140_1.dll"
+        msvcp140 = sys_dir / "msvcp140.dll"
+        if vc140_1.exists() and msvcp140.exists():
+            return True
+        import winreg
+        key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\X64")
+        val, _ = winreg.QueryValueEx(key, "Installed")
+        return bool(val == 1)
+    except Exception:
+        return False
+
+
+def _ensure_vc_redist() -> bool:
+    """Ensures Microsoft Visual C++ 2015-2022 Redistributable is installed; downloads and runs installer if missing."""
+    if sys.platform != "win32" or _is_vc_redist_installed():
+        return True
+    try:
+        import tempfile
+        vc_url = "https://aka.ms/vs/17/release/vc_redist.x64.exe"
+        vc_tmp = Path(tempfile.gettempdir()) / "vc_redist.x64.exe"
+        logger.info("Downloading Microsoft Visual C++ 2015-2022 Redistributable (x64)...")
+        req = urllib.request.Request(vc_url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) G-Toolbox/4.4"})
+        with _safe_urlopen(req, timeout=180) as resp, open(vc_tmp, "wb") as f:
+            f.write(resp.read())
+        
+        logger.info("Installing Microsoft Visual C++ Redistributable...")
+        cmd = [str(vc_tmp), "/install", "/quiet", "/norestart"]
+        res = subprocess.run(cmd, timeout=180)
+        try:
+            vc_tmp.unlink()
+        except Exception:
+            pass
+        return res.returncode in (0, 3010)
+    except Exception as e:
+        logger.warning(f"Could not auto-install VC++ Redistributable: {e}")
+        return False
+
+
 def ensure_ai_runtime() -> bool:
     """Dynamically verifies and imports AI frameworks (Torch, RealESRGAN, BasicSR, Rembg, LaMa, Whisper, Demucs).
     Ensures hotfixes are applied and libraries installed during app runtime are immediately accessible without restart.
@@ -141,8 +207,19 @@ def ensure_ai_runtime() -> bool:
     # 0. Ensure runtime/Lib/site-packages is present in sys.path (critical for portable Python)
     try:
         runtime_sp = BASE_DIR / "runtime" / "Lib" / "site-packages"
-        if runtime_sp.exists() and str(runtime_sp) not in sys.path:
-            sys.path.insert(0, str(runtime_sp))
+        if runtime_sp.exists():
+            if str(runtime_sp) not in sys.path:
+                sys.path.insert(0, str(runtime_sp))
+            torch_lib = runtime_sp / "torch" / "lib"
+            if torch_lib.exists():
+                _unblock_directory(torch_lib)
+                if hasattr(os, "add_dll_directory"):
+                    try:
+                        os.add_dll_directory(str(torch_lib))
+                    except Exception:
+                        pass
+                if str(torch_lib) not in os.environ.get("PATH", ""):
+                    os.environ["PATH"] = str(torch_lib) + os.path.pathsep + os.environ.get("PATH", "")
     except Exception:
         pass
 
@@ -175,7 +252,15 @@ def ensure_ai_runtime() -> bool:
             RealESRGANer = _RealESRGANer
             logger.info("✅ RealESRGAN & PyTorch runtime loaded successfully.")
         except Exception as e:
-            logger.debug(f"AI upscaler dynamic load: {e}")
+            err_msg = str(e)
+            if "4551" in err_msg or "c10.dll" in err_msg or "application control" in err_msg.lower() or "uygulama denetimi" in err_msg.lower():
+                logger.error(
+                    "❌ [WinError 4551] Windows Application Control (Smart App Control) blocked torch/lib/c10.dll or its dependencies. "
+                    "Remedies: 1) Run G-Toolbox as Administrator. "
+                    "2) In Windows Security -> App & browser control -> Smart App Control -> set to Off."
+                )
+            else:
+                logger.debug(f"AI upscaler dynamic load: {e}")
 
     # 3. Rembg
     if not REMBG_AVAILABLE or rembg_remove is None:
@@ -213,7 +298,7 @@ def get_lama_model():
     if _LAMA_INSTANCE is None:
         ensure_ai_runtime()
         if not LAMA_AVAILABLE or SimpleLama is None:
-            raise RuntimeError("simple-lama-inpainting kütüphanesi henüz yüklü değil. Lütfen yapay zeka kurulumunu tamamlayın.")
+            raise RuntimeError("simple-lama-inpainting library is not installed yet. Please complete AI setup.")
         _LAMA_INSTANCE = SimpleLama()
     return _LAMA_INSTANCE
 
@@ -222,7 +307,7 @@ def get_upscaler(model_type: str = "general", force_fp32: bool = False):
     global _UPSCALER_INSTANCE, _UPSCALER_INSTANCES
     ensure_ai_runtime()
     if RealESRGANer is None:
-        raise RuntimeError("realesrgan veya PyTorch henüz yüklü değil. Lütfen yapay zeka kurulumunu tamamlayın.")
+        raise RuntimeError("realesrgan or PyTorch is not installed yet. Please complete AI setup.")
 
     m_key = "anime" if "anime" in str(model_type).lower() else "general"
     cache_key = f"{m_key}_fp32" if force_fp32 else m_key
@@ -718,7 +803,7 @@ async def remove_background(
         cleanup_files_and_memory(src_path)
         raise HTTPException(
             status_code=500,
-            detail="rembg kütüphanesi henüz yüklü değil. Lütfen yapay zeka kurulumunu tamamlayın."
+            detail="rembg library is not installed yet. Please complete AI setup."
         )
 
     try:
@@ -783,7 +868,7 @@ async def magic_erase(
     if not LAMA_AVAILABLE:
         return JSONResponse(
             status_code=500,
-            content={"success": False, "message": "simple-lama-inpainting kütüphanesi henüz yüklü değil. Lütfen yapay zeka kurulumunu tamamlayın."}
+            content={"success": False, "message": "simple-lama-inpainting library is not installed yet. Please complete AI setup."}
         )
 
     uid = uuid.uuid4().hex[:8]
@@ -862,9 +947,9 @@ async def upscale_image(
     x_task_id: str = Header(None)
 ):
     ensure_ai_runtime()
-    update_progress(x_task_id, 20, "Dosya yüklendi, işleme başlanıyor...")
+    update_progress(x_task_id, 20, "File uploaded, starting upscale process...")
     if RealESRGANer is None:
-        return JSONResponse(status_code=500, content={"success": False, "message": "realesrgan veya PyTorch henüz yüklü değil. Lütfen yapay zeka kurulumunu tamamlayın."})
+        return JSONResponse(status_code=500, content={"success": False, "message": "realesrgan or PyTorch is not installed yet. Please complete AI setup."})
     
     if scale not in [2, 4]:
         scale = 4
@@ -1524,10 +1609,10 @@ def _download_chunked_file(url: str, dest_path: Path, expected_min_size: int, pc
                         if total_size > 0:
                             ratio = min(1.0, downloaded / total_size)
                             curr_pct = int(pct_start + ratio * (pct_end - pct_start))
-                            _AI_INSTALL_PROGRESS["current_model"] = f"{label} ({dl_mb:.1f} / {total_mb:.1f} MB - %{int(ratio * 100)})"
+                            _AI_INSTALL_PROGRESS["current_model"] = f"{label} ({dl_mb:.1f} / {total_mb:.1f} MB - {int(ratio * 100)}%)"
                             _AI_INSTALL_PROGRESS["progress"] = min(99, max(pct_start, curr_pct))
                         else:
-                            _AI_INSTALL_PROGRESS["current_model"] = f"{label} ({dl_mb:.1f} MB indirildi...)"
+                            _AI_INSTALL_PROGRESS["current_model"] = f"{label} ({dl_mb:.1f} MB downloaded...)"
 
             # Successful stream completion
             actual_size = tmp_path.stat().st_size if tmp_path.exists() else 0
@@ -1536,9 +1621,9 @@ def _download_chunked_file(url: str, dest_path: Path, expected_min_size: int, pc
                 logger.info(f"Successfully downloaded and verified {label} ({actual_size} bytes).")
                 return
             else:
-                logger.warning(f"{label} indirilen boyut yetersiz ({actual_size} < {expected_min_size}). Yeniden deneniyor...")
+                logger.warning(f"{label} download size incomplete ({actual_size} < {expected_min_size}). Retrying...")
                 if attempt == max_retries:
-                    raise RuntimeError(f"{label} indirmesi eksik ({actual_size} bytes, beklenen: {expected_min_size}).")
+                    raise RuntimeError(f"{label} download incomplete ({actual_size} bytes, expected: {expected_min_size}).")
 
         except Exception as ex:
             err_msg = str(ex)
@@ -1551,8 +1636,8 @@ def _download_chunked_file(url: str, dest_path: Path, expected_min_size: int, pc
             )
             if is_network_err and attempt < max_retries:
                 dl_mb = (tmp_path.stat().st_size / (1024 * 1024)) if tmp_path.exists() else 0
-                logger.warning(f"{label} bağlantı zaman aşımı/kesintisi ({ex}). {retry_delay:.1f}s sonra kaldığı yerden ({dl_mb:.1f} MB) devam edilecek (Deneme {attempt}/{max_retries})...")
-                _AI_INSTALL_PROGRESS["current_model"] = f"{label} - Bağlantı tazeleniyor (Kaldığı yerden: {dl_mb:.1f} MB, Deneme {attempt}/{max_retries})..."
+                logger.warning(f"{label} connection timeout ({ex}). Retrying from ({dl_mb:.1f} MB) in {retry_delay:.1f}s (Attempt {attempt}/{max_retries})...")
+                _AI_INSTALL_PROGRESS["current_model"] = f"{label} - Reconnecting (Resuming from: {dl_mb:.1f} MB, Attempt {attempt}/{max_retries})..."
                 time.sleep(retry_delay)
                 retry_delay = min(10.0, retry_delay * 1.5)
                 continue
@@ -1562,7 +1647,7 @@ def _download_chunked_file(url: str, dest_path: Path, expected_min_size: int, pc
                         tmp_path.unlink()
                     except Exception:
                         pass
-                raise RuntimeError(f"{label} indirilirken bağlantı zaman aşımına uğradı (5 deneme başarısız): {ex}") from ex
+                raise RuntimeError(f"Connection timed out while downloading {label} (5 attempts failed): {ex}") from ex
             else:
                 raise ex
 
@@ -1573,13 +1658,20 @@ def _download_ai_models_worker():
     _AI_INSTALL_PROGRESS["error"] = None
 
     try:
+        # 0. Check and install Visual C++ 2015-2022 Redistributable if missing
+        if sys.platform == "win32" and not _is_vc_redist_installed():
+            _AI_INSTALL_PROGRESS["current_model"] = "Installing Microsoft Visual C++ Redistributable..."
+            _AI_INSTALL_PROGRESS["progress"] = 2
+            _ensure_vc_redist()
+
         # 1. Check and install python AI libraries if missing
         if torch is None or RealESRGANer is None or not REMBG_AVAILABLE:
-            _run_pip_step(["install", "torch", "torchvision", "--index-url", "https://download.pytorch.org/whl/cpu"], "PyTorch CPU kuruluyor (~250 MB, 1-3 dk)...", 5)
-            _run_pip_step(["install", "basicsr", "--no-deps"], "BasicSR mimarisi kuruluyor...", 15)
-            _run_pip_step(["install", "realesrgan", "rembg", "simple-lama-inpainting", "faster-whisper", "demucs"], "AI yardımcı kütüphaneleri kuruluyor...", 22)
+            _run_pip_step(["install", "torch", "torchvision", "--index-url", "https://download.pytorch.org/whl/cpu"], "Installing PyTorch CPU (~250 MB, 1-3 min)...", 5)
+            _run_pip_step(["install", "basicsr", "--no-deps"], "Configuring BasicSR architecture...", 15)
+            _run_pip_step(["install", "realesrgan", "rembg", "simple-lama-inpainting", "faster-whisper", "demucs"], "Installing AI helper libraries (RealESRGAN, Rembg, LaMa, Whisper, Demucs)...", 22)
 
-            # Dynamic re-import after installation
+            # Unblock newly installed libraries
+            _unblock_directory(BASE_DIR)
             ensure_ai_runtime()
 
         # 2. RealESRGAN General Model (~67 MB)
@@ -1604,7 +1696,7 @@ def _download_ai_models_worker():
         lama_path = lama_dir / "big-lama.pt"
         if not lama_path.exists() or lama_path.stat().st_size < 180 * 1024 * 1024:
             url = "https://github.com/enesmsahin/simple-lama-inpainting/releases/download/v0.1.0/big-lama.pt"
-            _download_chunked_file(url, lama_path, 180 * 1024 * 1024, 62, 82, "LaMa Nesne Silici")
+            _download_chunked_file(url, lama_path, 180 * 1024 * 1024, 62, 82, "LaMa Object Remover")
         else:
             _AI_INSTALL_PROGRESS["progress"] = max(_AI_INSTALL_PROGRESS["progress"], 82)
 
@@ -1614,18 +1706,26 @@ def _download_ai_models_worker():
         u2_path = u2_dir / "u2net.onnx"
         if not u2_path.exists() or u2_path.stat().st_size < 160 * 1024 * 1024:
             url = "https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2net.onnx"
-            _download_chunked_file(url, u2_path, 160 * 1024 * 1024, 82, 98, "U2-Net Arka Plan")
+            _download_chunked_file(url, u2_path, 160 * 1024 * 1024, 82, 98, "U2-Net Background Remover")
         else:
             _AI_INSTALL_PROGRESS["progress"] = max(_AI_INSTALL_PROGRESS["progress"], 98)
 
         ensure_ai_runtime()
         _AI_INSTALL_PROGRESS["progress"] = 100
         _AI_INSTALL_PROGRESS["status"] = "done"
-        _AI_INSTALL_PROGRESS["current_model"] = "Tüm Yapay Zekâ Modelleri Hazır!"
+        _AI_INSTALL_PROGRESS["current_model"] = "All AI Models Ready!"
     except Exception as e:
         logger.error(f"AI model download failed: {e}")
         _AI_INSTALL_PROGRESS["status"] = "error"
-        _AI_INSTALL_PROGRESS["error"] = str(e)
+        err_msg = str(e)
+        if "4551" in err_msg or "c10.dll" in err_msg or "application control" in err_msg.lower() or "uygulama denetimi" in err_msg.lower():
+            _AI_INSTALL_PROGRESS["error"] = (
+                "[WinError 4551] Windows Application Control (Smart App Control) blocked torch/lib/c10.dll or its dependencies. "
+                "Remedies: 1) Run G-Toolbox as Administrator. "
+                "2) If Windows 11 Smart App Control is active, set it to Off in Windows Security (App & browser control -> Smart App Control -> Off)."
+            )
+        else:
+            _AI_INSTALL_PROGRESS["error"] = err_msg
 
 
 @app.get("/api/ai-status")
@@ -1641,16 +1741,47 @@ async def start_install_ai_models():
     """Starts background download of all required AI models."""
     global _AI_INSTALL_PROGRESS
     if _AI_INSTALL_PROGRESS["status"] == "downloading":
-        return JSONResponse(content={"success": True, "message": "Zaten indiriliyor."})
+        return JSONResponse(content={"success": True, "message": "Already downloading."})
 
     _AI_INSTALL_PROGRESS = {
         "status": "downloading",
         "progress": 5,
-        "current_model": "Hazırlanıyor...",
+        "current_model": "Preparing...",
         "error": None
     }
     asyncio.get_event_loop().run_in_executor(None, _download_ai_models_worker)
-    return JSONResponse(content={"success": True, "message": "Model indirmesi başlatıldı."})
+    return JSONResponse(content={"success": True, "message": "Model download started."})
+
+
+@app.post("/api/restart-as-admin")
+async def restart_as_admin():
+    """Relaunches G-Toolbox as Administrator with UAC confirmation and closes the current instance."""
+    if sys.platform != "win32":
+        return JSONResponse(content={"success": False, "message": "Only supported on Windows."})
+    try:
+        import ctypes
+        base_exe = BASE_DIR / "G-Toolbox.exe"
+        target = str(base_exe) if base_exe.exists() else sys.executable
+        args = "" if base_exe.exists() else f'"{BASE_DIR / "desktop_app.py"}"'
+        ctypes.windll.shell32.ShellExecuteW(None, "runas", target, args, str(BASE_DIR), 1)
+
+        asyncio.get_event_loop().call_later(1.0, lambda: os._exit(0))
+        return JSONResponse(content={"success": True, "message": "Restarting as Administrator..."})
+    except Exception as e:
+        logger.error(f"Restart as admin failed: {e}")
+        return JSONResponse(status_code=500, content={"success": False, "message": str(e)})
+
+
+@app.post("/api/open-security-settings")
+async def open_security_settings():
+    """Opens Windows Security App & browser control settings."""
+    if sys.platform == "win32":
+        try:
+            os.system("start windowsdefender://appbrowser")
+            return JSONResponse(content={"success": True})
+        except Exception as e:
+            return JSONResponse(status_code=500, content={"success": False, "message": str(e)})
+    return JSONResponse(content={"success": False, "message": "Only supported on Windows."})
 
 
 @app.post("/api/delete-ai-models")
@@ -1709,7 +1840,7 @@ async def delete_ai_models():
         "success": True,
         "freed_mb": freed_mb,
         "deleted_files": deleted_files,
-        "message": f"Yapay zeka modelleri silindi. {freed_mb} MB disk alanı açıldı."
+        "message": f"AI models deleted. {freed_mb} MB disk space freed."
     })
 
 
