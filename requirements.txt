@@ -1,24 +1,4 @@
-fastapi
-uvicorn
-python-multipart
-jinja2
-pydantic
-ffmpeg-python
-yt-dlp
-Pillow
-rembg
-simple-lama-inpainting
-opencv-python
-numpy
-torch
-torchvision
-basicsr
-realesrgan
-pyAesCrypt
-pypdf
+# Full development install: core + native desktop window + AI engines.
+-r requirements-core.txt
 pywebview
-faster-whisper
-demucs
-aiofiles
-psutil
-certifi
+-r requirements-ai.txt

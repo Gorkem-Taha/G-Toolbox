@@ -32,7 +32,9 @@ else:
     sys.path.insert(0, str(APP_DIR))
 
 # Setup file logger so exceptions and diagnostics are recorded
-log_path = APP_DIR / "desktop.log"
+LOG_DIR = Path(os.environ["GTOOLBOX_DATA_DIR"]).expanduser() if os.environ.get("GTOOLBOX_DATA_DIR") else APP_DIR
+LOG_DIR.mkdir(parents=True, exist_ok=True)
+log_path = LOG_DIR / "desktop.log"
 try:
     log_fp = open(log_path, "a", encoding="utf-8", buffering=1)
     if sys.stdout is None:
@@ -46,9 +48,16 @@ except Exception:
         sys.stderr = open(os.devnull, "w", encoding="utf-8")
 
 import uvicorn
-import webview
 import main as gt_main
 from main import app, lan_access_enabled
+
+# pywebview needs a GUI toolkit binding (WebView2 on Windows, GTK/Qt on Linux).
+# Without one (e.g. the AppImage's bundled Python) fall back to the browser.
+try:
+    import webview
+except Exception as _webview_err:  # ImportError or a missing native backend
+    webview = None
+    _WEBVIEW_ERROR = _webview_err
 
 logger = logging.getLogger("gtoolbox.desktop")
 
@@ -180,6 +189,11 @@ def install_save_dialog_hook(window):
 
 
 def main():
+    if webview is None:
+        print(f"[*] Native window unavailable ({_WEBVIEW_ERROR}); opening G-Toolbox in the browser.")
+        gt_main.run_server(open_browser="--no-browser" not in sys.argv)
+        return
+
     # Loopback only unless LAN pairing was explicitly enabled.
     bind_host = "0.0.0.0" if lan_access_enabled() else "127.0.0.1"
     port = find_available_port(start_port=8000, host=bind_host)
@@ -221,7 +235,16 @@ def main():
     try:
         # Edge Chromium (WebView2) on Windows, WebKitGTK on Linux
         gui_type = "edgechromium" if sys.platform == "win32" else "gtk"
-        webview.start(gui=gui_type, debug=False)
+        try:
+            webview.start(gui=gui_type, debug=False)
+        except Exception as e:
+            # No usable GUI backend at runtime: keep the server, use the browser.
+            print(f"[*] Native window failed ({e}); opening {server_url} in the browser.")
+            gt_main.NATIVE_SAVE_DIALOG_HOOK = None
+            if "--no-browser" not in sys.argv:
+                import webbrowser
+                webbrowser.open(server_url)
+            server_thread.join()
     finally:
         print("[*] Desktop window closed. Shutting down server...")
         cleanup_ready_flag()
@@ -235,7 +258,7 @@ if __name__ == "__main__":
         import traceback
         err_msg = traceback.format_exc()
         try:
-            (APP_DIR / "desktop_error.log").write_text(err_msg, encoding="utf-8")
+            (LOG_DIR / "desktop_error.log").write_text(err_msg, encoding="utf-8")
         except Exception:
             pass
         raise

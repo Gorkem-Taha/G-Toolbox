@@ -1,0 +1,11 @@
+# Optional AI engines (installed on demand from the app's AI setup).
+numpy
+opencv-python
+torch
+torchvision
+basicsr
+realesrgan
+rembg
+simple-lama-inpainting
+faster-whisper
+demucs

@@ -35,8 +35,22 @@ else:
     BASE_DIR = Path(__file__).resolve().parent
     RESOURCE_DIR = BASE_DIR
 
-UPLOAD_DIR = BASE_DIR / "uploads"
-DOWNLOAD_DIR = BASE_DIR / "downloads"
+# Writable state (temp files, settings, pairing token, model weights). Defaults to
+# the program folder (portable Windows layout); read-only installs such as the
+# Linux AppImage point GTOOLBOX_DATA_DIR at a per-user folder instead.
+DATA_DIR = Path(os.environ["GTOOLBOX_DATA_DIR"]).expanduser() if os.environ.get("GTOOLBOX_DATA_DIR") else BASE_DIR
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+# Extra, user-writable site-packages for on-demand AI libraries when the bundled
+# Python is read-only (AppImage). pip installs there with --target.
+PIP_TARGET = os.environ.get("GTOOLBOX_PIP_TARGET")
+if PIP_TARGET:
+    Path(PIP_TARGET).mkdir(parents=True, exist_ok=True)
+    if PIP_TARGET not in sys.path:
+        sys.path.insert(0, PIP_TARGET)
+
+UPLOAD_DIR = DATA_DIR / "uploads"
+DOWNLOAD_DIR = DATA_DIR / "downloads"
 UPLOAD_DIR.mkdir(exist_ok=True)
 DOWNLOAD_DIR.mkdir(exist_ok=True)
 
@@ -163,11 +177,11 @@ def verify_model_file(path: Path) -> bool:
 MODEL_REGISTRY = {
     "RealESRGAN_x4plus.pth": (
         "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth",
-        BASE_DIR / "RealESRGAN_x4plus.pth", [],
+        DATA_DIR / "RealESRGAN_x4plus.pth", [BASE_DIR / "RealESRGAN_x4plus.pth"],
     ),
     "RealESRGAN_x4plus_anime_6B.pth": (
         "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.2.4/RealESRGAN_x4plus_anime_6B.pth",
-        BASE_DIR / "RealESRGAN_x4plus_anime_6B.pth", [],
+        DATA_DIR / "RealESRGAN_x4plus_anime_6B.pth", [BASE_DIR / "RealESRGAN_x4plus_anime_6B.pth"],
     ),
     "big-lama.pt": (
         "https://github.com/enesmsahin/simple-lama-inpainting/releases/download/v0.1.0/big-lama.pt",
@@ -625,8 +639,8 @@ app = FastAPI(title="G-Toolbox", version="4.4.0", lifespan=lifespan)
 # Cross-site requests (any other web page open in a browser) are always rejected,
 # and the Host header must be localhost or an IP literal (blocks DNS rebinding).
 
-SETTINGS_PATH = BASE_DIR / "gtoolbox_settings.json"
-TOKEN_PATH = BASE_DIR / ".gtoolbox_token"
+SETTINGS_PATH = DATA_DIR / "gtoolbox_settings.json"
+TOKEN_PATH = DATA_DIR / ".gtoolbox_token"
 TOKEN_COOKIE = "gt_token"
 
 # Endpoints that touch the host desktop, install software or delete data:
@@ -2013,6 +2027,8 @@ def _run_pip_step(args: list, step_label: str, pct: int):
     _AI_INSTALL_PROGRESS["current_model"] = step_label
     _AI_INSTALL_PROGRESS["progress"] = pct
     py_exe = sys.executable
+    if PIP_TARGET and args and args[0] == "install":
+        args = args + ["--target", PIP_TARGET, "--upgrade"]
     cmd = [
         py_exe, "-m", "pip"
     ] + args + [
@@ -2321,20 +2337,12 @@ async def delete_ai_models():
     freed_bytes = 0
     deleted_files = []
 
-    # Paths to remove
-    target_paths = [
-        BASE_DIR / "RealESRGAN_x4plus.pth",
-        BASE_DIR / "RealESRGAN_x4plus_anime_6B.pth",
-        BASE_DIR / "RealESRGAN_x4plus.pth.tmp",
-        BASE_DIR / "RealESRGAN_x4plus_anime_6B.pth.tmp",
-        BASE_DIR / "big-lama.pt",
-        BASE_DIR / "big-lama.pt.tmp",
-        BASE_DIR / "u2net.onnx",
-        BASE_DIR / "u2net.onnx.tmp",
-        Path.home() / ".cache" / "torch" / "hub" / "checkpoints" / "big-lama.pt",
-        Path.home() / ".u2net" / "u2net.onnx",
-        Path.home() / ".u2net" / "u2net.onnx.tmp",
-    ]
+    # Every location a model may live in, plus partial downloads
+    target_paths = []
+    for name in MODEL_REGISTRY:
+        for cand in model_candidates(name):
+            target_paths += [cand, cand.with_suffix(cand.suffix + ".tmp")]
+    target_paths = list(dict.fromkeys(target_paths))
 
     for p in target_paths:
         if p.exists():
@@ -2632,6 +2640,12 @@ async def apply_update(x_task_id: str = Header(None)):
     update_progress(x_task_id, 10, "Checking latest release...")
     work = DOWNLOAD_DIR / f"update_{uuid.uuid4().hex[:8]}"
 
+    if not os.access(BASE_DIR, os.W_OK):
+        return JSONResponse(status_code=409, content={
+            "status": "error",
+            "message": "This installation is read-only (e.g. AppImage). Download the new release instead.",
+        })
+
     def _run():
         rel = _latest_release()
         latest = str(rel.get("tag_name", "")).lstrip("v")
@@ -2692,6 +2706,8 @@ async def update_ytdlp():
     def _run_update():
         try:
             cmd = [sys.executable, "-m", "pip", "install", "--upgrade", "yt-dlp"]
+            if PIP_TARGET:
+                cmd += ["--target", PIP_TARGET]
             proc = subprocess.run(cmd, capture_output=True, text=True, timeout=90)
             v_proc = subprocess.run([sys.executable, "-m", "yt_dlp", "--version"], capture_output=True, text=True, timeout=10)
             ver = v_proc.stdout.strip() if v_proc.returncode == 0 else "Latest"

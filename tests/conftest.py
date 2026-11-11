@@ -7,6 +7,9 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 os.environ.setdefault("GTOOLBOX_LAN", "0")
+# Keep uploads, settings and the pairing token out of the source tree.
+import tempfile  # noqa: E402
+os.environ.setdefault("GTOOLBOX_DATA_DIR", tempfile.mkdtemp(prefix="gtoolbox-test-"))
 
 import main  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402

@@ -1,0 +1,14 @@
+# Core runtime: web server, media/file tools (no AI). Used by the Linux AppImage.
+fastapi
+uvicorn
+python-multipart
+jinja2
+pydantic
+ffmpeg-python
+yt-dlp
+Pillow
+pyAesCrypt
+pypdf
+aiofiles
+psutil
+certifi

@@ -27,3 +27,35 @@ def test_service_worker_served_from_root(local_client):
     assert "register('/sw.js')" in local_client.get("/").text
     for asset in re.findall(r"'(/static/[^']+)'", r.text):
         assert local_client.get(asset).status_code == 200, asset
+
+
+def test_data_dir_separates_writable_state():
+    import os
+    import main
+    data = os.environ["GTOOLBOX_DATA_DIR"]
+    for path in (main.UPLOAD_DIR, main.DOWNLOAD_DIR, main.SETTINGS_PATH, main.TOKEN_PATH):
+        assert str(path).startswith(data), path
+    assert str(main.MODEL_REGISTRY["RealESRGAN_x4plus.pth"][1]).startswith(data)
+
+
+def test_pip_installs_into_target_when_set(monkeypatch, tmp_path):
+    import main
+    seen = {}
+
+    class P:
+        returncode = 0
+
+        def communicate(self, timeout=None):
+            return "", ""
+
+    monkeypatch.setattr(main, "PIP_TARGET", str(tmp_path))
+    monkeypatch.setattr(main.subprocess, "Popen", lambda cmd, **kw: seen.setdefault("cmd", cmd) and P())
+    main._run_pip_step(["install", "rembg"], "x", 1)
+    assert seen["cmd"][seen["cmd"].index("--target") + 1] == str(tmp_path)
+
+
+def test_update_refused_on_read_only_install(local_client, monkeypatch):
+    import main
+    monkeypatch.setattr(main.os, "access", lambda p, m: False)
+    r = local_client.post("/apply-update")
+    assert r.status_code == 409
