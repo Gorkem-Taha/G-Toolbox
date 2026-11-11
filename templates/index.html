@@ -19,11 +19,12 @@
     <!-- Favicon -->
     <link rel="icon" href="/static/favicon.ico" type="image/x-icon" />
 
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tailwind CSS (prebuilt for offline use: `npm run build:css`) -->
+    <link rel="stylesheet" href="/static/vendor/tailwind.css" />
 
-    <!-- FontAwesome 6 -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <!-- Font Awesome Free 6.5.1 and web fonts (vendored, offline) -->
+    <link rel="stylesheet" href="/static/vendor/fontawesome/css/all.min.css" />
+    <link rel="stylesheet" href="/static/vendor/fonts/fonts.css" />
 
     <!-- Custom styles -->
     <link rel="stylesheet" href="/static/css/style.css" />
@@ -1820,7 +1821,7 @@
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/static/sw.js').catch(() => {});
+                navigator.serviceWorker.register('/sw.js').catch(() => {});
             });
         }
     </script>

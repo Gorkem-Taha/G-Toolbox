@@ -196,3 +196,4 @@ gtoolbox_settings.json
 runtime/
 desktop.log
 desktop_error.log
+node_modules/

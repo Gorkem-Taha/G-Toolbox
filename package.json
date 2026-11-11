@@ -1,0 +1,17 @@
+{
+  "name": "g-toolbox-frontend",
+  "private": true,
+  "description": "Build tooling for G-Toolbox's offline CSS/icon assets (not needed at runtime).",
+  "scripts": {
+    "build:css": "tailwindcss -c tailwind.config.js -i static/css/tailwind.input.css -o static/vendor/tailwind.css --minify",
+    "vendor:fontawesome": "node scripts/vendor_fontawesome.mjs",
+    "build": "npm run build:css && npm run vendor:fontawesome && npm run vendor:fonts",
+    "vendor:fonts": "node scripts/vendor_fonts.mjs"
+  },
+  "devDependencies": {
+    "@fontsource/inter": "^5.1.0",
+    "@fontsource/jetbrains-mono": "^5.1.0",
+    "@fortawesome/fontawesome-free": "6.5.1",
+    "tailwindcss": "3.4.17"
+  }
+}

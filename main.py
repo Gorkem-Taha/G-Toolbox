@@ -1077,6 +1077,16 @@ async def index(request: Request):
             return templates.TemplateResponse("index.html", {"request": request})
 
 
+@app.get("/sw.js")
+async def service_worker():
+    """Serves the service worker from the site root so its scope is "/"."""
+    return FileResponse(
+        str(STATIC_DIR / "sw.js"),
+        media_type="application/javascript",
+        headers={"Cache-Control": "no-cache"},
+    )
+
+
 @app.post("/upload")
 async def upload_file(file: UploadFile = File(...)):
     """Uploads a file to the temporary storage directory."""
