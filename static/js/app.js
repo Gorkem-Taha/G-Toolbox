@@ -15,6 +15,11 @@ function escapeHtml(value) {
     }[ch]));
 }
 
+// True when this page runs on the computer hosting G-Toolbox (desktop window or
+// local browser). Only then may the server open a native "Save As" dialog: from a
+// phone it would pop up on the PC instead.
+const IS_HOST_PAGE = ['127.0.0.1', 'localhost', '[::1]'].includes(window.location.hostname);
+
 function getApiBaseUrl() {
     // The API is always same-origin: the server rejects cross-site requests.
     // To use another computer, the page navigates to that server instead.
@@ -159,6 +164,7 @@ const translations = {
         transcriber_output_format: "Output Format",
         transcriber_format_txt: "📄 Plain Text (.txt)",
         transcriber_format_srt: "🎬 Subtitles with Timestamps (.srt)",
+        transcriber_format_vtt: "🌐 WebVTT Subtitles (.vtt)",
         transcriber_format_json: "🔍 Structured JSON (.json)",
         transcriber_lang_label: "Language Selection",
         transcriber_lang_auto: "🌐 Auto Detect (Auto)",
@@ -470,6 +476,7 @@ const translations = {
         transcriber_output_format: "Çıktı Formatı",
         transcriber_format_txt: "📄 Düz Metin (.txt)",
         transcriber_format_srt: "🎬 Zaman Damgalı Altyazı (.srt)",
+        transcriber_format_vtt: "🌐 WebVTT Altyazı (.vtt)",
         transcriber_format_json: "🔍 Yapılandırılmış JSON (.json)",
         transcriber_lang_label: "Dil Seçimi",
         transcriber_lang_auto: "🌐 Otomatik Algıla (Auto)",
@@ -1870,7 +1877,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 btnDownloadVideo.innerHTML = `<div class="spinner visible" style="width:18px;height:18px;border-width:2px;display:inline-block"></div><span>${i18n('video_save_as')}</span>`;
 
                 let savedViaNative = false;
-                if (currentMode === 'pc' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                if (IS_HOST_PAGE) {
                     try {
                         const saveRes = await fetch(`${getApiBaseUrl()}/api/save-task-file`, {
                             method: "POST",
@@ -2247,7 +2254,7 @@ document.addEventListener("DOMContentLoaded", () => {
     async function downloadBlob(blob, filename) {
         // 1. Yerel PC modunda (Masaüstü uygulaması veya yerel sunucu)
         // Kullanıcıya Windows'un gerçek "Farklı Kaydet" penceresini açtır
-        if (currentMode === 'pc' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        if (IS_HOST_PAGE) {
             try {
                 const fd = new FormData();
                 fd.append("file", blob, filename);
@@ -2587,7 +2594,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     const text = await blob.text();
                     transPreview.value = text.substring(0, 1500) + (text.length > 1500 ? "\n... (tamamı indirildi)" : "");
                     transResultBox.classList.remove("hidden");
-                    const ext = transFormat.value === "srt" ? "srt" : "txt";
+                    const ext = ["srt", "vtt"].includes(transFormat.value) ? transFormat.value : "txt";
                     downloadBlob(blob, `${transcriberFile.name.replace(/\.[^.]+$/, "")}_transcript.${ext}`);
                 }
 
@@ -3576,8 +3583,6 @@ window.openDeviceModeModal = function() {
 
     window.selectOperatingMode(currentMode);
 };
-
-const IS_HOST_PAGE = ['127.0.0.1', 'localhost', '[::1]'].includes(window.location.hostname);
 
 function refreshLanInfo() {
     const displayEl = document.getElementById('display-lan-url');

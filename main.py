@@ -594,7 +594,7 @@ def _find_ffmpeg() -> str | None:
 FFMPEG_DIR = _find_ffmpeg()
 if FFMPEG_DIR:
     if FFMPEG_DIR not in os.environ.get("PATH", ""):
-        os.environ["PATH"] = f"{FFMPEG_DIR};{os.environ.get('PATH', '')}"
+        os.environ["PATH"] = FFMPEG_DIR + os.pathsep + os.environ.get("PATH", "")
     logger.info(f"✅ ffmpeg found and added to PATH: {FFMPEG_DIR}")
 else:
     logger.warning(
@@ -604,8 +604,19 @@ else:
 
 from fastapi.responses import RedirectResponse
 
+from contextlib import asynccontextmanager
 
-app = FastAPI(title="G-Toolbox", version="4.0.0")
+
+@asynccontextmanager
+async def lifespan(_app):
+    task = asyncio.create_task(_maintenance_loop())
+    try:
+        yield
+    finally:
+        task.cancel()
+
+
+app = FastAPI(title="G-Toolbox", version="4.4.0", lifespan=lifespan)
 
 
 # ── Access control ────────────────────────────────────────────────
@@ -865,13 +876,28 @@ def purge_stale_files(max_age_hours: int = 12):
     if purged > 0:
         logger.info(f"🧹 Disk maintenance: Cleaned up {purged} stale temporary file(s).")
 
-@app.on_event("startup")
-async def on_startup():
-    """Application startup initialization and disk cleanup."""
-    try:
-        purge_stale_files(max_age_hours=6)
-    except Exception as e:
-        logger.warning(f"Startup purge warning: {e}")
+TEMP_MAX_AGE_HOURS = 6
+
+
+def purge_finished_download_tasks(max_age_hours: int = TEMP_MAX_AGE_HOURS):
+    """Forgets old video-download tasks and deletes their files."""
+    cutoff = time.time() - max_age_hours * 3600
+    for tid, task in list(_download_tasks.items()):
+        if task.get("created", 0) < cutoff and task.get("status") != "downloading":
+            _download_tasks.pop(tid, None)
+            if task.get("filepath"):
+                cleanup_files_and_memory(task["filepath"])
+
+
+async def _maintenance_loop():
+    """Disk hygiene at startup and then every hour (not only on startup)."""
+    while True:
+        try:
+            await asyncio.to_thread(purge_stale_files, TEMP_MAX_AGE_HOURS)
+            purge_finished_download_tasks()
+        except Exception as e:
+            logger.warning(f"Maintenance purge warning: {e}")
+        await asyncio.sleep(3600)
 
 STATIC_DIR = None
 for s_cand in [RESOURCE_DIR / "static", BASE_DIR / "static", Path.cwd() / "static"]:
@@ -913,6 +939,103 @@ def _path_inside(path: Path, base: Path) -> bool:
         return True
     except ValueError:
         return False
+
+
+def _copy_upload(upload: UploadFile, dest) -> None:
+    upload.file.seek(0)
+    with open(dest, "wb") as out:
+        shutil.copyfileobj(upload.file, out, 1024 * 1024)
+
+
+async def save_upload(upload: UploadFile, dest) -> None:
+    """Writes an uploaded file to disk without blocking the event loop."""
+    await asyncio.to_thread(_copy_upload, upload, dest)
+
+
+def ffmpeg_exe(tool: str = "ffmpeg") -> str:
+    """Path to ffmpeg/ffprobe: the detected FFMPEG_DIR first, then PATH."""
+    if FFMPEG_DIR:
+        found = shutil.which(tool, path=FFMPEG_DIR)
+        if found:
+            return found
+    return shutil.which(tool) or tool
+
+
+# Long media jobs: generous limit so real-world files are not killed mid-way.
+MEDIA_JOB_TIMEOUT = 3 * 3600
+
+
+def ffmpeg_error(proc, label: str) -> RuntimeError:
+    """Short, useful error from an ffmpeg run (drops the version banner)."""
+    lines = [l for l in (proc.stderr or proc.stdout or "").splitlines() if l.strip()]
+    return RuntimeError(f"{label}: " + " | ".join(lines[-4:]) if lines else f"{label} (exit {proc.returncode})")
+
+
+def probe_sample_rate(path, default: int = 44100) -> int:
+    """Returns the first audio stream's sample rate (ffprobe), or `default`."""
+    try:
+        res = subprocess.run(
+            [ffmpeg_exe("ffprobe"), "-v", "error", "-select_streams", "a:0",
+             "-show_entries", "stream=sample_rate", "-of", "csv=p=0", str(path)],
+            capture_output=True, text=True, timeout=60,
+        )
+        rate = int(res.stdout.strip().splitlines()[0])
+        return rate if rate > 0 else default
+    except Exception:
+        return default
+
+
+def atempo_chain(factor: float) -> str:
+    """atempo only accepts 0.5–2.0 per instance; chain instances for other factors."""
+    factor = max(0.125, min(8.0, float(factor)))
+    parts = []
+    while factor > 2.0:
+        parts.append("atempo=2.0")
+        factor /= 2.0
+    while factor < 0.5:
+        parts.append("atempo=0.5")
+        factor /= 0.5
+    parts.append(f"atempo={factor:.6f}")
+    return ",".join(parts)
+
+
+def speed_pitch_filter(sample_rate: int, tempo: float, pitch: float) -> str:
+    """ffmpeg filter giving playback speed `tempo` and pitch factor `pitch`.
+
+    asetrate scales speed *and* pitch by `pitch`; atempo then corrects the speed
+    to `tempo`; aresample restores the original sample rate.
+    """
+    if abs(pitch - 1.0) < 1e-3:
+        return atempo_chain(tempo)
+    new_rate = int(round(sample_rate * pitch))
+    return f"asetrate={new_rate},aresample={sample_rate},{atempo_chain(tempo / pitch)}"
+
+
+def parse_page_ranges(spec: str, total_pages: int) -> list:
+    """Parses "1-3, 5, 8-" (open-ended allowed) into sorted 0-based page indexes.
+
+    Raises ValueError with a user-facing message on malformed input.
+    """
+    pages = set()
+    for raw in str(spec or "").split(","):
+        part = raw.strip()
+        if not part:
+            continue
+        m = re.fullmatch(r"(\d*)\s*-\s*(\d*)", part)
+        if m:
+            start = int(m.group(1)) if m.group(1) else 1
+            end = int(m.group(2)) if m.group(2) else total_pages
+            if start > end:
+                start, end = end, start
+        elif part.isdigit():
+            start = end = int(part)
+        else:
+            raise ValueError(f"Invalid page range: '{part}'")
+        start, end = max(1, start), min(total_pages, end)
+        pages.update(range(start - 1, end))
+    if not pages:
+        raise ValueError(f"No valid pages selected (document has {total_pages} pages).")
+    return sorted(pages)
 
 MIME_MAP = {
     # Resim
@@ -960,8 +1083,7 @@ async def upload_file(file: UploadFile = File(...)):
     try:
         safe_name = _safe_filename(file.filename)
         dest = UPLOAD_DIR / safe_name
-        with open(dest, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
+        await save_upload(file, dest)
 
         return JSONResponse(
             status_code=200,
@@ -999,8 +1121,7 @@ async def convert_file(
 
     # Gelen dosyayı geçici olarak uploads/ klasörüne kaydet
     src_path = UPLOAD_DIR / f"{uid}_{safe_name}"
-    with open(src_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+    await save_upload(file, src_path)
 
     # Çıkış dosya adı
     stem = Path(safe_name).stem
@@ -1031,9 +1152,9 @@ async def convert_file(
     try:
         update_progress(x_task_id, 50, "Model is executing. This process relies on CPU/GPU hardware and may take a moment...")
         if category == "image":
-            _convert_image(str(src_path), str(out_path), target_format)
+            await asyncio.to_thread(_convert_image, str(src_path), str(out_path), target_format)
         else:
-            _convert_media(str(src_path), str(out_path))
+            await asyncio.to_thread(_convert_media, str(src_path), str(out_path))
 
         media_type = _guess_media_type(target_format)
         update_progress(x_task_id, 90, "Packaging results...")
@@ -1077,8 +1198,7 @@ async def convert_universal(
     out_path = DOWNLOAD_DIR / out_name
 
     src_path = UPLOAD_DIR / f"uni_{uid}_{safe_name}"
-    with open(src_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+    await save_upload(file, src_path)
 
     ext = Path(safe_name).suffix.lower().lstrip(".")
 
@@ -1088,10 +1208,10 @@ async def convert_universal(
     try:
         update_progress(x_task_id, 50, "Model is executing. This may take a while depending on file size...")
         if ext in images and target_format in images:
-            _convert_image(str(src_path), str(out_path), target_format)
+            await asyncio.to_thread(_convert_image, str(src_path), str(out_path), target_format)
             
         elif ext in videos_audios and target_format in videos_audios:
-            _convert_media(str(src_path), str(out_path))
+            await asyncio.to_thread(_convert_media, str(src_path), str(out_path))
 
         else:
             cleanup_files_and_memory(src_path)
@@ -1141,8 +1261,7 @@ async def remove_background(
         )
 
     src_path = UPLOAD_DIR / f"{uid}_{safe_name}"
-    with open(src_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+    await save_upload(file, src_path)
 
     stem = Path(safe_name).stem
     out_name = f"{stem}_nobg_{uid}.png"
@@ -1240,11 +1359,9 @@ async def magic_erase(
     out_name = f"{stem}_erased_{uid}.png"
     out_path = DOWNLOAD_DIR / out_name
 
-    with open(img_path, "wb") as buffer:
-        shutil.copyfileobj(image.file, buffer)
+    await save_upload(image, img_path)
         
-    with open(mask_path, "wb") as buffer:
-        shutil.copyfileobj(mask.file, buffer)
+    await save_upload(mask, mask_path)
 
     try:
         update_progress(x_task_id, 50, "LaMa model is executing over the masked regions...")
@@ -1322,8 +1439,7 @@ async def upscale_image(
     out_name = f"{stem}_upscaled_{scale}x_{uid}{ext}"
     out_path = DOWNLOAD_DIR / out_name
     
-    with open(src_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+    await save_upload(file, src_path)
         
     try:
         update_progress(x_task_id, 50, "Model çalışıyor (Bu işlem biraz sürebilir)...")
@@ -1380,18 +1496,21 @@ async def upscale_image(
                     output = np.dstack([output, alpha_resized])
 
             # Choose safe output extension (RGBA requires PNG format)
-            out_ext = ext.lower() if ext else '.png'
-            if has_alpha and out_ext in ('.jpg', '.jpeg'):
-                out_ext = '.png'
-            
+            # Keep the input format when OpenCV can write it; PNG otherwise
+            # (GIF/ICO input, or transparency that JPEG/BMP cannot hold).
+            out_ext = ext.lower() if ext.lower() in (".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff") else ".png"
+            if has_alpha and out_ext in (".jpg", ".jpeg", ".bmp"):
+                out_ext = ".png"
+            final_path = out_path.with_suffix(out_ext)
+
             # Encode and save via tofile to prevent Unicode save issues
             is_success, buffer = cv2.imencode(out_ext, output)
-            if is_success:
-                buffer.tofile(str(out_path))
-            else:
+            if not is_success:
                 raise ValueError("Upscaled image could not be encoded.")
-            
-        await asyncio.to_thread(process_upscale)
+            buffer.tofile(str(final_path))
+            return final_path
+
+        out_path = await asyncio.to_thread(process_upscale)
         
         update_progress(x_task_id, 90, "Packaging results...")
         if background_tasks:
@@ -1402,8 +1521,8 @@ async def upscale_image(
         update_progress(x_task_id, 100, "Completed!")
         return FileResponse(
             path=str(out_path),
-            filename=out_name,
-            media_type="image/png" if ext.lower() == ".png" else "image/jpeg"
+            filename=out_path.name,
+            media_type=_guess_media_type(out_path.suffix.lstrip(".").lower())
         )
     except Exception as exc:
         cleanup_files_and_memory(src_path, out_path)
@@ -1539,6 +1658,7 @@ async def start_download(req: VideoDownloadRequest):
     out_template = str(DOWNLOAD_DIR / f"{uid}.%(ext)s")
 
     _download_tasks[task_id] = {
+        "created": time.time(),
         "status": "downloading",
         "progress": 0,
         "speed": 0,
@@ -1784,8 +1904,7 @@ async def save_blob_file(
         return JSONResponse(content={"success": False, "canceled": False, "native_unsupported": True})
 
     try:
-        with open(chosen, "wb") as f_out:
-            shutil.copyfileobj(file.file, f_out)
+        await save_upload(file, chosen)
         return JSONResponse(content={
             "success": True,
             "canceled": False,
@@ -1819,14 +1938,6 @@ async def download_file(task_id: str):
         media_type=media_type,
     )
     return response
-
-
-_AI_INSTALL_PROGRESS = {
-    "status": "idle",
-    "progress": 0,
-    "current_model": "",
-    "error": None
-}
 
 
 def check_ai_models_status() -> dict:
@@ -2289,13 +2400,21 @@ def _guess_media_type(ext: str) -> str:
     mapping = {
         "png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg",
         "webp": "image/webp", "bmp": "image/bmp", "gif": "image/gif",
-        "tiff": "image/tiff", "ico": "image/x-icon",
+        "tiff": "image/tiff", "tif": "image/tiff", "ico": "image/x-icon",
         "mp4": "video/mp4", "avi": "video/x-msvideo", "mkv": "video/x-matroska",
         "mov": "video/quicktime", "webm": "video/webm",
         "mp3": "audio/mpeg", "wav": "audio/wav", "ogg": "audio/ogg",
         "flac": "audio/flac", "aac": "audio/aac", "m4a": "audio/mp4",
     }
     return mapping.get(ext, "application/octet-stream")
+
+
+def _safe_arcname(raw: str) -> str:
+    """Relative folder path from the browser, without '..', drive letters or leading slashes,
+    so the vault can never extract outside its folder later (zip-slip)."""
+    parts = [p for p in re.split(r"[\\/]+", str(raw or "")) if p not in ("", ".", "..")]
+    parts = [re.sub(r"^[A-Za-z]:", "", p) or "_" for p in parts]
+    return "/".join(parts) or uuid.uuid4().hex
 
 
 @app.post("/encrypt-file")
@@ -2314,21 +2433,25 @@ async def encrypt_file(
         file = files[0]
         safe_name = _safe_filename(file.filename)
         src_path = UPLOAD_DIR / f"enc_{uid}_{safe_name}"
-        with open(src_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
+        await save_upload(file, src_path)
         out_name = f"{safe_name}.enc"
     else:
-        import zipfile
         safe_name = "vault_archive.zip"
         src_path = UPLOAD_DIR / f"enc_{uid}_{safe_name}"
         update_progress(x_task_id, 30, "Converting folder/multi-files to zip...")
-        with zipfile.ZipFile(src_path, "w", zipfile.ZIP_DEFLATED) as zf:
-            for f in files:
-                arcname = f.filename.lstrip("/\\")
-                zf.writestr(arcname, f.file.read())
+
+        def _build_zip():
+            with zipfile.ZipFile(src_path, "w", zipfile.ZIP_DEFLATED) as zf:
+                for f in files:
+                    f.file.seek(0)
+                    with zf.open(_safe_arcname(f.filename), "w") as dst:
+                        shutil.copyfileobj(f.file, dst, 1024 * 1024)
+
+        await asyncio.to_thread(_build_zip)
         out_name = f"{safe_name}.enc"
-        
-    out_path = DOWNLOAD_DIR / out_name
+
+    # Unique on disk; the user still downloads `out_name`.
+    out_path = DOWNLOAD_DIR / f"{uid}_{out_name}"
     
     try:
         update_progress(x_task_id, 50, "Encrypting file (This may take a while)...")
@@ -2372,15 +2495,14 @@ async def decrypt_file(
     safe_name = _safe_filename(file.filename)
     
     src_path = UPLOAD_DIR / f"dec_{uid}_{safe_name}"
-    with open(src_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+    await save_upload(file, src_path)
         
     if safe_name.endswith(".enc"):
         out_name = safe_name[:-4]
     else:
         out_name = f"decrypted_{safe_name}"
-        
-    out_path = DOWNLOAD_DIR / out_name
+
+    out_path = DOWNLOAD_DIR / f"{uid}_{out_name}"
     
     try:
         update_progress(x_task_id, 50, "Decrypting (This may take a while)...")
@@ -2586,8 +2708,7 @@ async def separate_audio(
     safe_name = _safe_filename(file.filename)
     input_path = UPLOAD_DIR / f"{uuid.uuid4().hex}_{safe_name}"
     
-    with open(input_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+    await save_upload(file, input_path)
 
     out_folder = DOWNLOAD_DIR / f"separated_{uuid.uuid4().hex}"
     out_folder.mkdir(parents=True, exist_ok=True)
@@ -2617,9 +2738,9 @@ async def separate_audio(
                 if getattr(sys, "frozen", False):
                     py_exe = shutil.which("python") or shutil.which("python3") or sys.executable
                 cmd = [py_exe, "-m", "demucs"] + demucs_opts
-                proc = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+                proc = subprocess.run(cmd, capture_output=True, text=True, timeout=MEDIA_JOB_TIMEOUT)
                 if proc.returncode != 0:
-                    raise RuntimeError(f"Demucs processing error: {proc.stderr or proc.stdout}")
+                    raise ffmpeg_error(proc, "Demucs processing error")
 
             update_progress(x_task_id, 80, "Compressing separated audio stems into ZIP...")
             track_dirs = list((out_folder / "htdemucs").glob("*"))
@@ -2628,7 +2749,7 @@ async def separate_audio(
             
             target_track_dir = track_dirs[0]
             zip_filename = f"{Path(safe_name).stem}_separated_stems.zip"
-            zip_path = DOWNLOAD_DIR / zip_filename
+            zip_path = DOWNLOAD_DIR / f"{uuid.uuid4().hex[:8]}_{zip_filename}"
             
             with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
                 for stem_file in target_track_dir.glob("*.wav"):
@@ -2646,7 +2767,7 @@ async def separate_audio(
         return FileResponse(
             zip_path,
             media_type="application/zip",
-            filename=zip_path.name
+            filename=zip_path.name.split("_", 1)[1]
         )
     except Exception as e:
         logger.error(f"Demucs separation failed: {e}")
@@ -2682,10 +2803,10 @@ def get_whisper_model(model_size: str = "base"):
 
 def format_timestamp(seconds: float) -> str:
     """Formats float seconds into SRT timestamp HH:MM:SS,mmm."""
-    hrs = int(seconds // 3600)
-    mins = int((seconds % 3600) // 60)
-    secs = int(seconds % 60)
-    msecs = int(round((seconds - int(seconds)) * 1000))
+    total_ms = max(0, int(round(float(seconds) * 1000)))  # round once, then split
+    hrs, rem = divmod(total_ms, 3_600_000)
+    mins, rem = divmod(rem, 60_000)
+    secs, msecs = divmod(rem, 1000)
     return f"{hrs:02d}:{mins:02d}:{secs:02d},{msecs:03d}"
 
 @app.post("/transcribe-media")
@@ -2703,8 +2824,7 @@ async def transcribe_media(
     safe_name = _safe_filename(file.filename)
     input_path = UPLOAD_DIR / f"{uuid.uuid4().hex}_{safe_name}"
 
-    with open(input_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+    await save_upload(file, input_path)
 
     def _transcribe():
         try:
@@ -2733,10 +2853,20 @@ async def transcribe_media(
                 })
 
             base_stem = Path(safe_name).stem
+            tag = uuid.uuid4().hex[:8]
             if output_format == "srt":
-                out_path = DOWNLOAD_DIR / f"{base_stem}_subtitles.srt"
+                out_path = DOWNLOAD_DIR / f"{tag}_{base_stem}_subtitles.srt"
                 out_path.write_text("\n".join(srt_entries), encoding="utf-8")
                 media_type = "text/plain"
+            elif output_format == "vtt":
+                out_path = DOWNLOAD_DIR / f"{tag}_{base_stem}_subtitles.vtt"
+                cues = [
+                    f"{format_timestamp(seg['start']).replace(',', '.')} --> "
+                    f"{format_timestamp(seg['end']).replace(',', '.')}\n{seg['text']}\n"
+                    for seg in raw_segments
+                ]
+                out_path.write_text("WEBVTT\n\n" + "\n".join(cues), encoding="utf-8")
+                media_type = "text/vtt"
             elif output_format == "json":
                 return {
                     "language": info.language,
@@ -2745,7 +2875,7 @@ async def transcribe_media(
                     "segments": raw_segments
                 }
             else:
-                out_path = DOWNLOAD_DIR / f"{base_stem}_transcript.txt"
+                out_path = DOWNLOAD_DIR / f"{tag}_{base_stem}_transcript.txt"
                 out_path.write_text("\n\n".join(text_lines), encoding="utf-8")
                 media_type = "text/plain"
 
@@ -2760,7 +2890,7 @@ async def transcribe_media(
             return JSONResponse(res)
         out_path, media_type = res
         background_tasks.add_task(cleanup_files_and_memory, out_path)
-        return FileResponse(out_path, media_type=media_type, filename=out_path.name)
+        return FileResponse(out_path, media_type=media_type, filename=out_path.name.split("_", 1)[1])
     except Exception as e:
         logger.error(f"Transcription failed: {e}")
         return JSONResponse(status_code=500, content={"status": "error", "message": str(e)})
@@ -2805,37 +2935,80 @@ async def view_metadata(file: UploadFile = File(...)):
     except Exception as e:
         return JSONResponse(status_code=400, content={"error": f"Failed to read image metadata: {str(e)}"})
 
+# Image.info keys that carry no identifying data and are needed to reproduce the
+# image faithfully (palette transparency, animation timing, colour profile).
+_SAFE_INFO_KEYS = {"transparency", "duration", "loop", "background", "disposal", "dpi", "icc_profile"}
+
+
+def _safe_info(info: dict) -> dict:
+    return {k: v for k, v in info.items() if k in _SAFE_INFO_KEYS}
+
+
+def strip_image_metadata(src, dest: Path) -> str:
+    """Removes EXIF/GPS/XMP/IPTC/comments/text chunks; returns the Pillow format used.
+
+    Preserves pixels, palette, transparency, animation frames and ICC profile.
+    JPEGs are re-saved with their original quantisation tables (quality="keep")
+    whenever no rotation is needed, so there is no generational quality loss.
+    """
+    from PIL import ImageOps, ImageSequence
+
+    image = Image.open(src)
+    fmt = (image.format or "PNG").upper()
+    if fmt == "MPO":  # iPhone/camera JPEGs with an embedded preview
+        fmt = "JPEG"
+    n_frames = getattr(image, "n_frames", 1)
+
+    if n_frames > 1 and fmt in ("GIF", "WEBP", "PNG"):
+        frames, durations = [], []
+        for frame in ImageSequence.Iterator(image):
+            durations.append(frame.info.get("duration", 100))
+            f = frame.copy()
+            f.info = _safe_info(frame.info)
+            frames.append(f)
+        kwargs = {"save_all": True, "append_images": frames[1:], "duration": durations,
+                  "loop": image.info.get("loop", 0)}
+        if fmt == "WEBP":
+            kwargs["lossless"] = True
+        frames[0].save(dest, format=fmt, **kwargs)
+        return fmt
+
+    orientation = image.getexif().get(0x0112, 1)
+    icc = image.info.get("icc_profile")
+
+    if fmt == "JPEG" and orientation in (1, None):
+        image.info = _safe_info(image.info)
+        image.save(dest, format="JPEG", quality="keep", **({"icc_profile": icc} if icc else {}))
+        return fmt
+
+    clean = ImageOps.exif_transpose(image)  # bake the orientation into the pixels
+    clean.info = _safe_info(image.info)
+    kwargs = {"icc_profile": icc} if icc else {}
+    if fmt == "JPEG":
+        if clean.mode not in ("RGB", "L", "CMYK"):
+            clean = clean.convert("RGB")
+        kwargs.update(quality=95, subsampling=0)
+    elif fmt == "WEBP":
+        kwargs["lossless"] = True
+    clean.save(dest, format=fmt, **kwargs)
+    return fmt
+
+
 @app.post("/strip-metadata")
 async def strip_metadata(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
     """Completely strips EXIF, GPS, camera model, and private metadata from an image."""
     safe_name = _safe_filename(file.filename)
     dest_path = DOWNLOAD_DIR / f"clean_{uuid.uuid4().hex}_{safe_name}"
     try:
-        image = Image.open(file.file)
-        try:
-            from PIL import ImageOps
-            image = ImageOps.exif_transpose(image)
-        except Exception:
-            pass
-
-        # Recreate image purely without metadata tags
-        clean_img = Image.new(image.mode, image.size)
-        clean_img.paste(image)
-
-        fmt = image.format or "PNG"
-        if fmt.upper() in ("JPG", "JPEG"):
-            if clean_img.mode not in ("RGB", "L"):
-                clean_img = clean_img.convert("RGB")
-
-        clean_img.save(dest_path, format=fmt)
-
+        fmt = await asyncio.to_thread(strip_image_metadata, file.file, dest_path)
         background_tasks.add_task(cleanup_files_and_memory, dest_path)
         return FileResponse(
             dest_path,
-            media_type=f"image/{fmt.lower()}",
+            media_type=Image.MIME.get(fmt, "application/octet-stream"),
             filename=f"clean_{safe_name}"
         )
     except Exception as e:
+        cleanup_files_and_memory(dest_path)
         return JSONResponse(status_code=500, content={"status": "error", "message": f"Strip failed: {str(e)}"})
 
 
@@ -2853,12 +3026,20 @@ async def video_to_anim(
     x_task_id: str = Header(None, alias="X-Task-ID")
 ):
     """Converts a specific segment of a video to optimized animated GIF or WebP."""
+    # Validate user parameters before they reach the ffmpeg command line.
+    start_time = str(start_time).strip()
+    if not re.fullmatch(r"(\d{1,2}:){0,2}\d{1,5}(\.\d{1,3})?", start_time):
+        return JSONResponse(status_code=400, content={"status": "error",
+                            "message": "Start time must look like HH:MM:SS, MM:SS or seconds."})
+    duration = max(0.1, min(60.0, float(duration)))
+    fps = max(1, min(60, int(fps)))
+    width = max(64, min(1920, int(width)))
+    quality = max(1, min(100, int(quality)))
     update_progress(x_task_id, 10, "Uploading video for animation render...")
     safe_name = _safe_filename(file.filename)
     input_path = UPLOAD_DIR / f"{uuid.uuid4().hex}_{safe_name}"
     
-    with open(input_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+    await save_upload(file, input_path)
 
     out_ext = "webp" if anim_format.lower() == "webp" else "gif"
     out_path = DOWNLOAD_DIR / f"{Path(safe_name).stem}_anim_{uuid.uuid4().hex[:6]}.{out_ext}"
@@ -2866,16 +3047,12 @@ async def video_to_anim(
     def _render():
         try:
             update_progress(x_task_id, 40, f"Rendering high-quality animated {out_ext.upper()} via FFmpeg...")
-            ffmpeg_exe = "ffmpeg"
-            if FFMPEG_DIR:
-                custom_path = Path(FFMPEG_DIR) / "ffmpeg.exe"
-                if custom_path.exists():
-                    ffmpeg_exe = str(custom_path)
+            ffmpeg_bin = ffmpeg_exe()
 
             if out_ext == "gif":
                 vf = f"fps={fps},scale={width}:-2:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse"
                 cmd = [
-                    ffmpeg_exe, "-y",
+                    ffmpeg_bin, "-y",
                     "-ss", str(start_time),
                     "-t", str(duration),
                     "-i", str(input_path),
@@ -2885,7 +3062,7 @@ async def video_to_anim(
             else:
                 vf = f"fps={fps},scale={width}:-2:flags=lanczos"
                 cmd = [
-                    ffmpeg_exe, "-y",
+                    ffmpeg_bin, "-y",
                     "-ss", str(start_time),
                     "-t", str(duration),
                     "-i", str(input_path),
@@ -2898,9 +3075,9 @@ async def video_to_anim(
                     str(out_path)
                 ]
 
-            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
+            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=MEDIA_JOB_TIMEOUT)
             if proc.returncode != 0:
-                raise RuntimeError(f"FFmpeg error: {proc.stderr or proc.stdout}")
+                raise ffmpeg_error(proc, "FFmpeg error")
 
             update_progress(x_task_id, 100, f"Rendered {out_ext.upper()} successfully!")
             return out_path
@@ -2997,15 +3174,21 @@ async def burn_subtitles(
     safe_video = _safe_filename(video.filename)
     safe_sub = _safe_filename(subtitle.filename)
 
+    sub_ext = Path(safe_sub).suffix.lower().lstrip(".")
+    if sub_ext not in ("srt", "vtt", "ass", "ssa"):
+        return JSONResponse(status_code=400, content={"status": "error",
+                            "message": "Subtitle must be .srt, .vtt, .ass or .ssa"})
+
     video_path = UPLOAD_DIR / f"v_{uid}_{safe_video}"
-    sub_path = UPLOAD_DIR / f"s_{uid}_{safe_sub}"
+    # Fixed, filter-safe name: the subtitles= filter option is parsed by ffmpeg's
+    # filtergraph syntax, where quotes, colons and backslashes are special.
+    sub_name = f"sub_{uid}.{sub_ext}"
+    sub_path = UPLOAD_DIR / sub_name
     out_name = f"{Path(safe_video).stem}_subbed_{uid}.mp4"
     out_path = DOWNLOAD_DIR / out_name
 
-    with open(video_path, "wb") as vb:
-        shutil.copyfileobj(video.file, vb)
-    with open(sub_path, "wb") as sb:
-        shutil.copyfileobj(subtitle.file, sb)
+    await save_upload(video, video_path)
+    await save_upload(subtitle, sub_path)
 
     color_map = {
         "white": "&H00FFFFFF",
@@ -3014,33 +3197,34 @@ async def burn_subtitles(
         "green": "&H0000FF00",
     }
     color_code = color_map.get(font_color.lower(), "&H00FFFFFF")
+    font_size = max(8, min(120, int(font_size)))
 
     def _burn():
         try:
             update_progress(x_task_id, 40, "Burning subtitles into video stream...")
-            ffmpeg_exe = "ffmpeg"
-            if FFMPEG_DIR:
-                custom_path = Path(FFMPEG_DIR) / "ffmpeg.exe"
-                if custom_path.exists():
-                    ffmpeg_exe = str(custom_path)
+            style = f"FontSize={font_size},PrimaryColour={color_code},OutlineColour=&H00000000,BorderStyle=3,Outline=2"
+            vf = f"subtitles={sub_name}:force_style='{style}'"
 
-            # Format subtitle path for FFmpeg filter on Windows
-            sub_str = str(sub_path).replace("\\", "/").replace(":", "\\:")
-            vf = f"subtitles='{sub_str}':force_style='FontSize={font_size},PrimaryColour={color_code},OutlineColour=&H00000000,BorderStyle=3,Outline=2'"
+            def run(audio_args):
+                cmd = [
+                    ffmpeg_exe(), "-hide_banner", "-y",
+                    "-i", str(video_path.resolve()),
+                    "-vf", vf,
+                    "-c:v", "libx264", "-preset", "fast", "-crf", "22",
+                    *audio_args,
+                    "-movflags", "+faststart",
+                    str(out_path.resolve()),
+                ]
+                # cwd = upload dir so the filter only sees the safe relative name
+                return subprocess.run(cmd, capture_output=True, text=True,
+                                      timeout=MEDIA_JOB_TIMEOUT, cwd=str(UPLOAD_DIR))
 
-            cmd = [
-                ffmpeg_exe, "-y",
-                "-i", str(video_path),
-                "-vf", vf,
-                "-c:v", "libx264",
-                "-preset", "fast",
-                "-crf", "22",
-                "-c:a", "copy",
-                str(out_path)
-            ]
-            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+            proc = run(["-c:a", "copy"])
             if proc.returncode != 0:
-                raise RuntimeError(f"Subtitle burn error: {proc.stderr or proc.stdout}")
+                # Source audio codec may not fit in MP4 (e.g. Vorbis): re-encode it.
+                proc = run(["-c:a", "aac", "-b:a", "192k"])
+            if proc.returncode != 0:
+                raise ffmpeg_error(proc, "Subtitle burn error")
 
             update_progress(x_task_id, 100, "Subtitles burned successfully!")
             return out_path
@@ -3073,8 +3257,7 @@ async def pdf_merge(
     saved_paths = []
     for f in files:
         p = UPLOAD_DIR / f"pdf_{uid}_{_safe_filename(f.filename)}"
-        with open(p, "wb") as buf:
-            shutil.copyfileobj(f.file, buf)
+        await save_upload(f, p)
         saved_paths.append(p)
 
     def _do_merge():
@@ -3117,8 +3300,7 @@ async def pdf_split(
     out_name = f"{Path(safe_name).stem}_pages_{uid}.pdf"
     out_path = DOWNLOAD_DIR / out_name
 
-    with open(src_path, "wb") as buf:
-        shutil.copyfileobj(file.file, buf)
+    await save_upload(file, src_path)
 
     def _do_split():
         try:
@@ -3127,24 +3309,7 @@ async def pdf_split(
             writer = pypdf.PdfWriter()
             total_pages = len(reader.pages)
 
-            pages_to_extract = set()
-            parts = [p.strip() for p in target_range.split(",") if p.strip()]
-            for part in parts:
-                if "-" in part:
-                    s_str, e_str = part.split("-", 1)
-                    s_idx = max(1, int(s_str.strip()))
-                    e_idx = min(total_pages, int(e_str.strip()))
-                    for p_num in range(s_idx, e_idx + 1):
-                        pages_to_extract.add(p_num - 1)
-                else:
-                    p_idx = int(part) - 1
-                    if 0 <= p_idx < total_pages:
-                        pages_to_extract.add(p_idx)
-
-            if not pages_to_extract:
-                raise ValueError("No valid pages selected.")
-
-            for page_idx in sorted(pages_to_extract):
+            for page_idx in parse_page_ranges(target_range, total_pages):
                 writer.add_page(reader.pages[page_idx])
 
             with open(out_path, "wb") as out_buf:
@@ -3159,6 +3324,8 @@ async def pdf_split(
         split_file = await asyncio.to_thread(_do_split)
         background_tasks.add_task(cleanup_files_and_memory, split_file)
         return FileResponse(split_file, media_type="application/pdf", filename=out_name)
+    except ValueError as e:
+        return JSONResponse(status_code=400, content={"status": "error", "message": str(e)})
     except Exception as e:
         return JSONResponse(status_code=500, content={"status": "error", "message": f"Split failed: {str(e)}"})
 
@@ -3176,8 +3343,7 @@ async def pdf_extract_text(
     safe_name = _safe_filename(file.filename)
     src_path = UPLOAD_DIR / f"txt_{uid}_{safe_name}"
 
-    with open(src_path, "wb") as buf:
-        shutil.copyfileobj(file.file, buf)
+    await save_upload(file, src_path)
 
     def _do_extract():
         try:
@@ -3224,57 +3390,47 @@ async def audio_effects(
     out_name = f"{Path(safe_name).stem}_fx_{uid}.mp3"
     out_path = DOWNLOAD_DIR / out_name
 
-    with open(input_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+    await save_upload(file, input_path)
 
     enable_reverb = add_reverb or (str(reverb).lower() in ("true", "1", "yes"))
 
     def _apply_fx():
         try:
             update_progress(x_task_id, 40, f"Applying audio effects filter chain...")
-            ffmpeg_exe = "ffmpeg"
-            if FFMPEG_DIR:
-                custom_path = Path(FFMPEG_DIR) / "ffmpeg.exe"
-                if custom_path.exists():
-                    ffmpeg_exe = str(custom_path)
+            ffmpeg_bin = ffmpeg_exe()
 
+            # Use the real input sample rate (48 kHz is common) instead of assuming 44.1 kHz.
+            sr = probe_sample_rate(input_path)
+            reverb = "aecho=0.8:0.88:60:0.4"
             filters = []
             if preset == "slowed_reverb":
-                filters.append("atempo=0.85,aecho=0.8:0.88:60:0.4")
+                filters += [atempo_chain(0.85), reverb]
             elif preset == "nightcore":
-                filters.append("asetrate=44100*1.25,atempo=1.0")
+                filters.append(speed_pitch_filter(sr, 1.25, 1.25))
             elif preset == "speed_1_5x":
-                filters.append("atempo=1.5")
+                filters.append(atempo_chain(1.5))
             elif preset == "slow_0_75x":
-                filters.append("atempo=0.75")
+                filters.append(atempo_chain(0.75))
             else:
                 clamped_tempo = max(0.5, min(2.0, tempo))
                 clamped_pitch = max(0.5, min(2.0, pitch))
-
-                if abs(clamped_pitch - 1.0) > 0.01:
-                    rate = int(44100 * clamped_pitch)
-                    comp_tempo = clamped_tempo / clamped_pitch
-                    # atempo requires between 0.5 and 2.0
-                    comp_tempo = max(0.5, min(2.0, comp_tempo))
-                    filters.append(f"asetrate={rate},atempo={comp_tempo:.3f}")
-                else:
-                    filters.append(f"atempo={clamped_tempo:.3f}")
-
+                filters.append(speed_pitch_filter(sr, clamped_tempo, clamped_pitch))
                 if enable_reverb:
-                    filters.append("aecho=0.8:0.88:60:0.4")
+                    filters.append(reverb)
 
             af = ",".join(filters) if filters else "atempo=1.0"
 
             cmd = [
-                ffmpeg_exe, "-y",
+                ffmpeg_bin, "-y",
                 "-i", str(input_path),
+                "-vn",
                 "-af", af,
                 "-q:a", "2",
                 str(out_path)
             ]
-            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=MEDIA_JOB_TIMEOUT)
             if proc.returncode != 0:
-                raise RuntimeError(f"Audio effect error: {proc.stderr or proc.stdout}")
+                raise ffmpeg_error(proc, "Audio effect error")
 
             update_progress(x_task_id, 100, "Audio effects rendered successfully!")
             return out_path
@@ -3312,14 +3468,14 @@ async def clean_audio_noise(
     out_name = f"{Path(safe_name).stem}_clean_{uid}.{out_ext}"
     out_path = DOWNLOAD_DIR / out_name
 
-    with open(input_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+    await save_upload(file, input_path)
 
     # Calculate filter string
     is_voice_focus = str(voice_focus).lower() in ("true", "1", "yes")
     if noise_reduction_db is not None:
-        nr_val = -abs(float(noise_reduction_db))
-        denoise_filter = f"afftdn=nf={nr_val}:tn=1"
+        # afftdn accepts a noise floor between -80 and -20 dB
+        nr_val = max(-80.0, min(-20.0, -abs(float(noise_reduction_db))))
+        denoise_filter = f"afftdn=nf={nr_val:g}:tn=1"
     else:
         preset_filters = {
             "light": "afftdn=nf=-20:tn=1",
@@ -3337,34 +3493,34 @@ async def clean_audio_noise(
     def _denoise():
         try:
             update_progress(x_task_id, 40, f"Processing audio with FFT noise suppressor...")
-            ffmpeg_exe = "ffmpeg"
-            if FFMPEG_DIR:
-                custom_path = Path(FFMPEG_DIR) / "ffmpeg.exe"
-                if custom_path.exists():
-                    ffmpeg_exe = str(custom_path)
+            ffmpeg_bin = ffmpeg_exe()
 
             if is_video:
+                # Pick an audio codec the output container can hold (WebM: Opus only).
+                audio_codec = {"webm": ["libopus", "-b:a", "160k"],
+                               "wmv": ["wmav2", "-b:a", "192k"]}.get(out_ext, ["aac", "-b:a", "192k"])
                 cmd = [
-                    ffmpeg_exe, "-y",
+                    ffmpeg_bin, "-y",
                     "-i", str(input_path),
+                    "-map", "0:v?", "-map", "0:a?",
                     "-c:v", "copy",
                     "-af", af,
-                    "-c:a", "aac",
-                    "-b:a", "192k",
+                    "-c:a", *audio_codec,
                     str(out_path)
                 ]
             else:
                 cmd = [
-                    ffmpeg_exe, "-y",
+                    ffmpeg_bin, "-y",
                     "-i", str(input_path),
+                    "-vn",
                     "-af", af,
                     "-q:a", "2",
                     str(out_path)
                 ]
 
-            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=240)
+            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=MEDIA_JOB_TIMEOUT)
             if proc.returncode != 0:
-                raise RuntimeError(f"Denoise error: {proc.stderr or proc.stdout}")
+                raise ffmpeg_error(proc, "Denoise error")
 
             update_progress(x_task_id, 100, "Audio noise cleaned successfully!")
             return out_path
