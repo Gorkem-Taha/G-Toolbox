@@ -36,8 +36,13 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+      # GitHub's Ubuntu runners ship an Android SDK (ANDROID_HOME); the Android
+      # Gradle plugin fetches any missing platform/build-tools itself.
+      # (android-actions/setup-android@v3 broke: it installs the removed 'tools' package.)
+      - name: Check Android SDK
+        run: |
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          ls "$ANDROID_HOME/platforms" "$ANDROID_HOME/build-tools"
 
       # Signed release build when the keystore secrets exist, debug build otherwise
       - name: Build and lint
