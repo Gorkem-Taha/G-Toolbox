@@ -6,7 +6,12 @@ Backend: FastAPI + Jinja2 + Pillow + ffmpeg-python + rembg + yt-dlp
 import asyncio
 import gc
 import glob
+import hmac
+import html
+import ipaddress
+import json
 import logging
+import secrets
 import os
 import re
 import shutil
@@ -514,17 +519,158 @@ else:
         "Place ffmpeg.exe in the project directory or add it to PATH."
     )
 
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
+
 
 app = FastAPI(title="G-Toolbox", version="4.0.0")
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+
+# ── Access control ────────────────────────────────────────────────
+# The server is meant for the local desktop window. LAN access (phone pairing)
+# is opt-in and every non-loopback client must present the pairing token.
+# Cross-site requests (any other web page open in a browser) are always rejected,
+# and the Host header must be localhost or an IP literal (blocks DNS rebinding).
+
+SETTINGS_PATH = BASE_DIR / "gtoolbox_settings.json"
+TOKEN_PATH = BASE_DIR / ".gtoolbox_token"
+TOKEN_COOKIE = "gt_token"
+
+# Endpoints that touch the host desktop, install software or delete data:
+# never reachable from another device, even with a valid token.
+LOOPBACK_ONLY_PATHS = {
+    "/api/save-task-file",
+    "/api/save-blob-file",
+    "/api/restart-as-admin",
+    "/api/open-security-settings",
+    "/apply-update",
+    "/api/install-ai-models",
+    "/api/delete-ai-models",
+    "/update-ytdlp",
+    "/api/lan-access",
+}
+
+
+def load_settings() -> dict:
+    try:
+        return json.loads(SETTINGS_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def save_settings(settings: dict) -> None:
+    SETTINGS_PATH.write_text(json.dumps(settings, indent=2), encoding="utf-8")
+
+
+def lan_access_enabled() -> bool:
+    """LAN access is enabled by --lan, GTOOLBOX_LAN=1 or the saved setting."""
+    if "--lan" in sys.argv:
+        return True
+    if os.environ.get("GTOOLBOX_LAN", "").strip().lower() in ("1", "true", "yes"):
+        return True
+    return bool(load_settings().get("lan_access", False))
+
+
+def _load_or_create_token() -> str:
+    try:
+        tok = TOKEN_PATH.read_text(encoding="utf-8").strip()
+        if len(tok) >= 20:
+            return tok
+    except Exception:
+        pass
+    tok = secrets.token_urlsafe(24)
+    try:
+        TOKEN_PATH.write_text(tok, encoding="utf-8")
+        os.chmod(TOKEN_PATH, 0o600)
+    except Exception as e:
+        logger.warning(f"Could not persist pairing token: {e}")
+    return tok
+
+
+ACCESS_TOKEN = _load_or_create_token()
+
+
+def _is_loopback(host: str) -> bool:
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False
+
+
+def _host_header_allowed(host_header: str) -> bool:
+    if not host_header:
+        return False
+    if host_header.startswith("["):  # [::1]:8000
+        hostname = host_header[1:].split("]", 1)[0]
+    else:
+        hostname = host_header.rsplit(":", 1)[0] if host_header.count(":") == 1 else host_header
+    if hostname.lower() == "localhost":
+        return True
+    try:
+        ipaddress.ip_address(hostname)
+        return True
+    except ValueError:
+        return False
+
+
+def _token_valid(candidate: Optional[str]) -> bool:
+    return bool(candidate) and hmac.compare_digest(candidate, ACCESS_TOKEN)
+
+
+def _deny(status: int, message: str, request: Request):
+    if "text/html" in request.headers.get("accept", ""):
+        return HTMLResponse(
+            status_code=status,
+            content=(
+                "<!DOCTYPE html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width'>"
+                "<title>G-Toolbox</title></head><body style='font-family:sans-serif;background:#0d1117;color:#c9d1d9;padding:30px;'>"
+                f"<h2>G-Toolbox</h2><p>{html.escape(message)}</p></body></html>"
+            ),
+        )
+    return JSONResponse(status_code=status, content={"success": False, "message": message})
+
+
+@app.middleware("http")
+async def access_guard(request: Request, call_next):
+    client_host = request.client.host if request.client else ""
+    is_local = _is_loopback(client_host)
+    host_header = request.headers.get("host", "")
+
+    if not _host_header_allowed(host_header):
+        return _deny(403, "Invalid Host header.", request)
+
+    origin = request.headers.get("origin")
+    if request.headers.get("sec-fetch-site") == "cross-site" or (
+        origin is not None and origin != f"{request.url.scheme}://{host_header}"
+    ):
+        return _deny(403, "Cross-site requests are not allowed.", request)
+
+    if not is_local:
+        if not lan_access_enabled():
+            return _deny(403, "LAN access is disabled on this G-Toolbox instance.", request)
+        if request.url.path in LOOPBACK_ONLY_PATHS:
+            return _deny(403, "This action is only available on the host computer.", request)
+
+        query_token = request.query_params.get("token")
+        if request.method == "GET" and _token_valid(query_token):
+            # Pairing link: store the token in a cookie and drop it from the URL.
+            resp = RedirectResponse(url=request.url.path or "/", status_code=303)
+            resp.set_cookie(
+                TOKEN_COOKIE, ACCESS_TOKEN, max_age=365 * 24 * 3600,
+                httponly=True, samesite="strict", path="/",
+            )
+            return resp
+
+        presented = request.cookies.get(TOKEN_COOKIE) or request.headers.get("x-gtoolbox-token")
+        if not _token_valid(presented):
+            return _deny(
+                401,
+                "Pairing required. Open G-Toolbox on your computer, go to the device mode "
+                "window and open the pairing link shown there on this device.",
+                request,
+            )
+
+    return await call_next(request)
+
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
@@ -533,12 +679,12 @@ async def global_exception_handler(request: Request, exc: Exception):
     if request.url.path == "/" or "text/html" in request.headers.get("accept", ""):
         return HTMLResponse(
             status_code=500,
-            content=f"<!DOCTYPE html><html><head><meta charset='utf-8'><title>G-Toolbox Hata</title></head><body style='font-family:sans-serif;background:#0d1117;color:#c9d1d9;padding:30px;'>"
-                    f"<h2 style='color:#f85149;'>⚠️ G-Toolbox — Sunucu Hatası (500)</h2>"
-                    f"<p>İstek: <code>{request.method} {request.url.path}</code></p>"
-                    f"<p>Hata: <b>{exc}</b></p>"
-                    f"<pre style='background:#161b22;padding:15px;border-radius:6px;overflow-x:auto;color:#ff7b72;'>{err_tb}</pre>"
-                    f"</body></html>"
+            content="<!DOCTYPE html><html><head><meta charset='utf-8'><title>G-Toolbox Hata</title></head><body style='font-family:sans-serif;background:#0d1117;color:#c9d1d9;padding:30px;'>"
+                    "<h2 style='color:#f85149;'>⚠️ G-Toolbox — Sunucu Hatası (500)</h2>"
+                    f"<p>İstek: <code>{html.escape(request.method)} {html.escape(request.url.path)}</code></p>"
+                    f"<p>Hata: <b>{html.escape(str(exc))}</b></p>"
+                    "<p>Ayrıntılar sunucu günlüğüne yazıldı.</p>"
+                    "</body></html>"
         )
     return JSONResponse(
         status_code=500,
@@ -560,10 +706,42 @@ async def get_network_info(request: Request):
     """Returns host LAN network details for easy mobile pairing."""
     host_ip = get_lan_ip()
     port = request.url.port or 8000
-    return JSONResponse({
+    lan_enabled = lan_access_enabled()
+    client_host = request.client.host if request.client else ""
+    payload = {
         "lan_ip": host_ip,
         "port": port,
-        "mobile_url": f"http://{host_ip}:{port}"
+        "lan_enabled": lan_enabled,
+        "mobile_url": f"http://{host_ip}:{port}" if lan_enabled else "",
+    }
+    # Only the host computer gets the pairing link (it contains the secret token).
+    if lan_enabled and _is_loopback(client_host):
+        payload["pairing_url"] = f"http://{host_ip}:{port}/?token={ACCESS_TOKEN}"
+    return JSONResponse(payload)
+
+
+class LanAccessRequest(BaseModel):
+    enabled: bool
+    rotate_token: bool = False
+
+
+@app.post("/api/lan-access")
+async def set_lan_access(req: LanAccessRequest):
+    """Enables/disables LAN (phone) access. Takes effect after restart. Host-only."""
+    global ACCESS_TOKEN
+    settings = load_settings()
+    settings["lan_access"] = bool(req.enabled)
+    save_settings(settings)
+    if req.rotate_token:
+        try:
+            TOKEN_PATH.unlink()
+        except FileNotFoundError:
+            pass
+        ACCESS_TOKEN = _load_or_create_token()
+    return JSONResponse({
+        "success": True,
+        "lan_enabled": settings["lan_access"],
+        "restart_required": True,
     })
 
 progress_store: dict[str, dict] = {}
@@ -637,6 +815,21 @@ templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "webp", "bmp", "gif", "tiff", "ico"}
 VIDEO_EXTENSIONS = {"mp4", "avi", "mkv", "mov", "webm", "flv", "wmv"}
 AUDIO_EXTENSIONS = {"mp3", "wav", "ogg", "flac", "aac", "m4a", "wma"}
+ALL_TARGET_FORMATS = IMAGE_EXTENSIONS | VIDEO_EXTENSIONS | AUDIO_EXTENSIONS
+
+
+def _normalize_target_format(raw: str) -> Optional[str]:
+    """Returns a whitelisted lowercase extension, or None if not supported."""
+    fmt = str(raw or "").strip().lower().lstrip(".")
+    return fmt if fmt in ALL_TARGET_FORMATS else None
+
+
+def _path_inside(path: Path, base: Path) -> bool:
+    try:
+        path.resolve().relative_to(base.resolve())
+        return True
+    except ValueError:
+        return False
 
 MIME_MAP = {
     # Resim
@@ -715,7 +908,9 @@ async def convert_file(
 ):
     """Handles standard media file conversions."""
     update_progress(x_task_id, 20, "File uploaded, initializing conversion...")
-    target_format = target_format.strip().lower().lstrip(".")
+    target_format = _normalize_target_format(target_format)
+    if target_format is None:
+        return JSONResponse(status_code=400, content={"success": False, "message": "Unsupported target format."})
     uid = uuid.uuid4().hex[:8]
     safe_name = _safe_filename(file.filename)
 
@@ -788,7 +983,9 @@ async def convert_universal(
 ):
     """Handles universal format conversions across image, audio, and video types."""
     update_progress(x_task_id, 20, "File uploaded, initializing conversion...")
-    target_format = target_format.strip().lower().lstrip(".")
+    target_format = _normalize_target_format(target_format)
+    if target_format is None:
+        return JSONResponse(status_code=400, content={"success": False, "message": "Unsupported target format."})
     uid = uuid.uuid4().hex[:8]
     safe_name = _safe_filename(file.filename)
 
@@ -1366,32 +1563,62 @@ class SaveTaskRequest(BaseModel):
     suggested_name: Optional[str] = None
 
 
+# Set by desktop_app.py: callable(initial_filename, ext) -> path | "CANCELED" | None
+NATIVE_SAVE_DIALOG_HOOK = None
+
+_SAFE_EXT_RE = re.compile(r"^[A-Za-z0-9]{1,10}$")
+
+
+def _clean_dialog_inputs(initial_filename: str, file_ext: str) -> tuple[str, str]:
+    """Reduces dialog inputs to a bare file name and an alphanumeric extension."""
+    name = Path(str(initial_filename or "")).name.strip() or "file"
+    name = re.sub(r'[\x00-\x1f<>:"/\\|?*]', "_", name)[:200]
+    ext = str(file_ext or "").lstrip(".")
+    if not _SAFE_EXT_RE.match(ext):
+        ext = ""
+    return name, ext
+
+
 def _open_native_save_dialog(initial_filename: str, file_ext: str = "") -> Optional[str]:
-    """Opens a native Windows Save As dialog on top of all windows without requiring Tkinter."""
-    # 1. Primary Method on Windows: WinForms SaveFileDialog via PowerShell (works on all Windows versions with zero Python dependencies)
+    """Opens a native Save As dialog on the host computer.
+
+    Returns the chosen absolute path, "CANCELED", or None if no dialog is available.
+    User-controlled values are never interpolated into a command line.
+    """
+    initial_filename, clean_ext = _clean_dialog_inputs(initial_filename, file_ext)
+
+    # 0. Desktop window (pywebview) provides its own native dialog.
+    if NATIVE_SAVE_DIALOG_HOOK is not None:
+        try:
+            return NATIVE_SAVE_DIALOG_HOOK(initial_filename, clean_ext)
+        except Exception as e:
+            logger.warning(f"pywebview save dialog failed: {e}")
+
+    # 1. Windows: WinForms SaveFileDialog via PowerShell. The script is constant;
+    #    file name and filter are passed through environment variables.
     if sys.platform == "win32":
         try:
-            clean_ext = file_ext.lstrip(".")
             filter_str = f"{clean_ext.upper()} Files (*.{clean_ext})|*.{clean_ext}|All Files (*.*)|*.*" if clean_ext else "All Files (*.*)|*.*"
-            safe_name = initial_filename.replace("'", "''")
             ps_cmd = (
                 "[System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms') | Out-Null; "
                 "$f = New-Object System.Windows.Forms.SaveFileDialog; "
-                f"$f.FileName = '{safe_name}'; "
-                f"$f.Filter = '{filter_str}'; "
-                "$f.Title = 'G-Toolbox — Dosyayı Farklı Kaydet'; "
+                "$f.FileName = $env:GT_SAVE_NAME; "
+                "$f.Filter = $env:GT_SAVE_FILTER; "
+                "$f.Title = 'G-Toolbox'; "
                 "$top = New-Object System.Windows.Forms.Form; "
                 "$top.TopMost = $true; "
                 "if ($f.ShowDialog($top) -eq [System.Windows.Forms.DialogResult]::OK) { "
                 "Write-Output $f.FileName "
                 "} else { Write-Output '__CANCELED__' }"
             )
+            env = dict(os.environ, GT_SAVE_NAME=initial_filename, GT_SAVE_FILTER=filter_str)
             res = subprocess.run(
                 ["powershell", "-Sta", "-NoProfile", "-NonInteractive", "-Command", ps_cmd],
                 capture_output=True,
                 text=True,
                 timeout=180,
-                creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+                env=env,
+                creationflags=subprocess.CREATE_NO_WINDOW
             )
             out_str = res.stdout.strip()
             if out_str == "__CANCELED__":
@@ -1410,15 +1637,14 @@ def _open_native_save_dialog(initial_filename: str, file_ext: str = "") -> Optio
         root.attributes("-topmost", True)
 
         types = []
-        if file_ext:
-            clean_ext = file_ext.lstrip(".")
+        if clean_ext:
             types.append((f"{clean_ext.upper()} Dosyaları (*.{clean_ext})", f"*.{clean_ext}"))
         types.append(("Tüm Dosyalar (*.*)", "*.*"))
 
         chosen_path = filedialog.asksaveasfilename(
             parent=root,
             initialfile=initial_filename,
-            defaultextension=f".{file_ext.lstrip('.')}" if file_ext else None,
+            defaultextension=f".{clean_ext}" if clean_ext else None,
             filetypes=types,
             title="G-Toolbox — Dosyayı Farklı Kaydet"
         )
@@ -1469,6 +1695,7 @@ async def save_blob_file(
     suggested_filename: str = Form("dosya")
 ):
     """Saves uploaded blob directly to user-chosen destination via native Windows Save As dialog."""
+    suggested_filename = Path(suggested_filename or "").name or "dosya"
     ext = Path(suggested_filename).suffix or Path(file.filename or "").suffix
     chosen = await asyncio.to_thread(_open_native_save_dialog, suggested_filename, ext)
     if chosen == "CANCELED":
@@ -1860,6 +2087,8 @@ def _download_ai_models_worker():
 async def get_ai_status():
     """Returns local AI model presence and installation status."""
     st = check_ai_models_status()
+    for m in st.get("models", {}).values():
+        m.pop("path", None)  # do not expose local file system layout
     st["install_progress"] = _AI_INSTALL_PROGRESS
     return JSONResponse(content=st)
 
@@ -2338,17 +2567,26 @@ async def separate_audio(
 
 # ── Faster-Whisper Local Transcription ────────────────────────────
 _WHISPER_MODELS: dict[str, object] = {}
+WHISPER_ALLOWED_MODELS = {
+    "tiny", "tiny.en", "base", "base.en", "small", "small.en",
+    "medium", "medium.en", "large-v2", "large-v3", "turbo", "large-v3-turbo",
+}
 
 def get_whisper_model(model_size: str = "base"):
     global _WHISPER_MODELS
+    key = str(model_size).lower().strip() or "base"
+    if key not in WHISPER_ALLOWED_MODELS:
+        raise ValueError(f"Unsupported Whisper model: {key}")
     ensure_ai_runtime()
     try:
         from faster_whisper import WhisperModel
     except ImportError:
         raise RuntimeError("faster-whisper library is not installed.")
-    
-    key = str(model_size).lower().strip() or "base"
+
     if key not in _WHISPER_MODELS:
+        # Keep at most one Whisper model in memory.
+        _WHISPER_MODELS.clear()
+        gc.collect()
         device = "cuda" if (torch and torch.cuda.is_available()) else "cpu"
         compute_type = "float16" if (torch and torch.cuda.is_available()) else "int8"
         _WHISPER_MODELS[key] = WhisperModel(key, device=device, compute_type=compute_type)
@@ -3053,3 +3291,26 @@ async def clean_audio_noise(
     except Exception as e:
         logger.error(f"Denoising failed: {e}")
         return JSONResponse(status_code=500, content={"status": "error", "message": str(e)})
+
+
+def run_server(port: int = 8000, open_browser: bool = True) -> None:
+    """Runs the API in browser mode: `python main.py [--lan] [--port N] [--no-browser]`."""
+    import uvicorn
+    host = "0.0.0.0" if lan_access_enabled() else "127.0.0.1"
+    if open_browser:
+        import threading
+        import webbrowser
+        threading.Timer(1.5, lambda: webbrowser.open(f"http://127.0.0.1:{port}")).start()
+    if host != "127.0.0.1":
+        logger.warning(f"LAN access enabled. Pairing link: http://{get_lan_ip()}:{port}/?token={ACCESS_TOKEN}")
+    uvicorn.run(app, host=host, port=port, log_level="info")
+
+
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description="G-Toolbox server")
+    parser.add_argument("--port", type=int, default=8000)
+    parser.add_argument("--lan", action="store_true", help="allow paired devices on the local network")
+    parser.add_argument("--no-browser", action="store_true")
+    args = parser.parse_args()
+    run_server(port=args.port, open_browser=not args.no_browser)

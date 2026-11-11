@@ -990,7 +990,8 @@ namespace GToolboxLauncher
                 psi.FileName = pythonExe;
                 if (webMode)
                 {
-                    psi.Arguments = "-m uvicorn main:app --host 0.0.0.0 --port 8000";
+                    // Loopback only; LAN pairing is opt-in via the app settings (see main.py)
+                    psi.Arguments = "\"" + Path.Combine(baseDir, "main.py") + "\" --port 8000";
                 }
                 else
                 {

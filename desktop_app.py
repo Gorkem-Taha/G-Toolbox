@@ -47,17 +47,18 @@ except Exception:
 
 import uvicorn
 import webview
-from main import app
+import main as gt_main
+from main import app, lan_access_enabled
 
 logger = logging.getLogger("gtoolbox.desktop")
 
 
-def find_available_port(start_port: int = 8000, max_attempts: int = 20) -> int:
+def find_available_port(start_port: int = 8000, max_attempts: int = 20, host: str = "127.0.0.1") -> int:
     """Finds an available TCP port starting from start_port."""
     for port in range(start_port, start_port + max_attempts):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             try:
-                s.bind(("0.0.0.0", port))
+                s.bind((host, port))
                 return port
             except OSError:
                 continue
@@ -162,14 +163,31 @@ def cleanup_ready_flag():
         pass
 
 
+def install_save_dialog_hook(window):
+    """Routes backend "Save As" requests to pywebview's native dialog."""
+    save_mode = getattr(getattr(webview, "FileDialog", None), "SAVE", None)
+    if save_mode is None:
+        save_mode = getattr(webview, "SAVE_DIALOG", 30)
+
+    def _dialog(initial_filename: str, ext: str):
+        file_types = (f"{ext.upper()} (*.{ext})", "All files (*.*)") if ext else ("All files (*.*)",)
+        result = window.create_file_dialog(save_mode, save_filename=initial_filename, file_types=file_types)
+        if not result:
+            return "CANCELED"
+        return result[0] if isinstance(result, (list, tuple)) else str(result)
+
+    gt_main.NATIVE_SAVE_DIALOG_HOOK = _dialog
+
+
 def main():
-    bind_host = "0.0.0.0"
-    port = find_available_port(start_port=8000)
+    # Loopback only unless LAN pairing was explicitly enabled.
+    bind_host = "0.0.0.0" if lan_access_enabled() else "127.0.0.1"
+    port = find_available_port(start_port=8000, host=bind_host)
     server_url = f"http://127.0.0.1:{port}"
 
     cleanup_ready_flag()
 
-    print(f"[*] Starting G-Toolbox backend on port {port} (LAN & Localhost)...")
+    print(f"[*] Starting G-Toolbox backend on {bind_host}:{port}...")
     server_thread = ServerThread(app, host=bind_host, port=port)
     server_thread.start()
 
@@ -198,6 +216,7 @@ def main():
 
     # Attach native taskbar and titlebar icon hook
     setup_native_icon(window, window_title, favicon_path)
+    install_save_dialog_hook(window)
 
     try:
         # Edge Chromium (WebView2) on Windows, WebKitGTK on Linux

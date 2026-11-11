@@ -1,29 +1,45 @@
 // ═════════════════════════════════════════════════════════════════
 // GLOBAL OPERATING MODE & API ROUTING
 // ═════════════════════════════════════════════════════════════════
+// Modes: 'pc' (use the G-Toolbox server this page was loaded from) or
+// 'local' (client-side Canvas processing where possible).
 let currentMode = localStorage.getItem('gtoolbox_mode') || 'pc';
-let customServerUrl = localStorage.getItem('gtoolbox_server_url') || '';
+if (currentMode !== 'pc' && currentMode !== 'local') currentMode = 'pc';
+let customServerUrl = '';
+localStorage.removeItem('gtoolbox_server_url');
 
-// If operating in PC / Local Desktop mode, ensure customServerUrl is cleared
-// so all requests strictly route to the local host/port without port mismatch
-if (currentMode === 'pc') {
-    customServerUrl = '';
-    localStorage.removeItem('gtoolbox_server_url');
+// Escapes text for safe interpolation into HTML templates.
+function escapeHtml(value) {
+    return String(value ?? "").replace(/[&<>"']/g, ch => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    }[ch]));
 }
 
 function getApiBaseUrl() {
-    // In PC mode or when running via browser/webview directly, ALWAYS use relative path ("")
-    // Relative paths ensure 100% reliability regardless of port or LAN IP
-    if (currentMode === 'pc' || window.location.protocol.startsWith('http')) {
-        if (currentMode === 'mobile' && customServerUrl) {
-            return customServerUrl.replace(/\/+$/, '');
-        }
-        return '';
-    }
-    if (customServerUrl) {
-        return customServerUrl.replace(/\/+$/, '');
-    }
+    // The API is always same-origin: the server rejects cross-site requests.
+    // To use another computer, the page navigates to that server instead.
     return '';
+}
+
+// Parses a user-typed server address. Returns a URL object or null.
+function parseServerUrl(raw) {
+    let value = String(raw || '').trim();
+    if (!value) return null;
+    if (!/^https?:\/\//i.test(value)) value = 'http://' + value;
+    try {
+        const u = new URL(value);
+        return (u.protocol === 'http:' || u.protocol === 'https:') ? u : null;
+    } catch (e) {
+        return null;
+    }
+}
+
+// Navigates to another G-Toolbox server (keeps ?token= pairing links). Returns true if navigating.
+function navigateToServer(raw) {
+    const u = parseServerUrl(raw);
+    if (!u || u.origin === window.location.origin) return false;
+    window.location.href = u.href;
+    return true;
 }
 
 const translations = {
@@ -2325,13 +2341,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const displayTitle = title || typeTitles[type];
 
-        toast.innerHTML = `
-            <i class="fa-solid ${typeIcons[type]} text-xl"></i>
-            <div class="flex-1">
-                <p class="font-bold text-sm text-white">${displayTitle}</p>
-                <p class="text-xs text-gray-400 mt-0.5">${message}</p>
-            </div>
-        `;
+        // Messages often carry server/file-name text: build with textContent, never innerHTML.
+        const icon = document.createElement("i");
+        icon.className = `fa-solid ${typeIcons[type] || typeIcons.info} text-xl`;
+        const body = document.createElement("div");
+        body.className = "flex-1";
+        const titleEl = document.createElement("p");
+        titleEl.className = "font-bold text-sm text-white";
+        titleEl.textContent = displayTitle;
+        const msgEl = document.createElement("p");
+        msgEl.className = "text-xs text-gray-400 mt-0.5";
+        msgEl.textContent = String(message ?? "");
+        body.append(titleEl, msgEl);
+        toast.append(icon, body);
         toastContainer.appendChild(toast);
         setTimeout(() => {
             toast.classList.add("removing");
@@ -2641,7 +2663,15 @@ document.addEventListener("DOMContentLoaded", () => {
                     entries.forEach(([k, v]) => {
                         const item = document.createElement("div");
                         item.className = "flex justify-between py-1 border-b border-white/5";
-                        item.innerHTML = `<span class="text-gray-400">${k}:</span> <span class="text-teal-300 font-semibold truncate max-w-[240px]">${v}</span>`;
+                        // EXIF values are attacker-controlled: render as text only.
+                        const keyEl = document.createElement("span");
+                        keyEl.className = "text-gray-400";
+                        keyEl.textContent = `${k}:`;
+                        const valEl = document.createElement("span");
+                        valEl.className = "text-teal-300 font-semibold truncate max-w-[240px]";
+                        valEl.textContent = String(v);
+                        valEl.title = String(v);
+                        item.append(keyEl, " ", valEl);
                         metaTagsList.appendChild(item);
                     });
                 }
@@ -2988,7 +3018,7 @@ document.addEventListener("DOMContentLoaded", () => {
         listPdfMerge.classList.remove("hidden");
         listPdfMerge.innerHTML = pdfMergeFiles.map((f, idx) => `
             <div class="flex items-center justify-between bg-black/40 border border-white/10 px-3 py-2 rounded-xl text-xs text-white">
-                <span class="truncate max-w-[280px]">📄 ${idx + 1}. ${f.name}</span>
+                <span class="truncate max-w-[280px]">📄 ${idx + 1}. ${escapeHtml(f.name)}</span>
                 <span class="text-gray-400 text-[11px]">${formatBytes(f.size)}</span>
             </div>
         `).join("");
@@ -3540,31 +3570,80 @@ window.openDeviceModeModal = function() {
     if (!modal) return;
     modal.classList.remove('hidden');
     
-    // Fetch LAN IP info from backend if available
+    refreshLanInfo();
+
+    window.selectOperatingMode(currentMode);
+};
+
+const IS_HOST_PAGE = ['127.0.0.1', 'localhost', '[::1]'].includes(window.location.hostname);
+
+function refreshLanInfo() {
+    const displayEl = document.getElementById('display-lan-url');
+    const statusEl = document.getElementById('lan-access-status');
+    const toggleBtn = document.getElementById('btn-toggle-lan');
+    const rotateBtn = document.getElementById('btn-rotate-token');
+    const inputEl = document.getElementById('input-server-url');
+    if (inputEl && !inputEl.value) inputEl.value = window.location.origin;
+
     fetch('/api/network-info')
         .then(r => r.json())
         .then(data => {
-            const displayEl = document.getElementById('display-lan-url');
-            if (displayEl && data.mobile_url) {
-                displayEl.textContent = data.mobile_url;
+            const enabled = !!data.lan_enabled;
+            if (displayEl) {
+                displayEl.textContent = data.pairing_url || data.mobile_url
+                    || (enabled ? window.location.origin : 'LAN erişimi kapalı');
             }
-            const inputEl = document.getElementById('input-server-url');
-            if (inputEl && !inputEl.value) {
-                inputEl.value = customServerUrl || data.mobile_url || window.location.origin;
+            if (statusEl) {
+                statusEl.textContent = !IS_HOST_PAGE
+                    ? 'Bu cihaz bilgisayarla eşleştirildi.'
+                    : enabled
+                        ? 'LAN erişimi açık. Bu bağlantı gizli bir anahtar içerir; yalnızca kendi cihazlarınızla paylaşın.'
+                        : 'LAN erişimi kapalı: G-Toolbox yalnızca bu bilgisayardan kullanılabilir.';
             }
+            if (toggleBtn && IS_HOST_PAGE) {
+                toggleBtn.classList.remove('hidden');
+                toggleBtn.dataset.enabled = enabled ? '1' : '0';
+                toggleBtn.textContent = enabled ? 'LAN erişimini kapat' : 'LAN erişimini aç (telefon)';
+            }
+            if (rotateBtn && IS_HOST_PAGE && enabled) rotateBtn.classList.remove('hidden');
         })
         .catch(() => {
-            const displayEl = document.getElementById('display-lan-url');
-            if (displayEl) {
-                displayEl.textContent = window.location.origin;
-            }
-            const inputEl = document.getElementById('input-server-url');
-            if (inputEl && !inputEl.value) {
-                inputEl.value = customServerUrl || window.location.origin;
-            }
+            if (displayEl) displayEl.textContent = window.location.origin;
         });
+}
 
-    window.selectOperatingMode(currentMode);
+async function postLanAccess(body) {
+    const resp = await fetch('/api/lan-access', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+    });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    return resp.json();
+}
+
+window.toggleLanAccess = async function() {
+    const btn = document.getElementById('btn-toggle-lan');
+    const enable = !(btn && btn.dataset.enabled === '1');
+    try {
+        await postLanAccess({ enabled: enable });
+        showToast('info', enable
+            ? 'LAN erişimi açıldı. Etkinleşmesi için G-Toolbox\'u yeniden başlatın.'
+            : 'LAN erişimi kapatıldı. Etkinleşmesi için G-Toolbox\'u yeniden başlatın.');
+        refreshLanInfo();
+    } catch (e) {
+        showToast('error', 'Ayar kaydedilemedi: ' + e.message);
+    }
+};
+
+window.rotateLanToken = async function() {
+    try {
+        await postLanAccess({ enabled: true, rotate_token: true });
+        showToast('success', 'Yeni eşleştirme anahtarı oluşturuldu. Eşleşmiş cihazlar yeniden eşleştirilmeli.');
+        refreshLanInfo();
+    } catch (e) {
+        showToast('error', 'Anahtar yenilenemedi: ' + e.message);
+    }
 };
 
 window.closeDeviceModeModal = function() {
@@ -3611,13 +3690,17 @@ window.testServerConnection = async function() {
     const msgEl = document.getElementById('connection-status-msg');
     if (!inputEl || !msgEl) return;
     
-    let target = inputEl.value.trim().replace(/\/+$/, '');
-    if (!target) target = window.location.origin;
+    const parsed = parseServerUrl(inputEl.value) || new URL(window.location.origin);
+    const target = parsed.origin;
+    if (parsed.origin !== window.location.origin) {
+        msgEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-yellow-400"></span> Farklı bir cihaz: kaydettiğinizde ${escapeHtml(target)} adresine yönlendirileceksiniz.`;
+        return;
+    }
 
-    msgEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-yellow-400 animate-ping"></span> Bağlanılıyor: ${target}...`;
+    msgEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-yellow-400 animate-ping"></span> Bağlanılıyor: ${escapeHtml(target)}...`;
 
     try {
-        const resp = await fetch(`${target}/api/network-info`, { method: 'GET', mode: 'cors' });
+        const resp = await fetch(`/api/network-info`, { method: 'GET' });
         if (resp.ok) {
             msgEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-green-400"></span> <span class="text-green-400 font-bold">Başarılı:</span> Sunucu aktif ve yanıt veriyor.`;
         } else {
@@ -3641,17 +3724,11 @@ window.copyLanUrl = function() {
 };
 
 window.saveOperatingModeSettings = function() {
-    const inputEl = document.getElementById('input-server-url');
-    if (inputEl) {
-        if (currentMode === 'mobile') {
-            customServerUrl = inputEl.value.trim().replace(/\/+$/, '');
-            localStorage.setItem('gtoolbox_server_url', customServerUrl);
-        } else {
-            customServerUrl = '';
-            localStorage.removeItem('gtoolbox_server_url');
-        }
-    }
     localStorage.setItem('gtoolbox_mode', currentMode);
+    const inputEl = document.getElementById('input-server-url');
+    if (currentMode === 'pc' && inputEl && navigateToServer(inputEl.value)) {
+        return;
+    }
 
     // Update status badge in header
     const dot = document.getElementById('mode-status-dot');
@@ -3938,15 +4015,20 @@ window.testOnboardServerConnection = async function() {
     const msg = document.getElementById('onboard-connection-msg');
     if (!input || !msg) return;
 
-    let target = input.value.trim().replace(/\/+$/, '');
-    if (!target) {
+    const parsed = parseServerUrl(input.value);
+    if (!parsed) {
         msg.innerHTML = '<span class="text-amber-400 font-bold">Lütfen bir adres girin (Örn: http://192.168.1.100:8000)</span>';
         return;
     }
+    const target = parsed.origin;
+    if (parsed.origin !== window.location.origin) {
+        msg.innerHTML = `<span class="text-yellow-400">Farklı bir cihaz: devam ettiğinizde ${escapeHtml(target)} adresine yönlendirileceksiniz.</span>`;
+        return;
+    }
 
-    msg.innerHTML = `<span class="text-yellow-400">Bağlanılıyor: ${target}...</span>`;
+    msg.innerHTML = `<span class="text-yellow-400">Bağlanılıyor: ${escapeHtml(target)}...</span>`;
     try {
-        const r = await fetch(`${target}/api/network-info`, { mode: 'cors' });
+        const r = await fetch(`/api/network-info`);
         if (r.ok) {
             msg.innerHTML = '<span class="text-green-400 font-bold">✅ Başarılı: Bilgisayar bulundu ve yanıt veriyor!</span>';
         } else {
@@ -3960,19 +4042,16 @@ window.testOnboardServerConnection = async function() {
 window.applyMobileOnboarding = function() {
     localStorage.setItem('gtoolbox_mobile_onboarded', 'true');
     if (selectedMobileOnboardMode === 'local') {
-        currentMode = 'mobile';
-        customServerUrl = '';
-        localStorage.setItem('gtoolbox_mode', 'mobile');
-        localStorage.removeItem('gtoolbox_server_url');
+        currentMode = 'local';
+        localStorage.setItem('gtoolbox_mode', 'local');
         showToast("info", "📱 Yerel Cihaz Modu seçildi.");
     } else {
         currentMode = 'pc';
-        const input = document.getElementById('input-onboard-server-url');
-        if (input && input.value.trim()) {
-            customServerUrl = input.value.trim().replace(/\/+$/, '');
-            localStorage.setItem('gtoolbox_server_url', customServerUrl);
-        }
         localStorage.setItem('gtoolbox_mode', 'pc');
+        const input = document.getElementById('input-onboard-server-url');
+        if (input && navigateToServer(input.value)) {
+            return;
+        }
         showToast("success", "💻 PC Sunucusuna bağlanıldı.");
     }
 
