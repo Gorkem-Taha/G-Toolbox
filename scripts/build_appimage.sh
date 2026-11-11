@@ -92,7 +92,8 @@ fi
 
 echo "[4/6] Application files"
 cp "$ROOT_DIR/main.py" "$ROOT_DIR/desktop_app.py" "$ROOT_DIR/LICENSE" "$APP_DIR/app/"
-cp -r "$ROOT_DIR/templates" "$ROOT_DIR/static" "$APP_DIR/app/"
+cp -r "$ROOT_DIR/gtoolbox" "$ROOT_DIR/templates" "$ROOT_DIR/static" "$APP_DIR/app/"
+find "$APP_DIR/app" -name "__pycache__" -type d -prune -exec rm -rf {} +
 rm -f "$APP_DIR/app/static/css/tailwind.input.css"
 
 echo "[5/6] Desktop integration"

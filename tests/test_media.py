@@ -10,7 +10,8 @@ import pyAesCrypt
 import pytest
 from PIL import Image, ImageSequence
 
-import main
+import gtoolbox.downloads as gt_downloads
+import gtoolbox.media as gt_media
 
 needs_ffmpeg = pytest.mark.skipif(not shutil.which("ffmpeg"), reason="ffmpeg not installed")
 
@@ -155,9 +156,9 @@ def test_pitch_only_keeps_duration(local_client, media, tmp_path):
 
 
 def test_atempo_chain_ranges():
-    assert main.atempo_chain(1.0) == "atempo=1.000000"
-    assert main.atempo_chain(0.25) == "atempo=0.5,atempo=0.500000"
-    assert main.atempo_chain(3.0) == "atempo=2.0,atempo=1.500000"
+    assert gt_media.atempo_chain(1.0) == "atempo=1.000000"
+    assert gt_media.atempo_chain(0.25) == "atempo=0.5,atempo=0.500000"
+    assert gt_media.atempo_chain(3.0) == "atempo=2.0,atempo=1.500000"
 
 
 # ── H6: noise reduction range and containers ────────────────────
@@ -195,9 +196,9 @@ def _pdf(pages):
 def test_parse_page_ranges(spec, expected):
     if expected is None:
         with pytest.raises(ValueError):
-            main.parse_page_ranges(spec, 5)
+            gt_media.parse_page_ranges(spec, 5)
     else:
-        assert main.parse_page_ranges(spec, 5) == expected
+        assert gt_media.parse_page_ranges(spec, 5) == expected
 
 
 def test_pdf_split_open_range(local_client):
@@ -214,7 +215,7 @@ def test_pdf_split_open_range(local_client):
 @pytest.mark.parametrize("sec,expected", [
     (1.9996, "00:00:02,000"), (0, "00:00:00,000"), (3661.5, "01:01:01,500"), (59.9999, "00:01:00,000")])
 def test_format_timestamp(sec, expected):
-    assert main.format_timestamp(sec) == expected
+    assert gt_media.format_timestamp(sec) == expected
 
 
 # ── H10: unique files and safe vault archives ───────────────────
@@ -255,9 +256,9 @@ def test_video_to_anim(local_client, media):
 def test_purge_finished_download_tasks(tmp_path):
     f = tmp_path / "old.mp4"
     f.write_bytes(b"x")
-    main._download_tasks["old"] = {"created": time.time() - 7 * 3600, "status": "done", "filepath": str(f)}
-    main._download_tasks["running"] = {"created": time.time() - 7 * 3600, "status": "downloading"}
-    main.purge_finished_download_tasks()
-    assert "old" not in main._download_tasks and not f.exists()
-    assert "running" in main._download_tasks
-    main._download_tasks.pop("running")
+    gt_downloads._download_tasks["old"] = {"created": time.time() - 7 * 3600, "status": "done", "filepath": str(f)}
+    gt_downloads._download_tasks["running"] = {"created": time.time() - 7 * 3600, "status": "downloading"}
+    gt_downloads.purge_finished_download_tasks()
+    assert "old" not in gt_downloads._download_tasks and not f.exists()
+    assert "running" in gt_downloads._download_tasks
+    gt_downloads._download_tasks.pop("running")

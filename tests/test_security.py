@@ -5,6 +5,10 @@ import pytest
 from PIL import Image
 
 import main
+import gtoolbox.ai as gt_ai
+import gtoolbox.dialogs as gt_dialogs
+import gtoolbox.routers.ai as gt_routers_ai
+import gtoolbox.security as gt_security
 
 
 def _png_bytes():
@@ -64,24 +68,24 @@ def test_remote_requires_token(lan_enabled, remote_client):
 
 
 def test_pairing_link_sets_cookie_and_strips_token(lan_enabled, remote_client):
-    r = remote_client.get(f"/?token={main.ACCESS_TOKEN}")
+    r = remote_client.get(f"/?token={gt_security.ACCESS_TOKEN}")
     assert r.status_code == 303
     assert r.headers["location"] == "/"
-    assert main.TOKEN_COOKIE in r.cookies
+    assert gt_security.TOKEN_COOKIE in r.cookies
     assert "httponly" in r.headers["set-cookie"].lower()
-    remote_client.cookies.set(main.TOKEN_COOKIE, main.ACCESS_TOKEN)
+    remote_client.cookies.set(gt_security.TOKEN_COOKIE, gt_security.ACCESS_TOKEN)
     assert remote_client.get("/").status_code == 200
 
 
-@pytest.mark.parametrize("path", sorted(main.LOOPBACK_ONLY_PATHS))
+@pytest.mark.parametrize("path", sorted(gt_security.LOOPBACK_ONLY_PATHS))
 def test_host_only_endpoints_refuse_paired_devices(lan_enabled, remote_client, path):
-    remote_client.cookies.set(main.TOKEN_COOKIE, main.ACCESS_TOKEN)
+    remote_client.cookies.set(gt_security.TOKEN_COOKIE, gt_security.ACCESS_TOKEN)
     assert remote_client.post(path).status_code == 403
 
 
 def test_pairing_url_only_shown_to_host(lan_enabled, local_client, remote_client):
     assert "pairing_url" in local_client.get("/api/network-info").json()
-    remote_client.cookies.set(main.TOKEN_COOKIE, main.ACCESS_TOKEN)
+    remote_client.cookies.set(gt_security.TOKEN_COOKIE, gt_security.ACCESS_TOKEN)
     assert "pairing_url" not in remote_client.get("/api/network-info").json()
 
 
@@ -94,7 +98,7 @@ def test_save_dialog_inputs_are_sanitized(local_client, monkeypatch):
         seen["name"], seen["ext"] = name, ext
         return "CANCELED"
 
-    monkeypatch.setattr(main, "NATIVE_SAVE_DIALOG_HOOK", fake_dialog)
+    monkeypatch.setattr(gt_dialogs, "NATIVE_SAVE_DIALOG_HOOK", fake_dialog)
     payload = "x.a';Start-Process calc;'"
     r = local_client.post("/api/save-blob-file",
                           files={"file": ("f.bin", b"data")},
@@ -111,7 +115,7 @@ def test_save_dialog_inputs_are_sanitized(local_client, monkeypatch):
 ])
 def test_clean_dialog_inputs(raw, expected):
     from pathlib import Path
-    name, ext = main._clean_dialog_inputs(raw, Path(raw).suffix)
+    name, ext = gt_dialogs._clean_dialog_inputs(raw, Path(raw).suffix)
     assert (name, ext) == expected
 
 
@@ -137,7 +141,7 @@ def test_convert_still_works(local_client):
 def test_error_page_escapes_and_hides_traceback(local_client, monkeypatch):
     def boom():
         raise RuntimeError("<script>alert(1)</script>")
-    monkeypatch.setattr(main, "check_ai_models_status", boom)
+    monkeypatch.setattr(gt_routers_ai, "check_ai_models_status", boom)
     client = type(local_client)(main.app, base_url="http://127.0.0.1:8000",
                                 client=("127.0.0.1", 1), raise_server_exceptions=False)
     r = client.get("/api/ai-status", headers={"accept": "text/html"})
@@ -156,4 +160,4 @@ def test_ai_status_hides_paths(local_client):
 @pytest.mark.parametrize("name", ["../../etc", "someone/evil-model", "/tmp/model"])
 def test_whisper_rejects_arbitrary_models(name):
     with pytest.raises(ValueError):
-        main.get_whisper_model(name)
+        gt_ai.get_whisper_model(name)

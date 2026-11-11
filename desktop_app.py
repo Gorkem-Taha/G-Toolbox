@@ -48,8 +48,9 @@ except Exception:
         sys.stderr = open(os.devnull, "w", encoding="utf-8")
 
 import uvicorn
-import main as gt_main
-from main import app, lan_access_enabled
+from gtoolbox import dialogs
+from gtoolbox.app import app, run_server
+from gtoolbox.config import lan_access_enabled
 
 # pywebview needs a GUI toolkit binding (WebView2 on Windows, GTK/Qt on Linux).
 # Without one (e.g. the AppImage's bundled Python) fall back to the browser.
@@ -185,13 +186,13 @@ def install_save_dialog_hook(window):
             return "CANCELED"
         return result[0] if isinstance(result, (list, tuple)) else str(result)
 
-    gt_main.NATIVE_SAVE_DIALOG_HOOK = _dialog
+    dialogs.NATIVE_SAVE_DIALOG_HOOK = _dialog
 
 
 def main():
     if webview is None:
         print(f"[*] Native window unavailable ({_WEBVIEW_ERROR}); opening G-Toolbox in the browser.")
-        gt_main.run_server(open_browser="--no-browser" not in sys.argv)
+        run_server(open_browser="--no-browser" not in sys.argv)
         return
 
     # Loopback only unless LAN pairing was explicitly enabled.
@@ -240,7 +241,7 @@ def main():
         except Exception as e:
             # No usable GUI backend at runtime: keep the server, use the browser.
             print(f"[*] Native window failed ({e}); opening {server_url} in the browser.")
-            gt_main.NATIVE_SAVE_DIALOG_HOOK = None
+            dialogs.NATIVE_SAVE_DIALOG_HOOK = None
             if "--no-browser" not in sys.argv:
                 import webbrowser
                 webbrowser.open(server_url)
@@ -254,7 +255,7 @@ def main():
 if __name__ == "__main__":
     try:
         main()
-    except Exception as e:
+    except Exception:
         import traceback
         err_msg = traceback.format_exc()
         try:
