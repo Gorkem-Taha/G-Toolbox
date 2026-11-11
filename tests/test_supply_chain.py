@@ -60,7 +60,7 @@ def test_pip_does_not_trust_hosts(monkeypatch):
 
 
 def test_launcher_has_no_tls_or_defender_bypass():
-    src = (Path(main.__file__).parent / "launcher.cs").read_text(encoding="utf-8")
+    src = (Path(main.__file__).parent / "launcher" / "Launcher.cs").read_text(encoding="utf-8")
     for needle in ("ServerCertificateValidationCallback", "--trusted-host", "Add-MpPreference",
                    "Zone.Identifier", "get-pip.py\""):
         assert needle not in src, needle
@@ -206,4 +206,39 @@ def test_embedded_key_matches_local_signing_key():
         pytest.skip("release signing key not present on this machine")
     key = serialization.load_pem_private_key(key_path.read_bytes(), password=None)
     pub = key.public_key().public_bytes(serialization.Encoding.Raw, serialization.PublicFormat.Raw)
+    assert base64.b64encode(pub).decode() == gt_updates.UPDATE_PUBLIC_KEY_B64
+
+
+def test_update_installs_changed_dependencies_first(local_client, signing_key, monkeypatch, tmp_path):
+    calls = []
+    monkeypatch.setattr(gt_updates, "BASE_DIR", tmp_path)
+    (tmp_path / "requirements-desktop.lock").write_text("old==1\n")
+    monkeypatch.setattr(gt_updates, "install_locked_requirements",
+                        lambda lock: calls.append((lock.read_text(), (tmp_path / "main.py").exists())))
+    _release(monkeypatch, signing_key, _zip({"G-Toolbox/main.py": "# new",
+                                             "G-Toolbox/requirements-desktop.lock": "new==2\n",
+                                             "G-Toolbox/static/vendor/fonts/files/x.woff2": "font"}))
+    r = local_client.post("/apply-update")
+    assert r.json()["dependencies_updated"] is True
+    assert calls == [("new==2\n", False)]          # installed before any file was replaced
+    assert (tmp_path / "requirements-desktop.lock").read_text() == "new==2\n"
+    assert (tmp_path / "static/vendor/fonts/files/x.woff2").exists()
+
+
+def test_update_aborts_when_dependency_install_fails(local_client, signing_key, monkeypatch, tmp_path):
+    monkeypatch.setattr(gt_updates, "BASE_DIR", tmp_path)
+
+    def fail(lock):
+        raise RuntimeError("Dependency update failed: no network")
+    monkeypatch.setattr(gt_updates, "install_locked_requirements", fail)
+    _release(monkeypatch, signing_key, _zip({"main.py": "# new", "requirements-desktop.lock": "x==1\n"}))
+    r = local_client.post("/apply-update")
+    assert r.status_code == 500
+    assert not (tmp_path / "main.py").exists()     # nothing replaced
+
+
+def test_published_public_key_matches_embedded_key():
+    pem = (Path(main.__file__).parent / "release-signing-key.pub.pem").read_bytes()
+    pub = serialization.load_pem_public_key(pem).public_bytes(serialization.Encoding.Raw,
+                                                               serialization.PublicFormat.Raw)
     assert base64.b64encode(pub).decode() == gt_updates.UPDATE_PUBLIC_KEY_B64

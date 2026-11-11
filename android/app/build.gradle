@@ -2,6 +2,11 @@ plugins {
     id 'com.android.application'
 }
 
+// App version comes from the single source of truth: gtoolbox/__init__.py
+def appVersion = (rootProject.file("../gtoolbox/__init__.py").text =~ /__version__\s*=\s*"(\d+)\.(\d+)\.(\d+)"/)[0]
+def appVersionName = "${appVersion[1]}.${appVersion[2]}.${appVersion[3]}"
+def appVersionCode = (appVersion[1] as int) * 10000 + (appVersion[2] as int) * 100 + (appVersion[3] as int)
+
 android {
     namespace 'com.gtoolbox.app'
     compileSdk 34
@@ -10,16 +15,33 @@ android {
         applicationId "com.gtoolbox.app"
         minSdk 24
         targetSdk 34
-        versionCode 440
-        versionName "4.4.0"
+        versionCode appVersionCode
+        versionName appVersionName
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    // Release signing only when the keystore is provided (CI secrets or local env);
+    // otherwise `assembleRelease` produces an unsigned APK.
+    signingConfigs {
+        release {
+            def ks = System.getenv("ANDROID_KEYSTORE_PATH")
+            if (ks) {
+                storeFile file(ks)
+                storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                keyAlias System.getenv("ANDROID_KEY_ALIAS")
+                keyPassword System.getenv("ANDROID_KEY_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            if (System.getenv("ANDROID_KEYSTORE_PATH")) {
+                signingConfig signingConfigs.release
+            }
         }
     }
     compileOptions {

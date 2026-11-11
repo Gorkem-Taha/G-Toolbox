@@ -5,14 +5,13 @@ on:
     branches: [ main ]
     paths:
       - '**.py'
-      - 'requirements*.txt'
+      - 'requirements*.lock'
       - 'scripts/build_appimage.sh'
       - 'templates/**'
       - 'static/**'
       - '.github/workflows/build-appimage.yml'
   workflow_dispatch:
-  release:
-    types: [ published ]
+  workflow_call:
 
 permissions:
   contents: read
@@ -47,16 +46,3 @@ jobs:
           path: dist/G-Toolbox-x86_64.AppImage
           if-no-files-found: error
 
-  attach-to-release:
-    if: github.event_name == 'release'
-    needs: build-appimage
-    runs-on: ubuntu-22.04
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: G-Toolbox-Linux-x86_64-AppImage
-      - uses: softprops/action-gh-release@v2
-        with:
-          files: G-Toolbox-x86_64.AppImage

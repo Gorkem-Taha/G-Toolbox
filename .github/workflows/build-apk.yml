@@ -12,6 +12,7 @@ on:
       - 'android/**'
       - '.github/workflows/build-apk.yml'
   workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
@@ -38,13 +39,31 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
+      # Signed release build when the keystore secrets exist, debug build otherwise
       - name: Build and lint
         working-directory: ./android
-        run: ./gradlew assembleDebug lintDebug --stacktrace
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          mkdir -p ../dist
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.jks"
+            export ANDROID_KEYSTORE_PATH="$RUNNER_TEMP/release.jks"
+            ./gradlew assembleRelease lintRelease --stacktrace
+            cp app/build/outputs/apk/release/app-release.apk ../dist/G-Toolbox.apk
+            rm -f "$RUNNER_TEMP/release.jks"
+          else
+            echo "::warning::No release keystore configured; publishing a debug-signed APK."
+            ./gradlew assembleDebug lintDebug --stacktrace
+            cp app/build/outputs/apk/debug/app-debug.apk ../dist/G-Toolbox.apk
+          fi
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: G-Toolbox-Android-APK
-          path: android/app/build/outputs/apk/debug/*.apk
+          path: dist/G-Toolbox.apk
           retention-days: 14

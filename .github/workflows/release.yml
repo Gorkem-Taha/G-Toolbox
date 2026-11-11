@@ -1,0 +1,97 @@
+name: Release
+
+# Push a tag that matches gtoolbox/__init__.py, e.g.:  git tag v4.5.0 && git push origin v4.5.0
+# Produces a DRAFT GitHub release with the Windows bundle, AppImage, APK and a
+# SHA256SUMS manifest. The in-app updater only installs releases whose SHA256SUMS
+# is signed (SHA256SUMS.sig) with the key embedded in gtoolbox/updates.py:
+#   • with the RELEASE_SIGNING_KEY secret (PEM), CI signs automatically;
+#   • otherwise download SHA256SUMS, run `python scripts/sign_release.py <dir>` locally
+#     and upload SHA256SUMS.sig to the draft before publishing.
+
+on:
+  push:
+    tags: [ 'v*' ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tag must match gtoolbox/__init__.py
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          VERSION=$(python3 -c "import re;print(re.search(r'__version__\s*=\s*\"([^\"]+)\"',open('gtoolbox/__init__.py').read()).group(1))")
+          [ "v$VERSION" = "$GITHUB_REF_NAME" ] || { echo "::error::Tag $GITHUB_REF_NAME != v$VERSION"; exit 1; }
+
+  tests:
+    needs: verify-version
+    uses: ./.github/workflows/tests.yml
+
+  apk:
+    needs: tests
+    uses: ./.github/workflows/build-apk.yml
+    secrets: inherit
+
+  appimage:
+    needs: tests
+    uses: ./.github/workflows/build-appimage.yml
+
+  windows:
+    needs: tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Build launcher and bundle
+        run: python3 scripts/build_windows_bundle.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: G-Toolbox-Windows
+          path: dist/G-Toolbox-v*-Windows.zip
+          if-no-files-found: error
+
+  publish:
+    needs: [ apk, appimage, windows ]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Collect files
+        run: |
+          mkdir -p release
+          find artifacts -type f \( -name '*.zip' -o -name '*.AppImage' -o -name '*.apk' \) -exec cp {} release/ \;
+          ls -la release
+
+      - name: Checksums and signature
+        env:
+          RELEASE_SIGNING_KEY: ${{ secrets.RELEASE_SIGNING_KEY }}
+        run: |
+          if [ -n "$RELEASE_SIGNING_KEY" ]; then
+            pip install --quiet --require-hashes -r requirements-dev.lock
+            umask 077; printf '%s\n' "$RELEASE_SIGNING_KEY" > "$RUNNER_TEMP/key.pem"
+            python scripts/sign_release.py release --key "$RUNNER_TEMP/key.pem"
+            rm -f "$RUNNER_TEMP/key.pem"
+          else
+            (cd release && sha256sum * > SHA256SUMS)
+            echo "::warning::RELEASE_SIGNING_KEY not set: SHA256SUMS is unsigned. Sign it locally and upload SHA256SUMS.sig before publishing, or in-app updates will refuse this release."
+          fi
+          cat release/SHA256SUMS
+
+      - name: Create draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          gh release create "$TAG" release/* --draft --title "G-Toolbox $TAG" --generate-notes

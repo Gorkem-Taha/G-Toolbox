@@ -197,3 +197,6 @@ runtime/
 desktop.log
 desktop_error.log
 node_modules/
+launcher/bin/
+launcher/obj/
+Releases/

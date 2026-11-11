@@ -4,7 +4,7 @@
 #
 # Produces a self-contained G-Toolbox-x86_64.AppImage that bundles:
 #   • a relocatable CPython 3.11 (python-build-standalone, SHA-256 pinned)
-#   • the core Python dependencies (requirements-core.txt)
+#   • the core Python dependencies, hash-locked (requirements-core.lock)
 #   • a static ffmpeg/ffprobe (BtbN, verified against the release checksums)
 # AI engines (torch, rembg, …) are installed on demand from the app into
 # ~/.local/share/g-toolbox/site-packages, since the AppImage itself is read-only.
@@ -64,7 +64,7 @@ PY="$APP_DIR/usr/python/bin/python3"
 
 echo "[2/6] Core Python dependencies"
 "$PY" -m pip install --quiet --no-warn-script-location --disable-pip-version-check \
-      -r "$ROOT_DIR/requirements-core.txt"
+      --require-hashes -r "$ROOT_DIR/requirements-core.lock"
 # Byte-code is generated at build time; the AppImage is read-only at runtime.
 "$PY" -m compileall -q "$APP_DIR/usr/python/lib" >/dev/null || true
 

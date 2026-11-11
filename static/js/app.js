@@ -51,7 +51,6 @@ const translations = {
     en: {
         app_title: "G-Toolbox | Premium Toolbox",
         app_desc: "Premium multi-purpose media & file processing tool.",
-        app_version: "Toolbox v4.0",
         hero_title: "The Only Place for All Your Files",
         hero_desc: "Process your media, documents, and files locally, securely, and at lightning speed with G-Toolbox. With zero data leak guarantee.",
         menu_converter: "Media Converter",
@@ -363,7 +362,6 @@ const translations = {
     tr: {
         app_title: "G-Toolbox | Premium Araç Seti",
         app_desc: "Premium çok amaçlı medya & dosya işleme aracı.",
-        app_version: "Araç Seti v4.0",
         hero_title: "Tüm Dosyalarınız İçin Tek Yer",
         hero_desc: "Medya, belge ve dosyalarınızı G-Toolbox ile yerel, güvenli ve ışık hızında işleyin. Sıfır veri sızıntısı garantisiyle.",
         menu_converter: "Medya Dönüştürücü",
@@ -3791,6 +3789,12 @@ window.saveOperatingModeSettings = function() {
 
 // Initial badge render & onboarding/integrity checks on load
 document.addEventListener('DOMContentLoaded', () => {
+    // Version comes from the server (single source: gtoolbox/__init__.py)
+    fetch('/check-update').then(r => r.json()).then(d => {
+        const label = document.getElementById('app-version-label');
+        if (label && d.current) label.textContent = `G-Toolbox v${d.current}`;
+    }).catch(() => {});
+
     const dot = document.getElementById('mode-status-dot');
     const text = document.getElementById('mode-status-text');
     if (dot && text) {

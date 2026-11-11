@@ -15,7 +15,7 @@ import urllib.request
 from pathlib import Path
 from typing import Optional
 
-from .config import BASE_DIR, DATA_DIR, PIP_TARGET, logger
+from .config import APP_VERSION, BASE_DIR, DATA_DIR, PIP_TARGET, logger
 from .net import _safe_urlopen, sha256_file, verify_authenticode_microsoft
 
 
@@ -205,7 +205,7 @@ def _ensure_vc_redist() -> bool:
         vc_url = "https://aka.ms/vs/17/release/vc_redist.x64.exe"
         vc_tmp = Path(tempfile.gettempdir()) / "vc_redist.x64.exe"
         logger.info("Downloading Microsoft Visual C++ 2015-2022 Redistributable (x64)...")
-        req = urllib.request.Request(vc_url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) G-Toolbox/4.4"})
+        req = urllib.request.Request(vc_url, headers={"User-Agent": f"Mozilla/5.0 (Windows NT 10.0; Win64; x64) G-Toolbox/{APP_VERSION}"})
         with _safe_urlopen(req, timeout=180) as resp, open(vc_tmp, "wb") as f:
             f.write(resp.read())
 

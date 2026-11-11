@@ -17,6 +17,31 @@ namespace GToolboxLauncher
     // ═════════════════════════════════════════════════════════════════════════
     // 0. SYSTEM & SECURITY HELPERS (pinned hashes, Authenticode, VC++ Redist)
     // ═════════════════════════════════════════════════════════════════════════
+    internal static class AppInfo
+    {
+        private static string _version;
+
+        /// <summary>Version from gtoolbox/__init__.py (single source of truth), or "" if unreadable.</summary>
+        public static string Version
+        {
+            get
+            {
+                if (_version != null) return _version;
+                _version = "";
+                try
+                {
+                    string init = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "gtoolbox", "__init__.py");
+                    var m = System.Text.RegularExpressions.Regex.Match(File.ReadAllText(init), "__version__\\s*=\\s*\"([0-9.]+)\"");
+                    if (m.Success) _version = m.Groups[1].Value;
+                }
+                catch { }
+                return _version;
+            }
+        }
+
+        public static string Label { get { return Version.Length > 0 ? "v" + Version : ""; } }
+    }
+
     internal static class SecurityHelper
     {
         // ── Pinned downloads ────────────────────────────────────────────
@@ -396,7 +421,7 @@ namespace GToolboxLauncher
 
             // Version info footer (English)
             Label lblVer = new Label();
-            lblVer.Text = "G-Toolbox v4.4 • Zero Dependencies & Portable Environment" + (SecurityHelper.IsAdministrator() ? " (Administrator)" : "");
+            lblVer.Text = ("G-Toolbox " + AppInfo.Label).Trim() + " • Portable Environment" + (SecurityHelper.IsAdministrator() ? " (Administrator)" : "");
             lblVer.Font = new Font("Segoe UI", 8f, FontStyle.Regular);
             lblVer.ForeColor = Color.FromArgb(100, 116, 139);
             lblVer.Location = new Point(30, 268);
@@ -516,8 +541,10 @@ namespace GToolboxLauncher
                 // ── STEP 5: Install Core Dependencies ───────────────────
                 UpdateUI("5/5: Installing core engine packages...", "FastAPI, WebView, Media Tools and dependencies (1-2 min)...", 0, ProgressBarStyle.Marquee);
 
-                string corePackages = "fastapi uvicorn python-multipart jinja2 pydantic ffmpeg-python yt-dlp Pillow pyAesCrypt pypdf pywebview opencv-python numpy aiofiles psutil certifi --no-warn-script-location --prefer-binary --default-timeout 180 --retries 5";
-                RunProcess(pythonExe, "-m pip install " + corePackages, runtimeDir);
+                // Exact versions with SHA-256 hashes (universal lock covering Windows / Python 3.10).
+                // opencv / numpy come with the optional AI engines.
+                string desktopLock = Path.Combine(baseDir, "requirements-desktop.lock");
+                RunProcess(pythonExe, "-m pip install --require-hashes -r \"" + desktopLock + "\" --no-warn-script-location --default-timeout 180 --retries 5", runtimeDir);
 
                 if (installAi)
                 {
@@ -606,7 +633,7 @@ namespace GToolboxLauncher
             request.Proxy = null; // Bypasses 15-30s WPAD proxy delay on Windows
             request.Timeout = 180000;
             request.ReadWriteTimeout = 180000;
-            request.UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) G-Toolbox/4.4";
+            request.UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) G-Toolbox/" + (AppInfo.Version.Length > 0 ? AppInfo.Version : "dev");
             request.KeepAlive = true;
             request.AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate;
 
@@ -830,7 +857,7 @@ namespace GToolboxLauncher
             this.Controls.Add(progressBar);
 
             lblVersion = new Label();
-            lblVersion.Text = "v4.4 Desktop • Please wait...";
+            lblVersion.Text = (AppInfo.Label + " Desktop • Please wait...").Trim();
             lblVersion.Font = new Font("Segoe UI", 8.5f, FontStyle.Regular);
             lblVersion.ForeColor = Color.FromArgb(100, 116, 139);
             lblVersion.Location = new Point(30, 175);

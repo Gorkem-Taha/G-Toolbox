@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Windows launcher (G-Toolbox.exe). Builds on Windows or Linux: `dotnet build -c Release`.
+       Targets .NET Framework 4.8, which ships with Windows 10/11. -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net48</TargetFramework>
+    <AssemblyName>G-Toolbox</AssemblyName>
+    <RootNamespace>GToolboxLauncher</RootNamespace>
+    <LangVersion>7.3</LangVersion>
+    <ApplicationIcon>../static/favicon.ico</ApplicationIcon>
+    <Deterministic>true</Deterministic>
+    <Product>G-Toolbox</Product>
+    <Description>G-Toolbox Windows launcher</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Lets non-Windows hosts compile against the .NET Framework reference assemblies -->
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.IO.Compression.FileSystem" />
+  </ItemGroup>
+</Project>

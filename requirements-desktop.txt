@@ -1,0 +1,3 @@
+# Desktop install (Windows launcher / source installs): core + native window.
+-r requirements-core.txt
+pywebview

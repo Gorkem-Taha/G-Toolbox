@@ -4,18 +4,21 @@ import json
 import os
 import re
 import shutil
+import subprocess
+import sys
 import urllib.error
 import urllib.request
 import zipfile
 from pathlib import Path
 
-from .config import APP_VERSION, BASE_DIR, GITHUB_REPO
+from .config import APP_VERSION, BASE_DIR, GITHUB_REPO, PIP_TARGET
 from .files import _path_inside
 from .net import _safe_urlopen, sha256_file
 
 
 UPDATE_PUBLIC_KEY_B64 = "6Bz9iNc1LkjIO28rz7iiwsS2PhV7mzO+x49VUHL+fAw="
-UPDATE_ALLOWED_EXTS = {".py", ".html", ".js", ".css", ".json", ".png", ".ico", ".txt", ".md"}
+UPDATE_ALLOWED_EXTS = {".py", ".html", ".js", ".css", ".json", ".png", ".ico", ".txt", ".md", ".woff2", ".lock"}
+DEPENDENCY_LOCK = "requirements-desktop.lock"
 UPDATE_PROTECTED = {"venv", "runtime", "uploads", "downloads", ".git", ".env"}
 
 
@@ -67,6 +70,18 @@ def safe_extract_zip(zip_path: Path, dest: Path) -> None:
         zf.extractall(dest)
 
 
+def install_locked_requirements(lock_file: Path) -> None:
+    """pip install --require-hashes -r <lock> into this interpreter (or PIP_TARGET)."""
+    cmd = [sys.executable, "-m", "pip", "install", "--require-hashes", "--no-input",
+           "--disable-pip-version-check", "-r", str(lock_file)]
+    if PIP_TARGET:
+        cmd += ["--target", PIP_TARGET, "--upgrade"]
+    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=1800)
+    if proc.returncode != 0:
+        tail = " | ".join((proc.stderr or proc.stdout or "").strip().splitlines()[-3:])
+        raise RuntimeError(f"Dependency update failed: {tail}")
+
+
 def check_for_update() -> dict:
     rel = _latest_release()
     latest = str(rel.get("tag_name", "")).lstrip("v")
@@ -112,6 +127,16 @@ def apply_latest_update(work: Path, progress=lambda pct, msg: None) -> dict:
     safe_extract_zip(zip_path, extract_path)
     items = list(extract_path.iterdir())
     root_dir = items[0] if len(items) == 1 and items[0].is_dir() else extract_path
+    # New/changed dependencies first (the lock is covered by the signed manifest via
+    # the zip hash): if pip fails, the installed code is left untouched.
+    new_lock = root_dir / DEPENDENCY_LOCK
+    old_lock = BASE_DIR / DEPENDENCY_LOCK
+    deps_updated = False
+    if new_lock.is_file() and (not old_lock.is_file() or old_lock.read_bytes() != new_lock.read_bytes()):
+        progress(60, "Installing updated dependencies...")
+        install_locked_requirements(new_lock)
+        deps_updated = True
+
     copied = 0
     for item in root_dir.rglob("*"):
         if not item.is_file():
@@ -125,4 +150,5 @@ def apply_latest_update(work: Path, progress=lambda pct, msg: None) -> dict:
             shutil.copy2(item, target)
             copied += 1
     return {"status": "success", "current": APP_VERSION, "latest": latest, "files": copied,
+            "dependencies_updated": deps_updated,
             "message": f"G-Toolbox updated to {latest}. Please restart the application."}

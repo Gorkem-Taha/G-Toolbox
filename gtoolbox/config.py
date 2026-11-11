@@ -131,5 +131,7 @@ MIME_MAP = {
     "audio/flac": "audio", "audio/aac": "audio", "audio/mp4": "audio",
     "audio/x-m4a": "audio", "audio/x-ms-wma": "audio",
 }
-APP_VERSION = "4.4.0"
+from . import __version__
+
+APP_VERSION = __version__  # single source: gtoolbox/__init__.py
 GITHUB_REPO = "Gorkem-Taha/G-Toolbox"
