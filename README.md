@@ -1,426 +1,233 @@
-# ⚡ G-Toolbox | Premium AI-Powered Local Toolkit & Mobile Studio
+# ⚡ G-Toolbox — Local AI & Media Toolkit
 
-![Version](https://img.shields.io/badge/version-4.3.0-blue.svg)
 [![Release](https://img.shields.io/github/v/release/Gorkem-Taha/G-Toolbox?color=success)](https://github.com/Gorkem-Taha/G-Toolbox/releases/latest)
-![License](https://img.shields.io/badge/license-Non--Commercial-red.svg)
+[![Tests](https://github.com/Gorkem-Taha/G-Toolbox/actions/workflows/tests.yml/badge.svg)](https://github.com/Gorkem-Taha/G-Toolbox/actions/workflows/tests.yml)
+![License](https://img.shields.io/badge/license-CC%20BY--NC%204.0-red.svg)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20Android-lightgrey.svg)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
-![Build](https://img.shields.io/badge/build-Native%20Desktop%20%26%20AppImage%20%26%20APK-purple.svg)
 
-G-Toolbox is a premium, all-in-one local workspace that combines state-of-the-art Artificial Intelligence (Computer Vision) models, military-grade encryption, universal media conversion, and cross-platform mobile connectivity into a single, sleek VIP interface. 
+G-Toolbox is an all-in-one workspace for media, documents and local AI. Your files are
+processed on your own computer: nothing is uploaded to a cloud service and no account or
+API key is needed. A phone can use the computer's power over your Wi-Fi after a one-time
+pairing.
 
-> ⚠️ **IMPORTANT LICENSE & COMMERCIAL USE WARNING**
-> This software is strictly licensed for **Personal and Educational Use Only**. Using G-Toolbox (or its underlying code) for commercial purposes, within a corporate network, for client projects, or in any revenue-generating capacity is **STRICTLY PROHIBITED** without a valid Commercial License. For commercial licensing inquiries, please contact the developer.
+> ⚠️ **Non-commercial license.** G-Toolbox is licensed under
+> [CC BY-NC 4.0](LICENSE): free for personal and educational use. Commercial use requires
+> a separate license from the author.
 
----
-
-## 🔒 The Ultimate Privacy: Your Data Stays Yours
-
-In a world where every SaaS application uploads your private documents and photos to the cloud, **G-Toolbox operates 100% locally on your machine.**
-* **Zero Cloud Uploads:** Your files never leave your computer or local network.
-* **No API Keys Required:** We use open-source, local AI models. No hidden subscription fees or credit limits.
-* **Complete Offline Capability:** Once installed, you can disconnect your internet and continue working with military-grade encryption and AI generation.
+![G-Toolbox home](./static/menu.png?v=2)
 
 ---
 
-## 📸 Screenshots & UI
+## 🧰 Tools
 
-### 🏠 The Workspace (Home)
-![G-Toolbox Homepage](./static/menu.png?v=2)
-*The dark-themed, premium interface designed for maximum productivity.*
+| Tool | What it does | Engine |
+| :--- | :--- | :--- |
+| 🔄 Media converter | Image, audio and video format conversion | Pillow, FFmpeg |
+| ✂️ Background remover | Cuts out the main subject as a transparent PNG | U²-Net (rembg) |
+| 🪄 Magic eraser | Removes painted objects, text or watermarks | LaMa |
+| 🌌 Upscaler | 2× / 4× super-resolution, photo and anime models, keeps transparency | Real-ESRGAN |
+| 📥 Video downloader | Downloads video or MP3 from YouTube and other sites | yt-dlp, FFmpeg |
+| 🔒 Vault | Encrypts a file or a folder into an AES-256 `.enc` archive | pyAesCrypt (AES Crypt format) |
+| 🎙️ Vocal separator | Vocals / instrumental or 4 stems, as a zip | Demucs (htdemucs) |
+| 📝 Transcriber | Speech to text: TXT, SRT, WebVTT or JSON | faster-whisper |
+| 🛡️ Metadata cleaner | Shows and removes EXIF/GPS/XMP/comments; keeps pixels, palette, animation and JPEG quality | Pillow |
+| 🎬 GIF / WebP maker | Clip → animated GIF (palette-optimised) or WebP | FFmpeg |
+| 💬 Subtitle burner | Burns SRT/VTT/ASS subtitles into a video | FFmpeg (libass) |
+| 📄 PDF toolkit | Merge, extract page ranges (`1-3, 5, 8-`), extract text | pypdf |
+| 🎚️ Audio effects | Slowed + reverb, nightcore, tempo and pitch | FFmpeg |
+| 🧹 Noise cleaner | FFT noise reduction with optional voice focus, audio or video | FFmpeg (afftdn) |
 
-### 🎨 AI Studio & Tools
-![AI Tools](./static/bc_remove.png?v=2)
-*Real-time progress bars, dual-engine AI selection, and seamless hardware acceleration.*
-
----
-
-## 🚀 Detailed Tool Descriptions & Capabilities
-
-### 1. 🌌 AI Image Upscaler (Dual Engine Super Resolution)
-Upscale low-resolution or blurry images up to 4x (4K/8K resolution) without detail loss, powered by **Real-ESRGAN**.
-* **Realistic / Photo Engine (`RealESRGAN_x4plus`):** 67 MB, 23-block deep neural network for natural photography, textures, and landscapes.
-* **Anime / Digital Illustration Engine (`RealESRGAN_x4plus_anime_6B`):** 17.9 MB, 6-block lightweight network. 4x faster inference with razor-sharp lines and zero digital artifacting.
-* **Full RGBA Transparency Support:** Transparent PNGs have their alpha channel isolated and seamlessly recombined via Lanczos filtering.
-* **Hardware Safe (FP16 Fallback):** Automatically detects GTX 16xx (Turing) and older Pascal GPUs to prevent black/NaN image output.
-* **VRAM Singleton:** Models are cached in memory (`_UPSCALER_INSTANCES`) to prevent memory leaks.
-
-### 2. 🪄 Magic Eraser (AI Inpainting)
-Remove unwanted objects, watermarks, text, or people from any photo. Powered by the **LaMa** model, it intelligently analyzes surrounding pixels to recreate the background flawlessly.
-
-### 3. ✂️ Deep Background Remover
-Instantly cut out the main subject of any photo with sub-pixel edge detection, powered by **U^2-Net** (`rembg`). Full i18n support and zero cloud dependency.
-
-### 4. 🔒 The File Vault (AES-256 Encryption)
-Military-grade file and folder encryption. Select a single file or an entire folder—the backend will automatically compress and lock it into an encrypted `.enc` vault with PBKDF2 key derivation.
-
-### 5. 📥 Universal Media Downloader & yt-dlp Auto-Updater
-Download high-quality videos or extract lossless audio directly from the web to your local drive.
-* Powered by **yt-dlp** and **FFmpeg** with real-time progress tracking.
-* **Anti-403 Multi-Client Routing:** Uses rotating client identifiers (`android`, `ios`, `mweb`, `web`) to bypass YouTube 403 Forbidden throttling.
-* **One-Click yt-dlp Updater (`/update-ytdlp`):** Upgrade the internal streaming downloader engine in seconds.
-
-### 6. 🔄 Universal File Converter & Media Tools
-Convert image, audio, and video formats locally using **FFmpeg** architecture without uploading sensitive files to third-party servers.
-
-### 7. 🧹 Automated Disk Hygiene & VRAM Unloader
-* **Disk Purge:** Automatically removes orphaned temporary files in `uploads/` and `downloads/` on startup and during scheduled intervals.
-* **Smart VRAM Purger (`/api/purge-vram`):** One-click button in the UI header to flush cached AI models (LaMa, Real-ESRGAN, Whisper) and release dedicated GPU VRAM / CPU RAM.
-
-### 8. 🎙️ AI Vocal & Stems Separator (Demucs / UVR Lite)
-Split songs or recorded audio into clean studio stems powered by **Meta's Demucs**.
-* **Dual Stem Mode:** Instantly separate into Vocals and Instrumental backings.
-* **4-Stem Quad Mode:** Separate full tracks into Vocals, Drums, Bass, and Other instruments.
-* **Package & Download:** Auto-bundles generated stems into a single high-fidelity `.zip` archive with real-time processing progress.
-
-### 9. 📝 Local AI Transcriber & Subtitle Generator (Faster-Whisper)
-Generate instant timestamps and text transcripts from video or audio files 100% locally with **faster-whisper**.
-* **Hardware Acceleration:** Auto-selects GPU FP16 or CPU INT8 for ultra-fast transcription.
-* **Multi-Format Export:** Download transcripts as `.srt` subtitles, `.txt` readable transcripts, or structured `.json` with segment-level timestamps.
-* **Language Support:** Auto-detection across 90+ languages, with optimized presets for Turkish, English, German, and French.
-
-### 10. 🛡️ EXIF & Privacy Metadata Stripper
-Inspect and scrub sensitive metadata embedded in photos before sharing online.
-* **Full EXIF Inspection:** View GPS coordinates, camera model, lens parameters, date taken, and software tags.
-* **Zero-Trace Stripping:** Strips EXIF, IPTC, XMP, and device fingerprints at pixel buffer level while preserving original image resolution and quality.
-
-### 11. 🎬 High-Performance GIF & WebP Animator
-Convert video clips to lightweight, smooth animated GIFs or modern animated WebP files using **FFmpeg**.
-* **Time Slice Precision:** Define exact start (`HH:MM:SS`) and end times (or duration).
-* **Two-Pass PaletteGen:** Generates a custom 256-color palette for crisp, non-dithered GIFs.
-* **Custom Framerate & Scaling:** Control FPS (10-30), target width (320px to 1080px), and WebP compression quality.
-
-### 12. 💬 Video Subtitle Burner (Hardsub)
-Permanently embed SRT or VTT subtitle tracks into video files with custom fonts, colors, and border styles via FFmpeg.
-
-### 13. 📄 Swiss Army PDF Toolkit
-Complete client-side and backend PDF suite powered by `pypdf`:
-* **PDF Merge:** Combine multiple documents preserving original order.
-* **PDF Split:** Extract specific pages or intervals (e.g. `1-3, 5, 8-10`) into an independent PDF.
-* **PDF Text Extraction:** Extract digital text from all pages into structured `.txt`.
-
-### 14. 🎚️ Audio Effects & Speed Engine (Slowed+Reverb & Nightcore)
-* **Slowed + Reverb:** Creates atmospheric spatial audio with tempo reduction and decay reverb.
-* **Nightcore:** High-energy pitch shifting and tempo acceleration.
-* **Fine-Tuning:** Custom sliders for speed/tempo (0.5x - 2.0x), pitch (0.5x - 2.0x), and room reverb.
-
-### 15. 🧹 Spectral & Adaptive Noise Suppressor (FFT De-Noise)
-Removes static hiss, fan whir, air conditioner hum, and room noise from microphone recordings or video audio using Adaptive Fast Fourier Transform filtering (`afftdn`) and Voice Focus bandpass.
+AI tools need the **AI engines**, which are installed on demand from the app (see below).
+Everything else works right after installation.
 
 ---
 
-## 💻 System Hardware Requirements (Local AI Engines)
+## 🔒 Privacy and security model
 
-Because **G-Toolbox runs 100% locally with zero cloud dependencies**, your processing speed and performance depend directly on your computer's hardware. The application dynamically routes workloads to **NVIDIA CUDA (GPU)** when available, with full fallback to **CPU (OpenMP / INT8)**.
+- **Local by default.** The server listens on `127.0.0.1` only. Requests from other web
+  pages open in your browser are rejected (Origin / `Sec-Fetch-Site` checks), and the
+  `Host` header must be `localhost` or an IP address (blocks DNS-rebinding attacks).
+- **Phone access is opt-in.** Turning on *LAN access* in the device window lets the server
+  listen on your network. Every other device must pair with a secret token (QR code or
+  link); the token can be regenerated at any time. Actions that touch the computer itself
+  (Save As dialogs, updates, installs, deleting models, restart) only work on the computer.
+- **Verified downloads.** Everything G-Toolbox downloads uses verified HTTPS. Model weights
+  and the portable Python are checked against pinned SHA-256 hashes before use; the
+  Microsoft VC++ installer must carry a valid Microsoft signature.
+- **Signed updates.** The in-app updater installs only GitHub releases whose `SHA256SUMS`
+  is signed with the project's ed25519 key ([public key](release-signing-key.pub.pem)).
+- G-Toolbox does not change Windows security settings (no Defender exclusions).
 
-### 🧠 Local AI Models & Resource Footprint
-
-| AI Engine / Tool | Underlying Architecture | Model Weight Size | Min. Mode (CPU Fallback) | Recommended Mode (NVIDIA GPU) |
-| :--- | :--- | :--- | :--- | :--- |
-| **🌌 AI Image Upscaler** | Real-ESRGAN (`RRDBNet` / `x4plus` & `anime_6B`) | 67 MB / 18 MB | 8 GB RAM (CPU FP32, ~15–45s / img) | 4 GB+ VRAM GDDR6 (~1–3s / img) |
-| **🪄 Magic Eraser** | LaMa Inpainting (`big-lama` FFC-ResNet) | ~200 MB | 8 GB System RAM | 3 GB – 4 GB+ VRAM |
-| **✂️ Deep Background Remover** | U^2-Net / ONNX Runtime (`rembg`) | ~176 MB | 4 GB System RAM (~3–5s) | 2 GB+ VRAM (CUDA/DirectML) (~0.8s) |
-| **🎙️ AI Vocal & Stems Separator** | Meta Demucs v4 (`htdemucs` 4-stem / 2-stem) | ~300 MB | 12–16 GB RAM (Multi-core CPU, ~2–4 min) | 6 GB – 8 GB+ VRAM (CUDA, ~15–30s) |
-| **📝 Local Transcriber & Subtitles**| Faster-Whisper (`CTranslate2` base/small/med) | 150 MB – 1.5 GB | 8 GB RAM (INT8 Quantized) | 2 GB – 4 GB+ VRAM (FP16 Engine) |
-| **🔄 Media Converter & Video Tools** | FFmpeg Native Core + Libx264/Libx265 | Bundled | 4-Core CPU / 4 GB RAM | NVENC / Hardware Acceleration |
-
----
-
-### 🟢 Minimum Hardware Requirements (CPU Mode)
-> Suitable for general file conversions, AES-256 encryption, background removal, and lightweight image editing. Heavier AI tasks (Demucs stem separation, 4K upscaling) will run on CPU threads at reduced speed.
-
-* **Operating System:** Windows 10 / 11 (64-bit) or Linux (Ubuntu 20.04+, Debian 11+, Fedora 36+, Arch)
-* **Processor (CPU):** Intel Core i3 / i5 (8th Gen+) or AMD Ryzen 3 / 5 (minimum 4 Cores / 8 Threads)
-* **System Memory (RAM):** 8 GB DDR4 (12 GB+ recommended if multitasking)
-* **Graphics (GPU):** Integrated Graphics (Intel UHD / Iris Xe / AMD Radeon Vega) or basic dedicated GPU
-* **Disk Storage:** 10 GB free space (SSD recommended for model weights & PyTorch cache)
-* **Network:** Required once during initial setup to download local AI models; 100% offline thereafter.
-
-### 🚀 Recommended / Maximum Performance (Dedicated GPU Acceleration)
-> Unlocks instant sub-second AI inference, 4K/8K real-time upscaling, rapid batch audio transcription, and seamless Demucs stem separation.
-
-* **Operating System:** Windows 10 / 11 (64-bit) or Modern Linux with NVIDIA Driver 535+
-* **Processor (CPU):** Intel Core i7 / i9 (10th Gen+) or AMD Ryzen 7 / 9 (3000 / 5000 / 7000+ Series, 6–8+ physical cores)
-* **System Memory (RAM):** 16 GB – 32 GB DDR4 / DDR5
-* **Dedicated GPU (VRAM):** **NVIDIA GeForce RTX 2060, RTX 3060, RTX 4060 or higher** with **6 GB to 12 GB+ GDDR6 VRAM**
-  * *CUDA 12.1+ and Tensor Core acceleration are automatically detected and utilized.*
-  * *GTX 1650/1660 Turing & Pascal cards are automatically supported via built-in FP16/FP32 NaN fallback.*
-* **Disk Storage:** 20 GB+ free space on an **NVMe M.2 SSD** (for high-throughput model deserialization and temporary 4K video I/O)
-
-> 💡 **VRAM Management Tip:** G-Toolbox features an on-demand **Smart VRAM Purger** (`/api/purge-vram`) accessible directly from the UI header to flush cached AI weights and immediately release VRAM for other GPU tasks.
+Found a security problem? Please report it privately to the author instead of opening a
+public issue.
 
 ---
 
-## 📦 Download & Installation Guide (Quick Start)
+## 📦 Install
 
-G-Toolbox is packaged to run seamlessly across Desktop (Windows, Linux) and Mobile (Android) environments with **zero cloud dependencies**. Choose the distribution package suited for your operating system:
+Download from [**GitHub Releases**](https://github.com/Gorkem-Taha/G-Toolbox/releases/latest).
+Every release lists the SHA-256 of each file in `SHA256SUMS` (see
+[Verifying downloads](#-verifying-downloads)).
 
-### 📥 Official Release Packages (v4.4.0 Releases)
+### 🪟 Windows 10 / 11 — `G-Toolbox-v<version>-Windows.zip`
 
-Download official standalone binaries directly from [**GitHub Releases (v4.4.0)**](https://github.com/Gorkem-Taha/G-Toolbox/releases/tag/v4.4.0) or locate them in the local repository's `Releases/` directory:
+1. Extract the zip to a folder you can write to (e.g. `Documents\G-Toolbox`).
+2. Run **`G-Toolbox.exe`**. The launcher is not code-signed, so SmartScreen may ask for
+   confirmation (*More info → Run anyway*).
+3. On first start the setup window downloads a portable Python 3.10 (hash-verified) and
+   installs the exact dependency versions from `requirements-desktop.lock`. Tick *Install AI
+   engine* to set up the AI tools at the same time, or do it later from the app.
+4. A Start-menu shortcut is created, so you can find G-Toolbox from Windows Search.
 
-| Platform / Package | File Name | Size | Target & Architecture | SHA-256 Checksum |
-| :--- | :--- | :--- | :--- | :--- |
-| **🪟 Windows (Full Bundle)** | [**`G-Toolbox-v4.4.0-Windows.zip`**](https://github.com/Gorkem-Taha/G-Toolbox/releases/download/v4.4.0/G-Toolbox-v4.4.0-Windows.zip) | ~1.01 MB | Standalone Portable Source & Launcher Bundle | `7F51447395AD027D2395A1380F6CCA94E03D538328E72170CC7468429C7D1D09` |
-| **🪟 Windows (Portable Launcher)** | [**`G-Toolbox.exe`**](https://github.com/Gorkem-Taha/G-Toolbox/releases/download/v4.4.0/G-Toolbox.exe) | ~34.0 KB | Win32 / .NET Smart Portable Launcher | `6B8B58B10F205BB0D83E396AFD7055A2806002DED999A4DC3C7E59FD2B151D36` |
-| **🐧 Linux (Portable)** | [**`G-Toolbox-x86_64.AppImage`**](https://github.com/Gorkem-Taha/G-Toolbox/releases/download/v4.4.0/G-Toolbox-x86_64.AppImage) | ~1.15 MB | `x86_64` Standalone Portable | `0F7BE770D1B8B5C988CD2ACCF49F6081CE169B4B43D9D23B7C015FA1BEBD3F91` |
-| **📱 Android (Mobile App)** | [**`G-Toolbox.apk`**](https://github.com/Gorkem-Taha/G-Toolbox/releases/download/v4.4.0/G-Toolbox.apk) | ~5.27 MB | `arm64-v8a / armeabi-v7a / x86_64` | `8F897B090C4D7B81FFF1B2CBB508DDD74A5DCCE84BFCC4A0ABB4519725DEEF8F` |
+Everything (Python runtime, settings, temporary files, models) stays inside that folder.
+To uninstall, delete the folder and the *G-Toolbox* Start-menu shortcut
+(the launcher also registers `HKCU\Software\Microsoft\Windows\CurrentVersion\App Paths\G-Toolbox.exe`).
 
----
+### 🐧 Linux — `G-Toolbox-x86_64.AppImage`
 
-### 🐧 Linux (AppImage) Comprehensive Installation & Setup Guide
+Self-contained: includes Python 3.11, the core dependencies and FFmpeg.
 
-G-Toolbox provides first-class Linux support packaged as a single portable `AppImage`. It runs sandboxed without conflicting with your system Python or package manager libraries.
-
-#### 1. Download & Grant Execution Permission
-Download the binary directly from GitHub Releases or locate it in `Releases/`:
 ```bash
-# Download directly via wget (or copy from Releases/)
-wget https://github.com/Gorkem-Taha/G-Toolbox/releases/download/v4.4.0/G-Toolbox-x86_64.AppImage
-
-# Make the AppImage executable
 chmod +x G-Toolbox-x86_64.AppImage
-```
-
-#### 2. Launch the Application
-```bash
 ./G-Toolbox-x86_64.AppImage
 ```
 
-#### 3. FUSE (Filesystem in Userspace) Troubleshooting (Ubuntu 22.04+, Debian 12, Fedora 36+)
-Modern Linux distributions (especially Ubuntu 22.04 LTS and newer) no longer include `libfuse2` by default. If launching `./G-Toolbox-x86_64.AppImage` outputs:
-`dlopen(): error loading libfuse.so.2` or `AppImages require FUSE to run...`, apply either of the following solutions:
+The app opens in your browser. Settings, temporary files, models and AI libraries live in
+`~/.local/share/g-toolbox`. The AppImage uses the static type2 runtime (no `libfuse2`
+needed); on systems without FUSE at all (some containers), run it with
+`--appimage-extract-and-run`.
 
-* **Method A (Recommended - Install FUSE 2 Library):**
-  - **Ubuntu / Debian / Linux Mint / Pop!_OS:**
-    ```bash
-    sudo apt update && sudo apt install -y libfuse2
-    ```
-  - **Fedora / RHEL / CentOS:**
-    ```bash
-    sudo dnf install fuse-libs
-    ```
-  - **Arch Linux / Manjaro:**
-    ```bash
-    sudo pacman -S fuse2
-    ```
+### 📱 Android — `G-Toolbox.apk`
 
-* **Method B (Run without Root / without Installing FUSE):**
-  Use the built-in extraction runtime flag to run immediately without installing system packages:
-  ```bash
-  ./G-Toolbox-x86_64.AppImage --appimage-extract-and-run
-  ```
+The Android app is a remote for G-Toolbox running on your computer (the heavy work runs on
+the computer):
 
-#### 4. Desktop & Application Menu Integration (XDG Menu)
-To add G-Toolbox to your GNOME, KDE Plasma, or XFCE application launcher menu:
-```bash
-# Move executable to user binary path
-mkdir -p ~/.local/bin ~/.local/share/applications
-cp G-Toolbox-x86_64.AppImage ~/.local/bin/g-toolbox
-chmod +x ~/.local/bin/g-toolbox
+1. On the computer: open G-Toolbox → device mode button (top right) → **Enable LAN access**,
+   then restart G-Toolbox.
+2. Install the APK on the phone (allow *Install unknown apps* for your browser or file
+   manager when asked).
+3. Open the app and **scan the QR code** shown in G-Toolbox's device window (or paste the
+   pairing link). Phone and computer must be on the same Wi-Fi.
 
-# Copy XDG desktop launcher specification
-cp g-toolbox.desktop ~/.local/share/applications/
-```
+You can also open the pairing link in any phone browser instead of installing the app.
 
-#### 5. Build Your Own AppImage from Source
-You can compile your own AppImage locally on any Linux distribution using the automated build script:
-```bash
-chmod +x scripts/build_appimage.sh
-./scripts/build_appimage.sh
-```
-
----
-
-### 📱 Android (.apk) Comprehensive Installation & Dual-Mode Guide
-
-The G-Toolbox Android application functions both as a mobile remote controller harnessing your PC's desktop GPU and as a standalone offline media studio.
-
-#### 1. Sideloading & Installing the APK
-1. Download [**`G-Toolbox.apk`**](https://github.com/Gorkem-Taha/G-Toolbox/releases/download/v4.4.0/G-Toolbox.apk) directly via your mobile browser, or transfer it from your PC via USB cable, Bluetooth, or local network.
-2. Tap the downloaded `G-Toolbox.apk` file.
-3. If Android prompts a security warning:
-   - Tap **"Settings" -> "Install Unknown Apps"**.
-   - Enable **"Allow from this source"** for your browser (e.g. Chrome) or File Manager.
-4. Tap **"Install"** to complete setup.
-5. On initial launch, grant the required storage, camera, and gallery permissions when prompted.
-
-#### 2. Dual-Mode Operating Architecture
-
-On initial startup, the **Smart Mode Selection Wizard** allows you to choose between two operational paradigms:
-
-```
-                  ┌────────────────────────────────────────────────┐
-                  │          G-Toolbox Operating Modes             │
-                  └───────────────────────┬────────────────────────┘
-                                          │
-                  ┌───────────────────────┴────────────────────────┐
-                  ▼                                                ▼
-     [Mode 1: PC Server / Remote GPU]                 [Mode 2: Standalone On-Device]
-   • Phone connects over local Wi-Fi to PC          • 100% offline and standalone
-   • Harnesses PC's NVIDIA RTX/GTX GPU power        • Uses phone's native hardware (WASM/Canvas)
-   • 4x AI Upscale, Inpainting & 4K video downloads • Fast image conversions & EXIF stripping
-   • Zero phone heating or battery drain            • Runs seamlessly when PC is turned off
-```
-
-##### ⚡ Mode 1: PC Server / GPU-Accelerated Remote Streaming (Recommended)
-Harness your desktop computer's high-performance NVIDIA GPU directly from your phone:
-1. Start G-Toolbox on your computer (`G-Toolbox.exe` or `python main.py`). The service starts listening on your local network.
-2. Ensure your phone and computer are connected to the **same Wi-Fi network**.
-3. Note the local LAN IP address displayed in your PC terminal or UI (for example: `http://192.168.1.35:8000`).
-4. In the Android app, select **"PC Server Mode"**, enter your PC's IP address, and tap **"Connect"**.
-5. When you process or capture images, heavy AI computation (Real-ESRGAN 4x upscaling, LaMa object removal) executes on your computer's GPU and streams the high-resolution output back to your mobile device within seconds. Your phone remains cool with zero battery drain.
-
-##### 🔋 Mode 2: Standalone On-Device Mode (100% Offline)
-When away from your desktop or traveling without an internet connection:
-1. Select **"Local Mode"** in the mobile app.
-2. The application utilizes your mobile processor, HTML5 Canvas, and WebAssembly engines directly on-device.
-3. Perform offline image format conversions (PNG, JPEG, WebP), image compression, and forensic EXIF metadata stripping without contacting any external server.
-
----
-
-### 🪟 Windows Installation & Desktop Setup Guide
-
-#### 1. Zero-Dependency One-Click Launch (Recommended)
-1. Download or clone the repository into your preferred folder.
-2. Double-click **`G-Toolbox.exe`**:
-   - **Zero Setup Required:** If no compatible Python runtime is detected (e.g. fresh machine or Python 3.12+ build tool conflicts), `G-Toolbox.exe` automatically provisions an isolated portable Python 3.10 runtime (~8.2 MB) without requiring system installations, PATH adjustments, or C++ compilers.
-   - **Instant Base Startup:** All media tools, PDF editors, file vault encryption, and audio cleaners initialize immediately.
-   - **Modular AI Weights:** Heavy AI models (Real-ESRGAN, LaMa, U2-Net) and neural network weights can be installed on-demand directly inside the app with a single click.
-
-#### 2. Native Desktop Launcher Features
-* **Zero-Dependency Bootstrap Engine:** Built-in download and setup engine that configures isolated portable Python 3.10 and Pip in under 1 minute.
-* **Instant Splash Screen (<30ms):** Launching `G-Toolbox.exe` immediately presents a sleek, dark-slate loading screen while the background FastAPI engine initializes.
-* **Automatic Windows Search Indexing:** On first run, the launcher automatically registers shortcuts in `%APPDATA%\Microsoft\Windows\Start Menu\Programs\G-Toolbox.lnk` and Registry `App Paths`. Pressing the `Windows` key and typing `G-Toolbox` finds and launches the app immediately.
-* **Official Branding & Taskbar Icon:** Low-level Win32 `SetCurrentProcessExplicitAppUserModelID` integration ensures the official G-Toolbox icon appears in the Windows Taskbar and window title bar.
-* **One-Click Storage Purge:** Reclaim ~460 MB of disk space anytime by wiping cached AI model weights directly from the "AI" / "Yapay Zeka" header menu (`/api/delete-ai-models`).
-
----
-
-### 💻 Manual Developer Setup (Run from Source)
-
-To run or develop G-Toolbox directly from the source code:
+### 💻 From source
 
 ```bash
-# 1. Clone the repository
 git clone https://github.com/Gorkem-Taha/G-Toolbox.git
 cd G-Toolbox
-
-# 2. Create and activate virtual environment
-python -m venv venv
-
-# On Windows:
-.\venv\Scripts\activate
-
-# On Linux / macOS:
-source venv/bin/activate
-
-# 3. Install required packages
-pip install --upgrade pip
-pip install -r requirements.txt
-
-# 4. Start the backend server
-python main.py
+python -m venv venv && source venv/bin/activate      # Windows: venv\Scripts\activate
+pip install --require-hashes -r requirements-desktop.lock
+python desktop_app.py          # native window (pywebview)
+# or: python main.py           # browser mode; add --lan for phone access
 ```
-Once started, your default browser will automatically open `http://localhost:8000`.
+
+FFmpeg must be on `PATH` for the media tools. AI engines: `pip install -r requirements-ai.txt`
+or use the in-app AI setup.
 
 ---
 
-## 🛠️ Comprehensive Technology Stack & Architecture
+## 🧠 AI engines and hardware
 
-G-Toolbox combines modern asynchronous web architecture, cutting-edge local computer vision models, neural audio processing pipelines, and native cross-platform binaries to deliver a zero-cloud, privacy-first workstation.
+The in-app **AI setup** installs PyTorch and the AI libraries, then downloads and verifies
+the model weights (~460 MB in total). *Delete AI models* in the same menu frees the space
+again, and *Purge VRAM* unloads models from memory.
 
-### 📊 Technology Stack Overview
+| Engine | Model size | Without a GPU |
+| :--- | :--- | :--- |
+| Real-ESRGAN (upscaler) | 67 MB + 18 MB | Works, slow on large images |
+| LaMa (magic eraser) | ~200 MB | Works |
+| U²-Net (background remover) | ~176 MB | Works well |
+| faster-whisper (transcriber) | 75 MB (tiny) – ~3 GB (large-v3), downloaded per model size | Works (INT8) |
+| Demucs (stems) | downloaded on first use | Works, a few minutes per song |
 
-| Domain / Layer | Primary Technology | Version / Specification | Architectural Role & Implementation Details |
-| :--- | :--- | :--- | :--- |
-| **Core Runtime & Language** | **Python** | `3.10+` | Core execution environment, asynchronous task orchestrator, native subprocess controller. |
-| **Backend & Web Framework** | **FastAPI** | `0.100+` | High-throughput asynchronous REST API, streaming response handlers, SSE / progress routing. |
-| **ASGI Web Server** | **Uvicorn** | `Standard` | Asynchronous Server Gateway Interface for high-concurrency LAN streaming and local HTTP serving. |
-| **Data Validation & Schemas** | **Pydantic** | `v2.x` | Runtime data validation, request body modeling, type coercion, and strict error serialization. |
-| **Templating Engine** | **Jinja2** | `3.1+` | Server-side template rendering for dynamic HTML views, internationalization tokens, and modals. |
-| **Form & Media Ingestion** | **python-multipart** | Latest | High-performance streaming multipart/form-data processor for large media and video uploads. |
-| **Deep Learning Engine** | **PyTorch & Torchvision** | `2.1+ (CUDA 12.1 / CPU)` | Tensor computation, dynamic neural graph execution, automatic mixed-precision (FP16/FP32). |
-| **AI Super Resolution** | **Real-ESRGAN** | `RRDBNet` (23 & 6 Block) | `RealESRGAN_x4plus` (67 MB) & `anime_6B` (18 MB) models, Lanczos RGBA transparency handling. |
-| **Computer Vision Toolbox** | **BasicSR** | `1.4+` | Specialized deep-learning image and video restoration framework powering the ESRGAN pipeline. |
-| **Generative Inpainting** | **LaMa (Large Mask)** | `simple-lama-inpainting` | Fast Fourier Convolution (`big-lama` FFC-ResNet) for zero-shot object removal & background repair. |
-| **Salient Object Detection** | **rembg (U^2-Net)** | `ONNX Runtime` | Two-level nested U-structure network for fine-grained alpha matting and background removal. |
-| **Speech-to-Text & Subtitles** | **faster-whisper** | `CTranslate2` | 4x faster Whisper inference with INT8 (CPU) and FP16 (GPU) quantization across 90+ languages. |
-| **Vocal & Music Separation** | **Meta Demucs v4** | `htdemucs` (Hybrid Transformer)| High-fidelity 2-stem (Vocals/Music) and 4-stem (Vocals, Drums, Bass, Other) track separation. |
-| **Computer Vision Matrix Ops** | **OpenCV (`opencv-python`)**| `4.8+` | Pixel matrix manipulations, Unicode path buffer conversion (`np.fromfile`, `cv2.imencode`). |
-| **Digital Imaging & Metadata** | **Pillow (PIL)** | `10.0+` | Multi-format image encoding/decoding, Lanczos interpolation, EXIF/IPTC/XMP forensic scrubbing. |
-| **Numerical Computing** | **NumPy** | `1.24+` | Vectorized multidimensional array processing, color space transforms, and raw byte buffers. |
-| **Multimedia DSP & Transcoding**| **FFmpeg & ffmpeg-python** | `v6.0+ (Bundled)` | Transcoding, hardsub subtitle burner, 2-pass palettegen GIF/WebP animator, FFT noise cleaning. |
-| **Streaming Media Extraction** | **yt-dlp** | Auto-Updating Core | Multi-client header rotation (`ios`, `android`, `mweb`) bypassing YouTube HTTP 403 throttling. |
-| **Military-Grade Encryption** | **pyAesCrypt** | `AES-256-CBC` | Secure PBKDF2 HMAC-SHA256 key derivation with chunked streaming buffer (`64 KB`) encryption. |
-| **Document Processing** | **pypdf** | `3.15+` | Pure-Python PDF parsing, lossless page-range splitting, document merging, and text extraction. |
-| **Native Windows Launcher & Installer** | **C# / .NET (WinForms)** | `Win32 / .NET 4.5+` | Zero-dependency portable Python 3.10 auto-downloader, pip setup, instant splash screen (<30ms), and AppUserModelID taskbar binding. |
-| **Linux Portable Packaging** | **AppImageKit** | `x86_64` | Portable single-file Linux bundle with XDG desktop specifications (`g-toolbox.desktop`). |
-| **Frontend Styling & UI** | **HTML5 & Modern CSS3** | Custom VIP Dark Theme | Responsive glassmorphic interface, CSS Grid/Flexbox, custom micro-interactions, zero CSS bloat. |
-| **Client-Side Scripting** | **Vanilla JavaScript** | `ES6+ (ES2022)` | Async/await fetch architecture, FileReader API, HTML5 Canvas offline graphics processing. |
-| **Progressive Web App (PWA)** | **Service Worker & Manifest**| `W3C PWA Standard` | Offline asset caching (`sw.js`) and standalone home-screen installation on Android/iOS browsers. |
-| **Mobile Native Wrapper** | **Android SDK & Java** | `API 26-34` | Android WebView wrapper (`MainActivity.java`) with hardware acceleration and file-picker hooks. |
-| **Cloud CI/CD Workflows** | **GitHub Actions** | Ubuntu Runners | Automated cloud pipelines for headless AppImage compilation and Android `.apk` generation. |
+**GPU acceleration:** the AI setup installs the **CPU** build of PyTorch, which works on
+every machine. If you have an NVIDIA GPU, replace it with a CUDA build to speed up the
+upscaler, eraser, transcriber and separator considerably — for example on Windows, from the
+G-Toolbox folder:
+
+```powershell
+runtime\python.exe -m pip install --force-reinstall torch torchvision --index-url https://download.pytorch.org/whl/cu124
+```
+
+GTX 16xx and older cards automatically use FP32 for the upscaler (their FP16 output is broken).
+Recommended: 8 GB RAM (16 GB for Demucs), 10 GB free disk space.
 
 ---
 
-### 🔬 Deep Architectural Breakdown by Subsystem
+## ✅ Verifying downloads
 
-#### 1. 🧠 Artificial Intelligence & Deep Learning Engines
-* **Real-ESRGAN (`RRDBNet`):**
-  * Employs Residual-in-Residual Dense Block (`RRDB`) networks trained with adversarial loss for photorealistic super-resolution.
-  * **Dual Engine Integration:** Offers `RealESRGAN_x4plus` (23 blocks, deep feature extraction for photographs) and `RealESRGAN_x4plus_anime_6B` (6 blocks, lightweight and artifact-free for digital art).
-  * **Alpha Channel Preservation:** Transparent PNG images are automatically bifurcated; RGB channels undergo neural upscaling while the alpha transparency mask is resized via high-order Lanczos interpolation before alpha recombination.
-  * **Hardware Fallback Guard:** Automatically audits GPU architecture; older Pascal and GTX 16xx (Turing) chips automatically fallback to FP32 calculation to circumvent hardware-level `NaN` blank pixel bugs.
-  * **In-Memory Singleton:** Models persist in memory (`_UPSCALER_INSTANCES`) across requests, slashing inference latency from ~4.5s to ~1.2s on subsequent runs.
-* **LaMa Inpainting (`SimpleLama`):**
-  * Based on Large Mask Inpainting with Fast Fourier Convolutions (`FFC-ResNet`).
-  * Features an image-wide receptive field capable of understanding structural context, enabling seamless text, watermark, and object removal without seam artifacts.
-  * Persisted via a global model cache (`_LAMA_INSTANCE`) for instantaneous reactive painting.
-* **rembg & ONNX Runtime (U^2-Net):**
-  * Implements a ReSidual U-block (`RSU`) architecture that captures multi-scale contextual features without increasing feature map memory footprints.
-  * Executed via ONNX Runtime with automatic hardware acceleration provider selection (CUDA, DirectML, or optimized CPU threads).
-* **Faster-Whisper (Speech Recognition):**
-  * Powered by `CTranslate2`, an optimized inference engine for Transformer models implementing weights quantization (INT8 on CPU, FP16 on GPU).
-  * Outperforms standard OpenAI Whisper implementations by up to 4x in inference speed while consuming 50% less memory.
-  * Emits structured JSON segments, SRT, VTT, and plain text transcripts with millisecond-accurate timestamps.
-* **Meta Demucs v4 (`htdemucs`):**
-  * State-of-the-art hybrid transformer architecture combining time-domain convnets with frequency-domain cross-attention.
-  * Features in-process native execution with fallback subprocess routing, enabling vocal isolation and 4-stem studio separation.
+```bash
+# 1. The manifest is signed by the G-Toolbox release key (OpenSSL 3)
+openssl pkeyutl -verify -pubin -inkey release-signing-key.pub.pem -rawin \
+        -in SHA256SUMS -sigfile SHA256SUMS.sig
+# 2. Your files match the manifest
+sha256sum --ignore-missing -c SHA256SUMS
+```
 
-#### 2. 🎬 Media Engineering, Audio DSP & Extraction
-* **FFmpeg Pipeline Architecture:**
-  * **Hardsub Engine:** Utilizes the FFmpeg `subtitles` filter graph to bake stylized SRT and VTT captions directly into video streams with custom font rendering.
-  * **Two-Pass GIF / WebP Generation:** Automatically passes media through `palettegen` to generate an adaptive 256-color palette, followed by `paletteuse` with custom dither algorithms, yielding ultra-crisp animations at minimal file sizes.
-  * **Spectral Noise Suppressor:** Executes Adaptive Fast Fourier Transform filtering (`afftdn`) coupled with voice-frequency bandpass equalization (`highpass=f=200, lowpass=f=3500`) to eliminate microphone hiss, air conditioning hum, and fan noise.
-  * **Audio Spatializer (Slowed+Reverb & Nightcore):** Implements complex `aecho` reflection matrices and `rubberband`/`atempo` algorithms for lossless pitch and tempo modulation.
-* **yt-dlp Extraction Architecture:**
-  * Employs multi-client identity rotation (`android`, `ios`, `mweb`, `web`) with spoofed headers to bypass modern YouTube HTTP 403 Forbidden client-verification mechanisms.
-  * Features a dedicated `/update-ytdlp` endpoint to hot-patch the extraction engine in production without requiring full software reinstallation.
+---
 
-#### 3. 🔒 Security, Cryptography & Forensics
-* **The File Vault (pyAesCrypt):**
-  * Implements `AES-256-CBC` encryption with HMAC-SHA256 authentication.
-  * Key derivation is hardened via PBKDF2 with dynamic cryptographic salts.
-  * Operates on a chunked 64 KB memory buffer, enabling secure encryption and decryption of multi-gigabyte archives without RAM exhaustion.
-* **Zero-Trace EXIF & Metadata Scrubbing:**
-  * Inspects GPS latitude/longitude, camera serial numbers, lens specifications, and editing software stamps using `PIL.ExifTags`.
-  * Scrubbing creates a sanitized raw pixel buffer and reconstructs the image from scratch, stripping EXIF, IPTC, and XMP metadata entirely.
+## 🛠️ Development
 
-#### 4. 🖥️ Desktop, OS Integration & Mobile Dual-Mode
-* **Win32 & .NET Native Launcher (`launcher.cs`):**
-  * Written in C# with Win32 P/Invoke declarations (`SetCurrentProcessExplicitAppUserModelID`, `WM_SETICON`).
-  * Features an integrated Zero-Dependency Runtime Engine: automatically detects, downloads (~8.2 MB), and provisions isolated portable Python 3.10, bypassing system Python conflicts and C++ compiler prerequisites.
-  * Displays a dark splash screen in under 30ms, eliminating the traditional Python startup lag while launching the background FastAPI service.
-* **pywebview Desktop Shell:**
-  * Embeds modern Chromium (Edge WebView2) on Windows and WebKit on Linux.
-  * Provides native window decorations, maximized startup, F11 borderless fullscreen toggle, and native file dialogs.
-* **Mobile Dual-Mode System:**
-  * **Mode 1 (Remote GPU Streaming):** Discovers the host's LAN IP via `/api/network-info` and establishes a CORS-enabled connection, streaming heavy GPU workloads to mobile browsers.
-  * **Mode 2 (Local On-Device):** Executes offline client-side image resizing, format conversions, and metadata stripping using HTML5 Canvas and JavaScript FileReader directly in the mobile browser or native Android APK.
+### Layout
+
+```
+main.py              entry point: python main.py [--lan] [--port N] [--no-browser] / uvicorn main:app
+desktop_app.py       native window (pywebview), falls back to the browser
+gtoolbox/
+  config.py          paths (GTOOLBOX_DATA_DIR), settings, constants
+  security.py        loopback/LAN policy, pairing token, request guard
+  net.py             verified HTTPS, hashing, Authenticode
+  ai.py              model registry (pinned hashes), AI runtime, setup, caches
+  media.py           FFmpeg / Pillow helpers
+  files.py           uploads, temp-file cleanup, progress
+  dialogs.py         native Save As
+  updates.py         signed updates
+  downloads.py       yt-dlp tasks
+  app.py             FastAPI app (middleware, errors, static files, routers)
+  routers/           system, media, ai, video, documents, updates
+templates/, static/  web UI (vanilla JS; vendored Tailwind CSS, Font Awesome, fonts)
+launcher/            Windows launcher (C#, .NET Framework 4.8)
+android/             Android client (Java, WebView)
+scripts/             AppImage / Windows bundle builds, release signing, lock files
+tests/               pytest suite (security, supply chain, media, offline, version)
+```
+
+Mutable state shared between modules (loaded AI libraries, model caches, the pairing token)
+is owned by one module and must be read as `ai.torch`, `security.ACCESS_TOKEN`, … — never
+copied with `from module import name`.
+
+### Common tasks
+
+```bash
+pip install --require-hashes -r requirements-dev.lock && pytest   # tests (needs ffmpeg)
+python -m pyflakes gtoolbox main.py desktop_app.py tests          # lint
+npm install && npm run build      # rebuild Tailwind CSS after adding classes; re-vendor assets
+scripts/lock_requirements.sh      # refresh the *.lock files after editing requirements-*.txt (needs uv)
+scripts/build_appimage.sh         # → dist/G-Toolbox-x86_64.AppImage
+python scripts/build_windows_bundle.py   # → dist/G-Toolbox-v<version>-Windows.zip (needs the .NET SDK)
+(cd android && ./gradlew assembleDebug)  # → APK (JDK 17 + Android SDK 34)
+```
+
+The version is defined once, in `gtoolbox/__init__.py`.
+
+### Releasing
+
+1. Bump `__version__` in `gtoolbox/__init__.py`, commit, then `git tag v<version> && git push --tags`.
+2. The **Release** workflow tests and builds everything and creates a **draft** release
+   with `SHA256SUMS`.
+3. If the `RELEASE_SIGNING_KEY` secret is not configured, sign locally and upload the
+   signature: `python scripts/sign_release.py <folder-with-the-release-files>` →
+   `SHA256SUMS.sig`. Releases without a valid signature are ignored by the in-app updater.
+4. Optional secrets for a release-signed APK: `ANDROID_KEYSTORE_BASE64`,
+   `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`.
 
 ---
 
 ## 📜 License
-This project is licensed under the [CC BY-NC 4.0 License](LICENSE).  
-Developed with ❤️ by **[Görkem Taha](https://github.com/Gorkem-Taha)**
+
+[CC BY-NC 4.0](LICENSE) © [Görkem Taha](https://github.com/Gorkem-Taha). Third-party
+components, the bundled FFmpeg (GPL) and model licenses are listed in
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Downloading videos may be restricted by a
+site's terms of service; you are responsible for how you use the downloader.
