@@ -6,6 +6,8 @@ using System.IO;
 using System.IO.Compression;
 using System.Net;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Security.Principal;
 using System.Threading;
 using System.Windows.Forms;
@@ -13,13 +15,112 @@ using System.Windows.Forms;
 namespace GToolboxLauncher
 {
     // ═════════════════════════════════════════════════════════════════════════
-    // 0. SYSTEM & SECURITY HELPERS (Admin Elevation, Zone.Identifier, VC++ Redist)
+    // 0. SYSTEM & SECURITY HELPERS (pinned hashes, Authenticode, VC++ Redist)
     // ═════════════════════════════════════════════════════════════════════════
     internal static class SecurityHelper
     {
-        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        private static extern bool DeleteFile(string name);
+        // ── Pinned downloads ────────────────────────────────────────────
+        public const string PythonEmbedUrl = "https://www.python.org/ftp/python/3.10.11/python-3.10.11-embed-amd64.zip";
+        public const string PythonEmbedSha256 = "608619f8619075629c9c69f361352a0da6ed7e62f83a0e19c63e0ea32eb7629d";
+        public const string PipWheelName = "pip-26.3-py3-none-any.whl";
+        public const string PipWheelUrl = "https://files.pythonhosted.org/packages/07/25/ee8c38ae72d66b844ce8eb9711ba905dba21ca1a8a0c960057c41cd23337/pip-26.3-py3-none-any.whl";
+        public const string PipWheelSha256 = "f3b60b20ffaadd4415ed7957212a38ac63fa4c5fa375bd0f4a797777940fad13";
+
+        public static string Sha256File(string path)
+        {
+            using (SHA256 sha = SHA256.Create())
+            using (FileStream fs = File.OpenRead(path))
+            {
+                byte[] hash = sha.ComputeHash(fs);
+                return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
+            }
+        }
+
+        public static void RequireSha256(string path, string expected)
+        {
+            string actual = Sha256File(path);
+            if (!string.Equals(actual, expected, StringComparison.OrdinalIgnoreCase))
+            {
+                try { File.Delete(path); } catch { }
+                throw new InvalidOperationException(
+                    "Integrity check failed for " + Path.GetFileName(path) + " (SHA-256 mismatch). " +
+                    "The download was corrupted or tampered with and has been discarded.");
+            }
+        }
+
+        // ── Authenticode (WinVerifyTrust) ───────────────────────────────
+        [DllImport("wintrust.dll", ExactSpelling = true, SetLastError = false, CharSet = CharSet.Unicode)]
+        private static extern uint WinVerifyTrust(IntPtr hwnd, [In] ref Guid pgActionID, IntPtr pWVTData);
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        private struct WINTRUST_FILE_INFO
+        {
+            public uint cbStruct;
+            [MarshalAs(UnmanagedType.LPWStr)] public string pcwszFilePath;
+            public IntPtr hFile;
+            public IntPtr pgKnownSubject;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct WINTRUST_DATA
+        {
+            public uint cbStruct;
+            public IntPtr pPolicyCallbackData;
+            public IntPtr pSIPClientData;
+            public uint dwUIChoice;
+            public uint fdwRevocationChecks;
+            public uint dwUnionChoice;
+            public IntPtr pFile;
+            public uint dwStateAction;
+            public IntPtr hWVTStateData;
+            public IntPtr pwszURLReference;
+            public uint dwProvFlags;
+            public uint dwUIContext;
+            public IntPtr pSignatureSettings;
+        }
+
+        /// <summary>True if the file has a valid Authenticode signature whose signer is Microsoft Corporation.</summary>
+        public static bool IsSignedByMicrosoft(string path)
+        {
+            Guid action = new Guid("00AAC56B-CD44-11d0-8CC2-00C04FC295EE"); // WINTRUST_ACTION_GENERIC_VERIFY_V2
+            WINTRUST_FILE_INFO fileInfo = new WINTRUST_FILE_INFO();
+            fileInfo.cbStruct = (uint)Marshal.SizeOf(typeof(WINTRUST_FILE_INFO));
+            fileInfo.pcwszFilePath = path;
+
+            IntPtr pFile = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(WINTRUST_FILE_INFO)));
+            IntPtr pData = IntPtr.Zero;
+            try
+            {
+                Marshal.StructureToPtr(fileInfo, pFile, false);
+                WINTRUST_DATA data = new WINTRUST_DATA();
+                data.cbStruct = (uint)Marshal.SizeOf(typeof(WINTRUST_DATA));
+                data.dwUIChoice = 2;          // WTD_UI_NONE
+                data.fdwRevocationChecks = 0; // WTD_REVOKE_NONE
+                data.dwUnionChoice = 1;       // WTD_CHOICE_FILE
+                data.pFile = pFile;
+                pData = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(WINTRUST_DATA)));
+                Marshal.StructureToPtr(data, pData, false);
+
+                if (WinVerifyTrust(IntPtr.Zero, ref action, pData) != 0) return false;
+
+                X509Certificate signer = X509Certificate.CreateFromSignedFile(path);
+                return signer.Subject.Contains("O=Microsoft Corporation");
+            }
+            catch
+            {
+                return false;
+            }
+            finally
+            {
+                if (pData != IntPtr.Zero)
+                {
+                    Marshal.DestroyStructure(pData, typeof(WINTRUST_DATA));
+                    Marshal.FreeHGlobal(pData);
+                }
+                Marshal.DestroyStructure(pFile, typeof(WINTRUST_FILE_INFO));
+                Marshal.FreeHGlobal(pFile);
+            }
+        }
 
         public static bool IsAdministrator()
         {
@@ -56,25 +157,6 @@ namespace GToolboxLauncher
             }
         }
 
-        public static void UnblockDirectory(string dirPath)
-        {
-            try
-            {
-                if (string.IsNullOrEmpty(dirPath) || !Directory.Exists(dirPath)) return;
-
-                string[] files = Directory.GetFiles(dirPath, "*.*", SearchOption.AllDirectories);
-                foreach (string file in files)
-                {
-                    try
-                    {
-                        DeleteFile(file + ":Zone.Identifier");
-                    }
-                    catch { }
-                }
-            }
-            catch { }
-        }
-
         public static bool IsVcRedistInstalled()
         {
             try
@@ -105,25 +187,6 @@ namespace GToolboxLauncher
             return false;
         }
 
-        public static void AddDefenderExclusion(string folderPath)
-        {
-            if (!IsAdministrator() || string.IsNullOrEmpty(folderPath) || !Directory.Exists(folderPath)) return;
-            try
-            {
-                ProcessStartInfo psi = new ProcessStartInfo();
-                psi.FileName = "powershell.exe";
-                psi.Arguments = "-NoProfile -ExecutionPolicy Bypass -Command \"Add-MpPreference -ExclusionPath '" + folderPath.Replace("'", "''") + "' -ErrorAction SilentlyContinue\"";
-                psi.UseShellExecute = false;
-                psi.CreateNoWindow = true;
-                psi.WindowStyle = ProcessWindowStyle.Hidden;
-
-                using (Process p = Process.Start(psi))
-                {
-                    if (p != null) p.WaitForExit(5000);
-                }
-            }
-            catch { }
-        }
     }
 
     // ═════════════════════════════════════════════════════════════════════════
@@ -368,18 +431,14 @@ namespace GToolboxLauncher
 
             try
             {
-                ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | (SecurityProtocolType)3072;
-                try
-                {
-                    ServicePointManager.ServerCertificateValidationCallback = delegate { return true; };
-                }
-                catch { }
+                // TLS 1.2 (+1.3 where available). Certificate validation stays ON.
+                ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | (SecurityProtocolType)12288;
 
                 // ── STEP 1: Download Python 3.10.11 Embeddable ZIP ───────
                 UpdateUI("1/5: Downloading Portable Python 3.10.11...", "Fetching official package from python.org (~8.2 MB)...", 0, ProgressBarStyle.Continuous);
 
-                string pyUrl = "https://www.python.org/ftp/python/3.10.11/python-3.10.11-embed-amd64.zip";
-                DownloadFileWithProgress(pyUrl, zipPath, "1/5: Downloading Portable Python 3.10.11...", 8.2);
+                DownloadFileWithProgress(SecurityHelper.PythonEmbedUrl, zipPath, "1/5: Downloading Portable Python 3.10.11...", 8.2);
+                SecurityHelper.RequireSha256(zipPath, SecurityHelper.PythonEmbedSha256);
 
                 // ── STEP 2: Extract to runtime/ ──────────────────────────
                 UpdateUI("2/5: Extracting runtime environment to runtime/...", "Please wait, extracting files...", 0, ProgressBarStyle.Marquee);
@@ -408,14 +467,17 @@ namespace GToolboxLauncher
                 string sitePackages = Path.Combine(runtimeDir, "Lib", "site-packages");
                 if (!Directory.Exists(sitePackages)) Directory.CreateDirectory(sitePackages);
 
-                string getPipPath = Path.Combine(runtimeDir, "get-pip.py");
-                UpdateUI("3/5: Downloading Pip package manager...", "Fetching get-pip.py from bootstrap.pypa.io...", 0, ProgressBarStyle.Marquee);
-                DownloadFileWithProgress("https://bootstrap.pypa.io/get-pip.py", getPipPath, "3/5: Downloading Pip package manager...", 2.5);
+                // Pinned pip wheel (hash-verified) instead of the unpinned get-pip.py script.
+                // A pip wheel can install itself: python pip.whl/pip install pip.whl
+                string pipWheel = Path.Combine(runtimeDir, SecurityHelper.PipWheelName);
+                UpdateUI("3/5: Downloading Pip package manager...", "Fetching pinned pip wheel from PyPI...", 0, ProgressBarStyle.Marquee);
+                DownloadFileWithProgress(SecurityHelper.PipWheelUrl, pipWheel, "3/5: Downloading Pip package manager...", 1.8);
+                SecurityHelper.RequireSha256(pipWheel, SecurityHelper.PipWheelSha256);
 
                 string pythonExe = Path.Combine(runtimeDir, "python.exe");
-                UpdateUI("3/5: Installing Pip...", "Installing pip and setuptools into runtime...", 0, ProgressBarStyle.Marquee);
-                RunProcess(pythonExe, "\"" + getPipPath + "\" --no-warn-script-location --default-timeout 180 --trusted-host pypi.org --trusted-host files.pythonhosted.org", runtimeDir);
-                try { File.Delete(getPipPath); } catch { }
+                UpdateUI("3/5: Installing Pip...", "Installing pip into runtime...", 0, ProgressBarStyle.Marquee);
+                RunProcess(pythonExe, "\"" + pipWheel + "\\pip\" install --no-index --no-warn-script-location \"" + pipWheel + "\"", runtimeDir);
+                try { File.Delete(pipWheel); } catch { }
 
                 // ── STEP 4: System Dependencies & Security Policies ──────
                 UpdateUI("4/5: Checking system dependencies (Visual C++ Redist)...", "Verifying Microsoft Visual C++ 2015-2022 Redistributable...", 0, ProgressBarStyle.Marquee);
@@ -427,6 +489,10 @@ namespace GToolboxLauncher
                     try
                     {
                         DownloadFileWithProgress("https://aka.ms/vs/17/release/vc_redist.x64.exe", vcRedistPath, "4/5: Installing Microsoft Visual C++ Redistributable...", 24.0);
+                        if (!SecurityHelper.IsSignedByMicrosoft(vcRedistPath))
+                        {
+                            throw new InvalidOperationException("vc_redist.x64.exe is not validly signed by Microsoft; refusing to run it.");
+                        }
                         ProcessStartInfo psiVc = new ProcessStartInfo();
                         psiVc.FileName = vcRedistPath;
                         psiVc.Arguments = "/install /quiet /norestart";
@@ -447,35 +513,21 @@ namespace GToolboxLauncher
                     }
                 }
 
-                // Remove Zone.Identifier from base directory and runtime
-                UpdateUI("4/5: Unblocking files & applying security policies...", "Removing Mark-of-the-Web (Zone.Identifier)...", 0, ProgressBarStyle.Marquee);
-                SecurityHelper.UnblockDirectory(baseDir);
-                if (SecurityHelper.IsAdministrator())
-                {
-                    SecurityHelper.AddDefenderExclusion(baseDir);
-                }
-
                 // ── STEP 5: Install Core Dependencies ───────────────────
                 UpdateUI("5/5: Installing core engine packages...", "FastAPI, WebView, Media Tools and dependencies (1-2 min)...", 0, ProgressBarStyle.Marquee);
 
-                string corePackages = "fastapi uvicorn python-multipart jinja2 pydantic ffmpeg-python yt-dlp Pillow pyAesCrypt pypdf pywebview opencv-python numpy aiofiles psutil certifi --no-warn-script-location --prefer-binary --default-timeout 180 --retries 5 --trusted-host pypi.org --trusted-host files.pythonhosted.org";
+                string corePackages = "fastapi uvicorn python-multipart jinja2 pydantic ffmpeg-python yt-dlp Pillow pyAesCrypt pypdf pywebview opencv-python numpy aiofiles psutil certifi --no-warn-script-location --prefer-binary --default-timeout 180 --retries 5";
                 RunProcess(pythonExe, "-m pip install " + corePackages, runtimeDir);
 
                 if (installAi)
                 {
                     UpdateUI("5/5+: Installing AI Engine (PyTorch CPU)...", "Downloading PyTorch CPU packages (~250 MB)...", 0, ProgressBarStyle.Marquee);
-                    RunProcess(pythonExe, "-m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu --no-warn-script-location --prefer-binary --default-timeout 180 --retries 5 --trusted-host download.pytorch.org --trusted-host pypi.org --trusted-host files.pythonhosted.org", runtimeDir);
+                    RunProcess(pythonExe, "-m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu --no-warn-script-location --prefer-binary --default-timeout 180 --retries 5", runtimeDir);
                     UpdateUI("5/5+: Configuring BasicSR architecture...", "Installing BasicSR components...", 0, ProgressBarStyle.Marquee);
-                    RunProcess(pythonExe, "-m pip install basicsr --no-deps --no-warn-script-location --prefer-binary --default-timeout 180 --trusted-host pypi.org --trusted-host files.pythonhosted.org", runtimeDir);
+                    RunProcess(pythonExe, "-m pip install basicsr --no-deps --no-warn-script-location --prefer-binary --default-timeout 180", runtimeDir);
                     UpdateUI("5/5+: Installing AI modules...", "Installing RealESRGAN, Rembg, LaMa, Whisper, Demucs...", 0, ProgressBarStyle.Marquee);
-                    RunProcess(pythonExe, "-m pip install realesrgan rembg simple-lama-inpainting faster-whisper demucs --no-warn-script-location --prefer-binary --default-timeout 180 --retries 5 --trusted-host pypi.org --trusted-host files.pythonhosted.org", runtimeDir);
+                    RunProcess(pythonExe, "-m pip install realesrgan rembg simple-lama-inpainting faster-whisper demucs --no-warn-script-location --prefer-binary --default-timeout 180 --retries 5", runtimeDir);
 
-                    // Ensure PyTorch DLLs are completely unblocked
-                    string torchLib = Path.Combine(runtimeDir, "Lib", "site-packages", "torch", "lib");
-                    if (Directory.Exists(torchLib))
-                    {
-                        SecurityHelper.UnblockDirectory(torchLib);
-                    }
                 }
 
                 // ── STEP 6: Finished! ───────────────────────────────────
@@ -922,9 +974,6 @@ namespace GToolboxLauncher
                     try { File.Delete(oldErr); } catch { }
                 }
 
-                // Automatically unblock all files in base directory to strip Zone.Identifier
-                SecurityHelper.UnblockDirectory(baseDir);
-
                 if (!File.Exists(script))
                 {
                     MessageBox.Show("desktop_app.py was not found:\n" + script, "G-Toolbox Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -934,29 +983,7 @@ namespace GToolboxLauncher
                 // Check for valid Python environment
                 string pythonExe = DetectWorkingPython(baseDir);
 
-                // If setup is needed OR Visual C++ Redistributable is missing, recommend Administrator privileges with user confirmation
-                if (!SecurityHelper.IsAdministrator())
-                {
-                    bool needsSetup = string.IsNullOrEmpty(pythonExe);
-                    bool needsVcRedist = !SecurityHelper.IsVcRedistInstalled();
-
-                    if (needsSetup || needsVcRedist)
-                    {
-                        DialogResult prompt = MessageBox.Show(
-                            "G-Toolbox requires Administrator privileges to install system runtime components (Microsoft Visual C++ Redistributable) and configure Windows security policies.\n\nWould you like to run G-Toolbox as Administrator?",
-                            "G-Toolbox - Administrator Privileges Recommended",
-                            MessageBoxButtons.YesNo,
-                            MessageBoxIcon.Question);
-
-                        if (prompt == DialogResult.Yes)
-                        {
-                            if (SecurityHelper.RestartAsAdministrator(args))
-                            {
-                                return; // Exit non-admin instance; elevated instance is starting
-                            }
-                        }
-                    }
-                }
+                // No blanket elevation: the VC++ installer requests UAC consent on its own.
 
                 // If no working environment is found, launch Setup Wizard!
                 if (string.IsNullOrEmpty(pythonExe))

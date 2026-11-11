@@ -40,23 +40,8 @@ DOWNLOAD_DIR = BASE_DIR / "downloads"
 UPLOAD_DIR.mkdir(exist_ok=True)
 DOWNLOAD_DIR.mkdir(exist_ok=True)
 
-# Configure AI model directories BEFORE importing rembg or torch
-u2_base = BASE_DIR / "u2net.onnx"
-u2_home = Path.home() / ".u2net"
-if u2_base.exists() and u2_base.stat().st_size > 160 * 1024 * 1024:
-    os.environ["U2NET_HOME"] = str(BASE_DIR)
-else:
-    os.environ.setdefault("U2NET_HOME", str(u2_home))
-
-lama_base = BASE_DIR / "big-lama.pt"
-lama_home = Path.home() / ".cache" / "torch" / "hub" / "checkpoints" / "big-lama.pt"
-if lama_base.exists() and lama_base.stat().st_size > 180 * 1024 * 1024:
-    os.environ["LAMA_MODEL"] = str(lama_base)
-elif lama_home.exists() and lama_home.stat().st_size > 180 * 1024 * 1024:
-    os.environ["LAMA_MODEL"] = str(lama_home)
-
+# Model file locations are resolved (and hash-verified) by find_verified_model().
 os.environ.setdefault("TORCH_HOME", str(Path.home() / ".cache" / "torch"))
-os.environ.setdefault("MODEL_CHECKSUM_DISABLED", "1")
 
 import ffmpeg
 import yt_dlp
@@ -114,30 +99,139 @@ _AI_INSTALL_PROGRESS = {
 }
 
 
-def _safe_urlopen(req: urllib.request.Request, timeout: int = 180):
-    """Safely opens a URL with SSL certificate fallback and generous timeout for clean Windows installations."""
-    # 1. Try standard / certifi SSL context
+def _tls_context() -> ssl.SSLContext:
+    """Verified TLS context. Uses certifi's CA bundle when available (fresh Windows
+    installs often lack intermediate CAs), otherwise the system store."""
     try:
-        ctx = None
-        try:
-            import certifi
-            ctx = ssl.create_default_context(cafile=certifi.where())
-        except Exception:
-            pass
-        return urllib.request.urlopen(req, timeout=timeout, context=ctx) if ctx else urllib.request.urlopen(req, timeout=timeout)
+        import certifi
+        return ssl.create_default_context(cafile=certifi.where())
+    except Exception:
+        return ssl.create_default_context()
+
+
+def _safe_urlopen(req: urllib.request.Request, timeout: int = 180):
+    """Opens a URL with certificate verification always on (never falls back to unverified)."""
+    try:
+        return urllib.request.urlopen(req, timeout=timeout, context=_tls_context())
     except Exception as e:
-        err_str = str(e)
-        if "CERTIFICATE_VERIFY_FAILED" in err_str or "certificate" in err_str.lower() or "ssl" in err_str.lower():
-            logger.warning(f"SSL certificate verification failed ({e}). Retrying with unverified context fallback...")
-            try:
-                unverified_ctx = ssl._create_unverified_context()
-                return urllib.request.urlopen(req, timeout=timeout, context=unverified_ctx)
-            except Exception as retry_err:
-                raise retry_err from e
-        raise e
+        if "CERTIFICATE_VERIFY_FAILED" in str(e):
+            raise RuntimeError(
+                "TLS certificate verification failed. Check the system date/time, antivirus HTTPS "
+                "scanning or a proxy intercepting the connection, then try again."
+            ) from e
+        raise
 
 
-GITHUB_REPO_URL = "https://github.com/Gorkem-Taha/G-Toolbox/archive/refs/heads/main.zip"
+def sha256_file(path: Path, chunk_size: int = 1024 * 1024) -> str:
+    import hashlib
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(chunk_size), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+# Pinned SHA-256 of every model file G-Toolbox downloads. A file that does not
+# match is deleted and never loaded (.pth/.pt files are pickles: loading an
+# unverified one is code execution).
+MODEL_SHA256 = {
+    "RealESRGAN_x4plus.pth": "4fa0d38905f75ac06eb49a7951b426670021be3018265fd191d2125df9d682f1",
+    "RealESRGAN_x4plus_anime_6B.pth": "f872d837d3c90ed2e05227bed711af5671a6fd1c9f7d7e91c911a61f155e99da",
+    "big-lama.pt": "7ba7aa7ac37a4d41fdbbeba3a2af7ead18058552997e3a3cd1a3b2210c9e6b4c",
+    "u2net.onnx": "8d10d2f3bb75ae3b6d527c77944fc5e7dcd94b29809d47a739a7a728a912b491",
+}
+_VERIFIED_MODEL_FILES: set = set()
+
+
+def verify_model_file(path: Path) -> bool:
+    """True if `path` matches its pinned hash. Result is cached per process."""
+    key = (str(path), path.stat().st_size if path.exists() else -1)
+    if key in _VERIFIED_MODEL_FILES:
+        return True
+    expected = MODEL_SHA256.get(path.name)
+    if not expected or not path.exists():
+        return False
+    ok = sha256_file(path) == expected
+    if ok:
+        _VERIFIED_MODEL_FILES.add(key)
+    else:
+        logger.error(f"Integrity check failed for {path} (unexpected SHA-256).")
+    return ok
+
+
+# name -> (download URL, default destination, extra locations searched for an existing copy)
+MODEL_REGISTRY = {
+    "RealESRGAN_x4plus.pth": (
+        "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth",
+        BASE_DIR / "RealESRGAN_x4plus.pth", [],
+    ),
+    "RealESRGAN_x4plus_anime_6B.pth": (
+        "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.2.4/RealESRGAN_x4plus_anime_6B.pth",
+        BASE_DIR / "RealESRGAN_x4plus_anime_6B.pth", [],
+    ),
+    "big-lama.pt": (
+        "https://github.com/enesmsahin/simple-lama-inpainting/releases/download/v0.1.0/big-lama.pt",
+        Path.home() / ".cache" / "torch" / "hub" / "checkpoints" / "big-lama.pt",
+        [BASE_DIR / "big-lama.pt"],
+    ),
+    "u2net.onnx": (
+        "https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2net.onnx",
+        Path.home() / ".u2net" / "u2net.onnx",
+        [BASE_DIR / "u2net.onnx"],
+    ),
+}
+
+
+def model_candidates(name: str) -> list:
+    _, default_dest, extra = MODEL_REGISTRY[name]
+    return list(extra) + [default_dest]
+
+
+def find_verified_model(name: str) -> Optional[Path]:
+    """Returns the first existing copy of `name` whose SHA-256 matches, else None."""
+    for cand in model_candidates(name):
+        if cand.exists() and verify_model_file(cand):
+            return cand
+    return None
+
+
+def ensure_model(name: str, pct_start: int = 0, pct_end: int = 100, label: Optional[str] = None) -> Path:
+    """Returns a verified copy of the model, downloading it if needed."""
+    found = find_verified_model(name)
+    if found:
+        return found
+    url, dest, _ = MODEL_REGISTRY[name]
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    if dest.exists():
+        dest.unlink()  # present but failed verification
+    _download_chunked_file(url, dest, 1, pct_start, pct_end, label or name)
+    if not verify_model_file(dest):
+        raise RuntimeError(f"{name} failed integrity verification after download.")
+    return dest
+
+
+def verify_authenticode_microsoft(exe_path: Path) -> bool:
+    """Windows only: True if exe_path has a valid Authenticode signature by Microsoft."""
+    if sys.platform != "win32":
+        return False
+    ps = (
+        "$s = Get-AuthenticodeSignature -LiteralPath $env:GT_VERIFY_PATH; "
+        "if ($s.Status -eq 'Valid' -and $s.SignerCertificate.Subject -match 'O=Microsoft Corporation') "
+        "{ 'OK' } else { 'BAD:' + $s.Status }"
+    )
+    try:
+        res = subprocess.run(
+            ["powershell", "-NoProfile", "-NonInteractive", "-Command", ps],
+            capture_output=True, text=True, timeout=60,
+            env=dict(os.environ, GT_VERIFY_PATH=str(exe_path)),
+            creationflags=subprocess.CREATE_NO_WINDOW,
+        )
+        return res.stdout.strip() == "OK"
+    except Exception as e:
+        logger.warning(f"Signature verification failed to run: {e}")
+        return False
+
+
 
 SimpleLama = None
 LAMA_AVAILABLE = False
@@ -205,7 +299,12 @@ def _ensure_vc_redist() -> bool:
         req = urllib.request.Request(vc_url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) G-Toolbox/4.4"})
         with _safe_urlopen(req, timeout=180) as resp, open(vc_tmp, "wb") as f:
             f.write(resp.read())
-        
+
+        if not verify_authenticode_microsoft(vc_tmp):
+            vc_tmp.unlink(missing_ok=True)
+            logger.error("vc_redist.x64.exe is not validly signed by Microsoft; refusing to run it.")
+            return False
+
         logger.info("Installing Microsoft Visual C++ Redistributable...")
         cmd = [str(vc_tmp), "/install", "/quiet", "/norestart"]
         res = subprocess.run(cmd, timeout=180)
@@ -354,13 +453,10 @@ def get_rembg_session():
         ensure_ai_runtime()
         if not REMBG_AVAILABLE or rembg_remove is None:
             raise RuntimeError("rembg library is not installed yet. Please complete AI setup.")
-        u2_base = BASE_DIR / "u2net.onnx"
-        if u2_base.exists() and u2_base.stat().st_size > 160 * 1024 * 1024:
-            os.environ["U2NET_HOME"] = str(BASE_DIR)
-        else:
-            u2_home = Path.home() / ".u2net"
-            os.environ.setdefault("U2NET_HOME", str(u2_home))
-        os.environ.setdefault("MODEL_CHECKSUM_DISABLED", "1")
+        u2_path = find_verified_model("u2net.onnx")
+        if u2_path is None:
+            raise RuntimeError("U2-Net model is missing or failed verification. Please run AI setup.")
+        os.environ["U2NET_HOME"] = str(u2_path.parent)
         from rembg import new_session
         _REMBG_SESSION = new_session("u2net")
     return _REMBG_SESSION
@@ -373,6 +469,11 @@ def get_lama_model():
         ensure_ai_runtime()
         if not LAMA_AVAILABLE or SimpleLama is None:
             raise RuntimeError("simple-lama-inpainting library is not installed yet. Please complete AI setup.")
+        lama_path = find_verified_model("big-lama.pt")
+        if lama_path is None:
+            raise RuntimeError("LaMa model is missing or failed verification. Please run AI setup.")
+        # SimpleLama would otherwise download an unverified checkpoint itself.
+        os.environ["LAMA_MODEL"] = str(lama_path)
         _LAMA_INSTANCE = SimpleLama()
     return _LAMA_INSTANCE
 
@@ -390,33 +491,15 @@ def get_upscaler(model_type: str = "general", force_fp32: bool = False):
     if cache_key in _UPSCALER_INSTANCES and not force_fp32:
         return _UPSCALER_INSTANCES[cache_key]
 
-    import urllib.request
-
     if m_key == "anime":
         model_name = "RealESRGAN_x4plus_anime_6B.pth"
-        model_url = f"https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.2.4/{model_name}"
-        expected_min_size = 15 * 1024 * 1024  # ~17.9 MB
         num_block = 6
     else:
         model_name = "RealESRGAN_x4plus.pth"
-        model_url = f"https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/{model_name}"
-        expected_min_size = 60 * 1024 * 1024  # ~67 MB
         num_block = 23
 
-    model_path = BASE_DIR / model_name
-
-    # Verify existing file integrity to prevent _pickle.UnpicklingError from partial downloads
-    if model_path.exists() and model_path.stat().st_size < expected_min_size:
-        logger.warning(f"Incomplete model file detected ({model_path.stat().st_size} bytes). Removing and re-downloading...")
-        try:
-            model_path.unlink()
-        except Exception as e:
-            logger.error(f"Could not remove corrupted model file: {e}")
-
-    if not model_path.exists():
-        logger.info(f"Downloading {model_name} from {model_url}...")
-        _download_chunked_file(model_url, model_path, expected_min_size, 0, 100, model_name)
-        logger.info(f"Successfully downloaded and verified {model_name} ({model_path.stat().st_size} bytes).")
+    # Hash-verified (downloads and verifies if missing or tampered)
+    model_path = ensure_model(model_name)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = RRDBNet(num_in_ch=3, num_out_ch=3, num_feat=64, num_block=num_block, num_grow_ch=32, scale=4)
@@ -1371,9 +1454,6 @@ def _build_ytdlp_opts(task_id: Optional[str] = None, out_template: Optional[str]
         "retry_sleep_functions": {"http": lambda n: 2},
         "quiet": False if task_id else True,
         "no_warnings": False,
-        "nocheckcertificate": True,
-        "prefer_insecure": False,
-        "legacy_server_connect": True,
         "extractor_args": {
             "youtube": {
                 "player_client": ["android", "ios", "mweb", "web"],
@@ -1758,56 +1838,34 @@ def check_ai_models_status() -> dict:
             "name": "Real-ESRGAN (General 4x)",
             "installed": False,
             "size_mb": 67.0,
-            "path": str(BASE_DIR / "RealESRGAN_x4plus.pth"),
         },
         "realesrgan_anime": {
             "name": "Real-ESRGAN (Anime 4x)",
             "installed": False,
             "size_mb": 17.9,
-            "path": str(BASE_DIR / "RealESRGAN_x4plus_anime_6B.pth"),
         },
         "lama": {
             "name": "LaMa Magic Eraser",
             "installed": False,
             "size_mb": 198.0,
-            "path": "",
         },
         "u2net": {
             "name": "U2-Net Background Remover",
             "installed": False,
             "size_mb": 176.0,
-            "path": "",
         },
     }
 
-    # 1. RealESRGAN General
-    p_gen = BASE_DIR / "RealESRGAN_x4plus.pth"
-    gen_ok = p_gen.exists() and p_gen.stat().st_size > 60 * 1024 * 1024
-    models["realesrgan_general"]["installed"] = bool(gen_ok and torch is not None and RealESRGANer is not None)
-    models["realesrgan_general"]["path"] = str(p_gen)
-
-    # 2. RealESRGAN Anime
-    p_ani = BASE_DIR / "RealESRGAN_x4plus_anime_6B.pth"
-    ani_ok = p_ani.exists() and p_ani.stat().st_size > 15 * 1024 * 1024
-    models["realesrgan_anime"]["installed"] = bool(ani_ok and torch is not None and RealESRGANer is not None)
-    models["realesrgan_anime"]["path"] = str(p_ani)
-
-    # 3. LaMa Inpainting
-    lama_base = BASE_DIR / "big-lama.pt"
-    lama_home = Path.home() / ".cache" / "torch" / "hub" / "checkpoints" / "big-lama.pt"
-    alt_lama = Path.home() / ".cache" / "torch" / "hub" / "smartyagy_simple-lama-inpainting_main"
-    p_lama = lama_base if (lama_base.exists() and lama_base.stat().st_size > 180 * 1024 * 1024) else lama_home
-    lama_ok = (p_lama.exists() and p_lama.stat().st_size > 180 * 1024 * 1024) or alt_lama.exists()
-    models["lama"]["installed"] = bool(lama_ok and LAMA_AVAILABLE and SimpleLama is not None)
-    models["lama"]["path"] = str(p_lama) if p_lama.exists() else str(lama_home)
-
-    # 4. U2-Net Background Remover
-    u2_base = BASE_DIR / "u2net.onnx"
-    u2_home = Path.home() / ".u2net" / "u2net.onnx"
-    p_u2 = u2_base if (u2_base.exists() and u2_base.stat().st_size > 160 * 1024 * 1024) else u2_home
-    u2_ok = p_u2.exists() and p_u2.stat().st_size > 160 * 1024 * 1024
-    models["u2net"]["installed"] = bool(u2_ok and REMBG_AVAILABLE and rembg_remove is not None)
-    models["u2net"]["path"] = str(p_u2) if p_u2.exists() else str(u2_home)
+    # Each model counts as installed only if a copy passes SHA-256 verification.
+    gen_path = find_verified_model("RealESRGAN_x4plus.pth")
+    ani_path = find_verified_model("RealESRGAN_x4plus_anime_6B.pth")
+    lama_path = find_verified_model("big-lama.pt")
+    u2_path = find_verified_model("u2net.onnx")
+    torch_ok = torch is not None and RealESRGANer is not None
+    models["realesrgan_general"]["installed"] = bool(gen_path and torch_ok)
+    models["realesrgan_anime"]["installed"] = bool(ani_path and torch_ok)
+    models["lama"]["installed"] = bool(lama_path and LAMA_AVAILABLE and SimpleLama is not None)
+    models["u2net"]["installed"] = bool(u2_path and REMBG_AVAILABLE and rembg_remove is not None)
 
     all_installed = all(m["installed"] for m in models.values())
     essential_installed = (
@@ -1840,9 +1898,6 @@ def _run_pip_step(args: list, step_label: str, pct: int):
         "--no-input",
         "--no-warn-script-location",
         "--prefer-binary",
-        "--trusted-host", "pypi.org",
-        "--trusted-host", "files.pythonhosted.org",
-        "--trusted-host", "download.pytorch.org",
         "--default-timeout", "180",
         "--retries", "5"
     ]
@@ -1944,6 +1999,16 @@ def _download_chunked_file(url: str, dest_path: Path, expected_min_size: int, pc
             # Successful stream completion
             actual_size = tmp_path.stat().st_size if tmp_path.exists() else 0
             if actual_size >= expected_min_size:
+                expected_sha = MODEL_SHA256.get(dest_path.name)
+                if expected_sha:
+                    _AI_INSTALL_PROGRESS["current_model"] = f"{label} - verifying integrity..."
+                    actual_sha = sha256_file(tmp_path)
+                    if actual_sha != expected_sha:
+                        tmp_path.unlink(missing_ok=True)
+                        raise RuntimeError(
+                            f"{label}: SHA-256 mismatch (got {actual_sha[:16]}…). "
+                            "The download was corrupted or tampered with and has been discarded."
+                        )
                 tmp_path.replace(dest_path)
                 logger.info(f"Successfully downloaded and verified {label} ({actual_size} bytes).")
                 return
@@ -2004,56 +2069,17 @@ def _download_ai_models_worker():
         # Invalidate import caches, register DLLs, and unblock directory
         import importlib
         importlib.invalidate_caches()
-        _unblock_directory(BASE_DIR)
         ensure_ai_runtime()
 
-        # 2. RealESRGAN General Model (~67 MB)
-        gen_path = BASE_DIR / "RealESRGAN_x4plus.pth"
-        if not gen_path.exists() or gen_path.stat().st_size < 60 * 1024 * 1024:
-            url = "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth"
-            _download_chunked_file(url, gen_path, 60 * 1024 * 1024, 28, 48, "Real-ESRGAN General")
-        else:
-            _AI_INSTALL_PROGRESS["progress"] = max(_AI_INSTALL_PROGRESS["progress"], 48)
-
-        # 3. RealESRGAN Anime Model (~18 MB)
-        ani_path = BASE_DIR / "RealESRGAN_x4plus_anime_6B.pth"
-        if not ani_path.exists() or ani_path.stat().st_size < 15 * 1024 * 1024:
-            url = "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.2.4/RealESRGAN_x4plus_anime_6B.pth"
-            _download_chunked_file(url, ani_path, 15 * 1024 * 1024, 48, 62, "Real-ESRGAN Anime")
-        else:
-            _AI_INSTALL_PROGRESS["progress"] = max(_AI_INSTALL_PROGRESS["progress"], 62)
-
-        # 4. LaMa Inpainting Model (~208 MB)
-        lama_base = BASE_DIR / "big-lama.pt"
-        lama_dir = Path.home() / ".cache" / "torch" / "hub" / "checkpoints"
-        lama_dir.mkdir(parents=True, exist_ok=True)
-        lama_path = lama_dir / "big-lama.pt"
-        if lama_base.exists() and lama_base.stat().st_size >= 180 * 1024 * 1024:
-            _AI_INSTALL_PROGRESS["progress"] = max(_AI_INSTALL_PROGRESS["progress"], 82)
-            os.environ["LAMA_MODEL"] = str(lama_base)
-        elif lama_path.exists() and lama_path.stat().st_size >= 180 * 1024 * 1024:
-            _AI_INSTALL_PROGRESS["progress"] = max(_AI_INSTALL_PROGRESS["progress"], 82)
-            os.environ["LAMA_MODEL"] = str(lama_path)
-        else:
-            url = "https://github.com/enesmsahin/simple-lama-inpainting/releases/download/v0.1.0/big-lama.pt"
-            _download_chunked_file(url, lama_path, 180 * 1024 * 1024, 62, 82, "LaMa Object Remover")
-            os.environ["LAMA_MODEL"] = str(lama_path)
-
-        # 5. U2-Net Background Remover Model (~176 MB)
-        u2_base = BASE_DIR / "u2net.onnx"
-        u2_dir = Path.home() / ".u2net"
-        u2_dir.mkdir(parents=True, exist_ok=True)
-        u2_path = u2_dir / "u2net.onnx"
-        if u2_base.exists() and u2_base.stat().st_size >= 160 * 1024 * 1024:
-            _AI_INSTALL_PROGRESS["progress"] = max(_AI_INSTALL_PROGRESS["progress"], 98)
-            os.environ["U2NET_HOME"] = str(BASE_DIR)
-        elif u2_path.exists() and u2_path.stat().st_size >= 160 * 1024 * 1024:
-            _AI_INSTALL_PROGRESS["progress"] = max(_AI_INSTALL_PROGRESS["progress"], 98)
-            os.environ["U2NET_HOME"] = str(u2_dir)
-        else:
-            url = "https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2net.onnx"
-            _download_chunked_file(url, u2_path, 160 * 1024 * 1024, 82, 98, "U2-Net Background Remover")
-            os.environ["U2NET_HOME"] = str(u2_dir)
+        # 2-5. Model weights: downloaded over verified TLS and checked against pinned SHA-256
+        ensure_model("RealESRGAN_x4plus.pth", 28, 48, "Real-ESRGAN General")
+        _AI_INSTALL_PROGRESS["progress"] = max(_AI_INSTALL_PROGRESS["progress"], 48)
+        ensure_model("RealESRGAN_x4plus_anime_6B.pth", 48, 62, "Real-ESRGAN Anime")
+        _AI_INSTALL_PROGRESS["progress"] = max(_AI_INSTALL_PROGRESS["progress"], 62)
+        ensure_model("big-lama.pt", 62, 82, "LaMa Object Remover")
+        _AI_INSTALL_PROGRESS["progress"] = max(_AI_INSTALL_PROGRESS["progress"], 82)
+        ensure_model("u2net.onnx", 82, 98, "U2-Net Background Remover")
+        _AI_INSTALL_PROGRESS["progress"] = max(_AI_INSTALL_PROGRESS["progress"], 98)
 
         ensure_ai_runtime()
         missing = []
@@ -2086,7 +2112,7 @@ def _download_ai_models_worker():
 @app.get("/api/ai-status")
 async def get_ai_status():
     """Returns local AI model presence and installation status."""
-    st = check_ai_models_status()
+    st = await asyncio.to_thread(check_ai_models_status)
     for m in st.get("models", {}).values():
         m.pop("path", None)  # do not expose local file system layout
     st["install_progress"] = _AI_INSTALL_PROGRESS
@@ -2391,80 +2417,142 @@ async def decrypt_file(
             content={"success": False, "message": f"Decryption failed: {str(exc)}"},
         )
 
+# ── Signed updates ────────────────────────────────────────────────
+# A release must ship three assets: the app zip, SHA256SUMS and SHA256SUMS.sig
+# (ed25519 signature of SHA256SUMS, made with scripts/sign_release.py).
+# The public key below is the only trust anchor; GitHub itself is not trusted.
+APP_VERSION = "4.4.0"
+GITHUB_REPO = "Gorkem-Taha/G-Toolbox"
+UPDATE_PUBLIC_KEY_B64 = "6Bz9iNc1LkjIO28rz7iiwsS2PhV7mzO+x49VUHL+fAw="
+UPDATE_ALLOWED_EXTS = {".py", ".html", ".js", ".css", ".json", ".png", ".ico", ".txt", ".md"}
+UPDATE_PROTECTED = {"venv", "runtime", "uploads", "downloads", ".git", ".env"}
+
+
+def _version_tuple(v: str) -> tuple:
+    nums = re.findall(r"\d+", str(v))
+    return tuple(int(n) for n in nums[:3]) + (0,) * (3 - len(nums[:3]))
+
+
+def _http_get(url: str, accept: str = "application/octet-stream", timeout: int = 60) -> bytes:
+    req = urllib.request.Request(url, headers={"User-Agent": f"G-Toolbox/{APP_VERSION}", "Accept": accept})
+    with _safe_urlopen(req, timeout=timeout) as resp:
+        return resp.read()
+
+
+def _latest_release() -> dict:
+    data = _http_get(f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest",
+                     accept="application/vnd.github+json")
+    return json.loads(data)
+
+
+def verify_release_manifest(sums: bytes, signature: bytes) -> dict:
+    """Verifies SHA256SUMS against the embedded ed25519 key; returns {filename: sha256}."""
+    import base64
+    from cryptography.exceptions import InvalidSignature
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+    pub = Ed25519PublicKey.from_public_bytes(base64.b64decode(UPDATE_PUBLIC_KEY_B64))
+    # Raw 64-byte signature, or a base64-encoded one (never strip raw bytes).
+    sig = signature if len(signature) == 64 else base64.b64decode(signature.strip())
+    try:
+        pub.verify(sig, sums)
+    except InvalidSignature:
+        raise RuntimeError("Update signature is invalid. The release was not signed by the G-Toolbox key.")
+    manifest = {}
+    for line in sums.decode("utf-8").splitlines():
+        parts = line.strip().split()
+        if len(parts) == 2 and re.fullmatch(r"[0-9a-fA-F]{64}", parts[0]):
+            manifest[parts[1].lstrip("*")] = parts[0].lower()
+    return manifest
+
+
+def safe_extract_zip(zip_path: Path, dest: Path) -> None:
+    """Extracts a zip, refusing absolute paths and '..' entries (zip-slip)."""
+    dest = dest.resolve()
+    with zipfile.ZipFile(zip_path) as zf:
+        for member in zf.infolist():
+            target = (dest / member.filename).resolve()
+            if not _path_inside(target, dest):
+                raise RuntimeError(f"Unsafe path in update archive: {member.filename}")
+        zf.extractall(dest)
+
+
 @app.get("/check-update")
-async def check_update():
-    """Checks for available over-the-air updates."""
-    return JSONResponse(content={"status": "ready", "message": "Checking for updates..."})
+async def check_update(request: Request):
+    """Reports whether a newer release exists. Desktop health checks call this offline-safe."""
+    if request.query_params.get("remote") != "1":
+        return JSONResponse(content={"status": "ready", "current": APP_VERSION})
+    try:
+        rel = await asyncio.to_thread(_latest_release)
+        latest = str(rel.get("tag_name", "")).lstrip("v")
+        return JSONResponse(content={
+            "status": "ok",
+            "current": APP_VERSION,
+            "latest": latest,
+            "update_available": _version_tuple(latest) > _version_tuple(APP_VERSION),
+        })
+    except Exception as e:
+        return JSONResponse(status_code=502, content={"status": "error", "message": str(e)})
+
 
 @app.post("/apply-update")
 async def apply_update(x_task_id: str = Header(None)):
-    """Downloads and applies updates from the source repository securely."""
-    update_progress(x_task_id, 10, "Connecting to GitHub...")
-    
-    zip_path = DOWNLOAD_DIR / "update.zip"
-    extract_path = DOWNLOAD_DIR / "update_tmp"
-    
+    """Downloads the latest signed release and replaces application files."""
+    update_progress(x_task_id, 10, "Checking latest release...")
+    work = DOWNLOAD_DIR / f"update_{uuid.uuid4().hex[:8]}"
+
+    def _run():
+        rel = _latest_release()
+        latest = str(rel.get("tag_name", "")).lstrip("v")
+        if _version_tuple(latest) <= _version_tuple(APP_VERSION):
+            return {"status": "up_to_date", "current": APP_VERSION, "latest": latest,
+                    "message": f"G-Toolbox is up to date ({APP_VERSION})."}
+
+        assets = {a.get("name"): a.get("browser_download_url") for a in rel.get("assets", [])}
+        if "SHA256SUMS" not in assets or "SHA256SUMS.sig" not in assets:
+            raise RuntimeError("Release has no signed checksum manifest; refusing to update.")
+
+        update_progress(x_task_id, 25, "Verifying release signature...")
+        manifest = verify_release_manifest(_http_get(assets["SHA256SUMS"]), _http_get(assets["SHA256SUMS.sig"]))
+        zip_name = next((n for n in manifest if n.endswith("-Windows.zip") and n in assets), None)
+        if not zip_name:
+            raise RuntimeError("Signed manifest does not list an application zip.")
+
+        update_progress(x_task_id, 40, f"Downloading {zip_name}...")
+        work.mkdir(parents=True, exist_ok=True)
+        zip_path = work / "update.zip"
+        zip_path.write_bytes(_http_get(assets[zip_name], timeout=300))
+        if sha256_file(zip_path) != manifest[zip_name]:
+            raise RuntimeError("Downloaded update does not match the signed checksum.")
+
+        update_progress(x_task_id, 70, "Applying update...")
+        extract_path = work / "x"
+        safe_extract_zip(zip_path, extract_path)
+        items = list(extract_path.iterdir())
+        root_dir = items[0] if len(items) == 1 and items[0].is_dir() else extract_path
+        copied = 0
+        for item in root_dir.rglob("*"):
+            if not item.is_file():
+                continue
+            rel_path = item.relative_to(root_dir)
+            if any(part in UPDATE_PROTECTED for part in rel_path.parts):
+                continue
+            if item.suffix.lower() in UPDATE_ALLOWED_EXTS:
+                target = BASE_DIR / rel_path
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(item, target)
+                copied += 1
+        return {"status": "success", "current": APP_VERSION, "latest": latest, "files": copied,
+                "message": f"G-Toolbox updated to {latest}. Please restart the application."}
+
     try:
-        update_progress(x_task_id, 30, "Downloading new updates...")
-        def _download():
-            urllib.request.urlretrieve(GITHUB_REPO_URL, str(zip_path))
-        await asyncio.to_thread(_download)
-        
-        update_progress(x_task_id, 60, "Applying system updates...")
-        def _extract_and_apply():
-            if extract_path.exists():
-                shutil.rmtree(extract_path)
-            extract_path.mkdir(parents=True, exist_ok=True)
-            
-            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-                zip_ref.extractall(extract_path)
-            
-            extracted_items = list(extract_path.iterdir())
-            if not extracted_items:
-                raise Exception("Downloaded ZIP file is empty.")
-            
-            root_dir = extracted_items[0] if extracted_items[0].is_dir() else extract_path
-            
-            allowed_exts = {".py", ".html", ".js", ".css"}
-            protected_folders = {"venv", "uploads", "downloads", ".git", ".env"}
-            
-            for item in root_dir.rglob("*"):
-                if item.is_file():
-                    rel_path = item.relative_to(root_dir)
-                    
-                    is_protected = False
-                    for part in rel_path.parts:
-                        if part in protected_folders:
-                            is_protected = True
-                            break
-                    if is_protected:
-                        continue
-                        
-                    if item.suffix.lower() in allowed_exts:
-                        target = BASE_DIR / rel_path
-                        target.parent.mkdir(parents=True, exist_ok=True)
-                        shutil.copy2(item, target)
-                        
-            if zip_path.exists():
-                zip_path.unlink()
-            if extract_path.exists():
-                shutil.rmtree(extract_path)
-                
-        await asyncio.to_thread(_extract_and_apply)
-        
+        result = await asyncio.to_thread(_run)
         update_progress(x_task_id, 100, "Update Completed!")
-        return JSONResponse(content={
-            "status": "success", 
-            "message": "G-Toolbox has been updated successfully! Please restart the server."
-        })
-        
+        return JSONResponse(content=result)
     except Exception as e:
         logger.error(f"Update failed: {e}")
-        if zip_path.exists():
-            zip_path.unlink()
-        if extract_path.exists():
-            shutil.rmtree(extract_path, ignore_errors=True)
         return JSONResponse(status_code=500, content={"status": "error", "message": f"Update failed: {str(e)}"})
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
 
 @app.post("/update-ytdlp")
 async def update_ytdlp():

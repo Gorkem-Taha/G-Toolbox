@@ -2393,7 +2393,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 stopGlobalProgress(response.ok, response.ok ? "Success" : "Error");
 
-                if (response.ok) {
+                if (response.ok && data.status === "up_to_date") {
+                    showToast("info", `✅ ${data.message}`);
+                } else if (response.ok) {
                     updateModal.classList.remove("hidden");
                 } else {
                     showToast("error", `⚠️ ${data.message || 'Update failed'}`);
