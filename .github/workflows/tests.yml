@@ -1,0 +1,44 @@
+name: Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [ '3.10', '3.11', '3.12' ]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+          cache-dependency-path: |
+            requirements-core.txt
+            requirements-dev.txt
+
+      - name: Install ffmpeg (media regression tests use the real binary)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Lint (pyflakes)
+        run: python -m pyflakes gtoolbox main.py desktop_app.py tests scripts/sign_release.py
+
+      - name: JavaScript syntax
+        run: node --check static/js/app.js && node --check static/sw.js
+
+      - name: Tests
+        run: python -m pytest -q

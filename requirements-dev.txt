@@ -1,0 +1,5 @@
+# Test / lint tooling (CI and local development)
+-r requirements-core.txt
+pytest
+httpx
+pyflakes

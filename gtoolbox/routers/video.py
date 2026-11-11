@@ -256,9 +256,16 @@ async def update_ytdlp():
             cmd = [sys.executable, "-m", "pip", "install", "--upgrade", "yt-dlp"]
             if PIP_TARGET:
                 cmd += ["--target", PIP_TARGET]
-            subprocess.run(cmd, capture_output=True, text=True, timeout=90)
-            v_proc = subprocess.run([sys.executable, "-m", "yt_dlp", "--version"], capture_output=True, text=True, timeout=10)
-            ver = v_proc.stdout.strip() if v_proc.returncode == 0 else "Latest"
+            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+            if proc.returncode != 0:
+                tail = (proc.stderr or proc.stdout or "").strip().splitlines()[-3:]
+                return {"success": False, "message": "yt-dlp update failed: " + " | ".join(tail)}
+            env = dict(os.environ)
+            if PIP_TARGET:  # make the freshly installed copy visible to the version check
+                env["PYTHONPATH"] = PIP_TARGET + os.pathsep + env.get("PYTHONPATH", "")
+            v_proc = subprocess.run([sys.executable, "-m", "yt_dlp", "--version"],
+                                    capture_output=True, text=True, timeout=30, env=env)
+            ver = v_proc.stdout.strip() if v_proc.returncode == 0 else "latest"
             return {"success": True, "version": ver, "message": f"yt-dlp engine successfully updated to {ver}."}
         except Exception as e:
             return {"success": False, "message": f"Update failed: {str(e)}"}
