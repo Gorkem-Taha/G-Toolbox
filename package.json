@@ -5,13 +5,15 @@
   "scripts": {
     "build:css": "tailwindcss -c tailwind.config.js -i static/css/tailwind.input.css -o static/vendor/tailwind.css --minify",
     "vendor:fontawesome": "node scripts/vendor_fontawesome.mjs",
-    "build": "npm run build:css && npm run vendor:fontawesome && npm run vendor:fonts",
-    "vendor:fonts": "node scripts/vendor_fonts.mjs"
+    "build": "npm run build:css && npm run vendor:fontawesome && npm run vendor:fonts && npm run vendor:qrcode",
+    "vendor:fonts": "node scripts/vendor_fonts.mjs",
+    "vendor:qrcode": "node -e \"const fs=require('fs');fs.mkdirSync('static/vendor/qrcode',{recursive:true});fs.copyFileSync('node_modules/qrcode-generator/qrcode.js','static/vendor/qrcode/qrcode.js')\""
   },
   "devDependencies": {
     "@fontsource/inter": "^5.1.0",
     "@fontsource/jetbrains-mono": "^5.1.0",
     "@fortawesome/fontawesome-free": "6.5.1",
+    "qrcode-generator": "^1.4.4",
     "tailwindcss": "3.4.17"
   }
 }

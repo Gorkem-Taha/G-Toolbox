@@ -2252,6 +2252,19 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     async function downloadBlob(blob, filename) {
+        // 0. Android app: WebView cannot save blob: URLs, use the native "Save as" bridge.
+        if (window.GToolboxAndroid && typeof window.GToolboxAndroid.saveFile === 'function') {
+            const dataUrl = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = () => reject(reader.error);
+                reader.readAsDataURL(blob);
+            });
+            window.GToolboxAndroid.saveFile(filename, blob.type || 'application/octet-stream',
+                String(dataUrl).split(',', 2)[1] || '');
+            return;
+        }
+
         // 1. Yerel PC modunda (Masaüstü uygulaması veya yerel sunucu)
         // Kullanıcıya Windows'un gerçek "Farklı Kaydet" penceresini açtır
         if (IS_HOST_PAGE) {
@@ -3613,10 +3626,30 @@ function refreshLanInfo() {
                 toggleBtn.textContent = enabled ? 'LAN erişimini kapat' : 'LAN erişimini aç (telefon)';
             }
             if (rotateBtn && IS_HOST_PAGE && enabled) rotateBtn.classList.remove('hidden');
+            renderPairingQr(IS_HOST_PAGE && data.pairing_url ? data.pairing_url : '');
+            const androidBtn = document.getElementById('btn-android-server');
+            if (androidBtn && window.GToolboxAndroid) androidBtn.classList.remove('hidden');
         })
         .catch(() => {
             if (displayEl) displayEl.textContent = window.location.origin;
         });
+}
+
+// QR code of the pairing link, for the Android app or a phone camera.
+function renderPairingQr(url) {
+    const box = document.getElementById('lan-pairing-qr');
+    if (!box) return;
+    box.replaceChildren();
+    if (!url || typeof qrcode !== 'function') {
+        box.classList.add('hidden');
+        return;
+    }
+    const qr = qrcode(0, 'M');
+    qr.addData(url);
+    qr.make();
+    // createSvgTag only emits generated <svg>/<rect> markup, never the input text.
+    box.innerHTML = qr.createSvgTag({ cellSize: 4, margin: 2 });
+    box.classList.remove('hidden');
 }
 
 async function postLanAccess(body) {
