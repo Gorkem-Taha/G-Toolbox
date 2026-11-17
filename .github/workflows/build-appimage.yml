@@ -65,14 +65,15 @@ jobs:
           sleep 10
           for i in $(seq 1 20); do
             kill -0 $APID 2>/dev/null || break
-            timeout 5 xdotool search --onlyvisible --name '.' >/dev/null 2>&1 && break
+            timeout 5 xdotool search --onlyvisible --name '^G-Toolbox$' >/dev/null 2>&1 && break
             sleep 1
           done
           sleep 2
           import -window root gui-test.png || true
           cat gui-test.log
           kill -0 $APID 2>/dev/null || { echo "::error::The AppImage exited instead of showing a window"; exit 1; }
-          timeout 5 xdotool search --onlyvisible --name '.' getwindowname %@ || { echo "::error::No visible window"; exit 1; }
+          # AppImageHub accepts any visible window; require ours (icewm's panels are windows too)
+          timeout 5 xdotool search --onlyvisible --name '^G-Toolbox$' getwindowgeometry %@ || { echo "::error::No visible G-Toolbox window"; exit 1; }
           kill $APID || true
 
       - name: Upload GUI test screenshot
