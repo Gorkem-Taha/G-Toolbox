@@ -40,7 +40,7 @@ fetch() {  # fetch <url> <dest> [sha256]
   local url="$1" dest="$2" sha="${3:-}"
   if [[ ! -f "$dest" ]]; then
     echo "    ↓ $url"
-    curl -fL --retry 3 --proto '=https' --tlsv1.2 -o "$dest.part" "$url"
+    curl -fsSL --retry 3 --proto '=https' --tlsv1.2 -o "$dest.part" "$url"
     mv "$dest.part" "$dest"
   fi
   if [[ -n "$sha" ]]; then
@@ -70,6 +70,7 @@ echo "[2/6] Core Python dependencies"
 
 if [[ "$WITH_FFMPEG" == 1 ]]; then
   echo "[3/6] Static ffmpeg (${FFMPEG_ASSET})"
+  rm -f "$CACHE_DIR/ffmpeg-checksums.sha256"   # rolling build: never reuse an old checksum list
   fetch "${FFMPEG_BASE}/checksums.sha256" "$CACHE_DIR/ffmpeg-checksums.sha256"
   FF_SHA="$(awk -v f="$FFMPEG_ASSET" '$2==f || $2=="*"f {print $1}' "$CACHE_DIR/ffmpeg-checksums.sha256")"
   [[ -n "$FF_SHA" ]] || { echo "No checksum published for $FFMPEG_ASSET" >&2; exit 1; }
@@ -102,6 +103,19 @@ cp "$ROOT_DIR/g-toolbox.desktop" "$APP_DIR/usr/share/applications/"
 cp "$ROOT_DIR/static/icon.png" "$APP_DIR/g-toolbox.png"
 cp "$ROOT_DIR/static/icon.png" "$APP_DIR/usr/share/icons/hicolor/64x64/apps/g-toolbox.png"
 ln -sf g-toolbox.png "$APP_DIR/.DirIcon"
+# AppStream metadata (software centres, AppImageHub), version from gtoolbox/__init__.py
+APP_VERSION="$(sed -n 's/^__version__ = "\(.*\)"/\1/p' "$ROOT_DIR/gtoolbox/__init__.py")"
+RELEASE_DATE="$(git -C "$ROOT_DIR" log -1 --format=%cs 2>/dev/null || date -u +%F)"
+mkdir -p "$APP_DIR/usr/share/metainfo"
+sed -e "s/@VERSION@/$APP_VERSION/" -e "s/@DATE@/$RELEASE_DATE/" \
+    "$ROOT_DIR/packaging/linux/g-toolbox.appdata.xml" > "$APP_DIR/usr/share/metainfo/io.github.gorkem_taha.g_toolbox.appdata.xml"
+# Same checks as the AppImageHub catalogue test (code/appdir-lint.sh) when the tools exist
+if command -v desktop-file-validate >/dev/null; then
+  desktop-file-validate "$APP_DIR/g-toolbox.desktop"
+fi
+if command -v appstreamcli >/dev/null; then
+  appstreamcli validate-tree --no-net "$APP_DIR"
+fi
 
 cat > "$APP_DIR/AppRun" <<'EOF'
 #!/usr/bin/env bash
@@ -131,10 +145,14 @@ fetch "https://github.com/AppImage/type2-runtime/releases/download/${RUNTIME_TAG
 OUT="$OUTPUT_DIR/G-Toolbox-x86_64.AppImage"
 # Extract-and-run avoids needing FUSE on CI runners / containers; the pinned
 # runtime stops appimagetool from downloading the rolling "continuous" one.
-ARCH=x86_64 "$APPIMAGETOOL" --appimage-extract-and-run --no-appstream \
-    --runtime-file "$RUNTIME" "$APP_DIR" "$OUT" >/dev/null
+# Update information lets AppImageUpdate fetch only the changed blocks of a new
+# release; it also writes $OUT.zsync, which must be uploaded with the release.
+UPDATE_INFO="gh-releases-zsync|Gorkem-Taha|G-Toolbox|latest|G-Toolbox-x86_64.AppImage.zsync"
+(cd "$OUTPUT_DIR" && ARCH=x86_64 "$APPIMAGETOOL" --appimage-extract-and-run --no-appstream \
+    --runtime-file "$RUNTIME" -u "$UPDATE_INFO" "$APP_DIR" "$OUT" >/dev/null)
 chmod +x "$OUT"
 
 echo "=========================================================="
 echo " ✅ $(du -h "$OUT" | cut -f1)  $OUT"
+[ -f "$OUT.zsync" ] && echo "    + $OUT.zsync (update information: $UPDATE_INFO)"
 echo "=========================================================="

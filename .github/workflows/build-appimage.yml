@@ -7,6 +7,8 @@ on:
       - '**.py'
       - 'requirements*.lock'
       - 'scripts/build_appimage.sh'
+      - 'packaging/**'
+      - 'g-toolbox.desktop'
       - 'templates/**'
       - 'static/**'
       - '.github/workflows/build-appimage.yml'
@@ -25,6 +27,15 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      # The same validators as the AppImageHub catalogue test (also Ubuntu 22.04),
+      # so the build fails here first if the desktop file or metainfo is rejected.
+      - name: Install validation and test tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends desktop-file-utils appstream \
+               xvfb icewm xdotool x11-utils imagemagick firejail
+          appstreamcli --version
+
       # Everything (Python, dependencies, ffmpeg, AppImage runtime) is bundled
       # and hash-verified by the script; no system Python packages are used.
       - name: Build G-Toolbox AppImage
@@ -39,10 +50,47 @@ jobs:
           curl -fs -o /dev/null http://127.0.0.1:8000/
           ./squashfs-root/usr/bin/ffmpeg -version | head -1
 
+      # Mirrors AppImageHub's test (code/worker.sh): run the AppImage in a firejail
+      # sandbox without network on a virtual X display and require a visible
+      # window within 30 seconds.
+      - name: GUI test (AppImageHub style)
+        run: |
+          Xvfb :99 -screen 0 1280x800x24 >/dev/null 2>&1 &
+          export DISPLAY=:99
+          sleep 2
+          icewm >/dev/null 2>&1 &
+          mkdir -p "$HOME/.local/share/appimagekit" && touch "$HOME/.local/share/appimagekit/no_desktopintegration"
+          firejail --quiet --noprofile --net=none --appimage ./dist/G-Toolbox-x86_64.AppImage > gui-test.log 2>&1 &
+          APID=$!
+          sleep 10
+          for i in $(seq 1 20); do
+            kill -0 $APID 2>/dev/null || break
+            timeout 5 xdotool search --onlyvisible --name '.' >/dev/null 2>&1 && break
+            sleep 1
+          done
+          sleep 2
+          import -window root gui-test.png || true
+          cat gui-test.log
+          kill -0 $APID 2>/dev/null || { echo "::error::The AppImage exited instead of showing a window"; exit 1; }
+          timeout 5 xdotool search --onlyvisible --name '.' getwindowname %@ || { echo "::error::No visible window"; exit 1; }
+          kill $APID || true
+
+      - name: Upload GUI test screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: G-Toolbox-AppImage-GUI-test
+          path: |
+            gui-test.png
+            gui-test.log
+          if-no-files-found: ignore
+
       - name: Upload AppImage Artifact
         uses: actions/upload-artifact@v4
         with:
           name: G-Toolbox-Linux-x86_64-AppImage
-          path: dist/G-Toolbox-x86_64.AppImage
+          path: |
+            dist/G-Toolbox-x86_64.AppImage
+            dist/G-Toolbox-x86_64.AppImage.zsync
           if-no-files-found: error
 

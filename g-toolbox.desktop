@@ -1,9 +1,11 @@
 [Desktop Entry]
 Name=G-Toolbox
+GenericName=Media and AI Toolkit
 Comment=All-in-One Media & AI Studio
 Exec=AppRun %U
 Icon=g-toolbox
 Type=Application
-Categories=AudioVideo;Audio;Video;Graphics;Utility;
+Categories=AudioVideo;Audio;Video;
+Keywords=converter;upscale;background;transcribe;subtitle;pdf;encrypt;
 Terminal=false
 StartupWMClass=G-Toolbox

@@ -71,7 +71,7 @@ jobs:
       - name: Collect files
         run: |
           mkdir -p release
-          find artifacts -type f \( -name '*.zip' -o -name '*.AppImage' -o -name '*.apk' \) -exec cp {} release/ \;
+          find artifacts -type f \( -name '*.zip' -o -name '*.AppImage' -o -name '*.zsync' -o -name '*.apk' \) -exec cp {} release/ \;
           ls -la release
 
       - name: Checksums and signature
