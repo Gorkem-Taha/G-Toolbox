@@ -93,8 +93,11 @@ chmod +x G-Toolbox-x86_64.AppImage
 ./G-Toolbox-x86_64.AppImage
 ```
 
-The app opens in your browser. Settings, temporary files, models and AI libraries live in
-`~/.local/share/g-toolbox`. The AppImage uses the static type2 runtime (no `libfuse2`
+The app opens in your browser, and a small G-Toolbox window stays open: it re-opens the app,
+shows the Save As dialog and stops G-Toolbox when you close it. Settings, temporary files,
+models and AI libraries live in `~/.local/share/g-toolbox`. The AppImage carries update
+information, so [AppImageUpdate](https://github.com/AppImageCommunity/AppImageUpdate) can update it
+by downloading only the changed parts. The AppImage uses the static type2 runtime (no `libfuse2`
 needed); on systems without FUSE at all (some containers), run it with
 `--appimage-extract-and-run`.
 
