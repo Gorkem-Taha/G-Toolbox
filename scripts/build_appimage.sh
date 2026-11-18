@@ -33,6 +33,7 @@ RUNTIME_TAG="20251108"   # AppImage type2 runtime embedded in the output
 RUNTIME_SHA256="2fca8b443c92510f1483a883f60061ad09b46b978b2631c807cd873a47ec260d"
 # BtbN only keeps rolling "latest" builds of each release branch, so the hash is
 # checked against that release's published checksums.sha256 instead of pinned.
+GLIBC_FLOOR="2.28"   # newest glibc any bundled ELF file may require
 FFMPEG_ASSET="ffmpeg-n8.1-latest-linux64-gpl-8.1.tar.xz"
 FFMPEG_BASE="https://github.com/BtbN/FFmpeg-Builds/releases/download/latest"
 
@@ -63,8 +64,17 @@ tar -xzf "$CACHE_DIR/$PY_ASSET" -C "$APP_DIR/usr"   # → usr/python
 PY="$APP_DIR/usr/python/bin/python3"
 
 echo "[2/6] Core Python dependencies"
+# Wheels for glibc 2.28 (RHEL 8, Debian 10, Ubuntu 20.04) whatever the build host
+# runs: pip would otherwise pick the newest manylinux tag the host supports.
+SITE_PACKAGES="$("$PY" -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])')"
+# pip does not widen an explicit --platform to older manylinux tags: list them all
+PLATFORMS=()
+for minor in $(seq "${GLIBC_FLOOR#2.}" -1 5); do PLATFORMS+=(--platform "manylinux_2_${minor}_x86_64"); done
+PLATFORMS+=(--platform manylinux2014_x86_64 --platform manylinux2010_x86_64 --platform manylinux1_x86_64)
 "$PY" -m pip install --quiet --no-warn-script-location --disable-pip-version-check \
-      --require-hashes -r "$ROOT_DIR/requirements-core.lock"
+      --require-hashes --only-binary=:all: \
+      "${PLATFORMS[@]}" --implementation cp --python-version 3.11 \
+      --target "$SITE_PACKAGES" -r "$ROOT_DIR/requirements-core.lock"
 # Byte-code is generated at build time; the AppImage is read-only at runtime.
 "$PY" -m compileall -q "$APP_DIR/usr/python/lib" >/dev/null || true
 
@@ -89,6 +99,21 @@ EOF
   rm -rf "$FF_DIR"
 else
   echo "[3/6] Skipping ffmpeg (system ffmpeg will be used if installed)"
+fi
+
+# Same measure as AppImageHub's code/check-libc.sh: the newest GLIBC_ version of
+# any undefined symbol in a dynamic ELF file must not exceed the floor.
+NEWEST_GLIBC="$(find "$APP_DIR" -type f -print0 | while IFS= read -r -d '' f; do
+  [ "$(od -An -tx1 -N4 "$f" 2>/dev/null)" == " 7f 45 4c 46" ] || continue
+  objdump -T "$f" 2>/dev/null | grep '\*UND\*' | grep -oE 'GLIBC_[0-9]+(\.[0-9]+)+' | sed "s|^|$f |"
+done | sort -k2,2V | tail -n 1)"
+if [ -n "$NEWEST_GLIBC" ]; then
+  NEWEST="${NEWEST_GLIBC##*GLIBC_}"
+  if [ "$(printf '%s\n%s\n' "$GLIBC_FLOOR" "$NEWEST" | sort -V | tail -n 1)" != "$GLIBC_FLOOR" ]; then
+    echo "ERROR: ${NEWEST_GLIBC% GLIBC_*} needs glibc $NEWEST (> $GLIBC_FLOOR)" >&2
+    exit 1
+  fi
+  echo "    newest glibc required: $NEWEST (floor $GLIBC_FLOOR)"
 fi
 
 echo "[4/6] Application files"

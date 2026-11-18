@@ -243,6 +243,28 @@ def _open_in_browser(url: str) -> None:
     threading.Thread(target=webbrowser.open, args=(url,), daemon=True).start()
 
 
+def _system_prefers_dark() -> bool:
+    """True if the desktop is set to a dark theme (GNOME/GTK or KDE); light otherwise."""
+    if "dark" in os.environ.get("GTK_THEME", "").lower():
+        return True
+    try:
+        import subprocess
+        out = subprocess.run(["gsettings", "get", "org.gnome.desktop.interface", "color-scheme"],
+                             capture_output=True, text=True, timeout=2).stdout
+        if "dark" in out:
+            return True
+    except Exception:
+        pass
+    try:
+        import re
+        kde = (Path.home() / ".config" / "kdeglobals").read_text(encoding="utf-8", errors="ignore")
+        if re.search(r"^ColorScheme=.*dark", kde, re.M | re.I):
+            return True
+    except Exception:
+        pass
+    return False
+
+
 def run_control_window(server_url: str, server_thread: ServerThread, open_browser: bool = True) -> bool:
     """Small native window used when the full webview is unavailable (e.g. the
     Linux AppImage): shows that G-Toolbox is running, opens it in the browser,
@@ -263,7 +285,14 @@ def run_control_window(server_url: str, server_thread: ServerThread, open_browse
     def t(tr_text: str, en_text: str) -> str:
         return tr_text if tr else en_text
 
-    bg, fg, muted, accent, error = "#0f1117", "#e6edf3", "#8b949e", "#7c3aed", "#f85149"
+    # Light by default; dark only when the desktop is set to dark
+    if _system_prefers_dark():
+        bg, fg, muted, field, button, button_active = "#0f1117", "#e6edf3", "#8b949e", "#161b22", "#21262d", "#30363d"
+        error = "#f85149"
+    else:
+        bg, fg, muted, field, button, button_active = "#ffffff", "#1f2328", "#59636e", "#f6f8fa", "#eaeef2", "#d0d7de"
+        error = "#cf222e"
+    accent = "#7c3aed"
     root.title("G-Toolbox")
     root.configure(bg=bg, padx=24, pady=20)
     root.resizable(False, False)
@@ -280,7 +309,7 @@ def run_control_window(server_url: str, server_thread: ServerThread, open_browse
                              "The app opens in your web browser. Closing this window stops G-Toolbox."))
     status.pack(anchor="w", pady=(6, 12))
 
-    address = tk.Entry(root, width=34, relief="flat", bg="#161b22", fg=fg, readonlybackground="#161b22",
+    address = tk.Entry(root, width=34, relief="flat", bg=field, fg=fg, readonlybackground=field,
                        insertbackground=fg, highlightthickness=0)
     address.insert(0, server_url)
     address.configure(state="readonly")
@@ -296,8 +325,8 @@ def run_control_window(server_url: str, server_thread: ServerThread, open_browse
     tk.Button(buttons, text=t("Tarayıcıda aç", "Open in browser"), command=lambda: _open_in_browser(server_url),
               bg=accent, fg="white", activebackground="#6d28d9", activeforeground="white",
               relief="flat", padx=14, pady=6).pack(side="left")
-    tk.Button(buttons, text=t("Kapat", "Quit"), command=quit_app, bg="#21262d", fg=fg,
-              activebackground="#30363d", activeforeground=fg, relief="flat", padx=14, pady=6).pack(side="left", padx=(8, 0))
+    tk.Button(buttons, text=t("Kapat", "Quit"), command=quit_app, bg=button, fg=fg,
+              activebackground=button_active, activeforeground=fg, relief="flat", padx=14, pady=6).pack(side="left", padx=(8, 0))
     root.protocol("WM_DELETE_WINDOW", quit_app)
 
     # "Save As" requests arrive on server threads; Tk may only be used from this
